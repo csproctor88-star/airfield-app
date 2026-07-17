@@ -4,6 +4,7 @@ import type { ObstructionRow } from '@/lib/supabase/obstructions'
 import { parsePhotoPaths } from '@/lib/supabase/obstructions'
 import { formatZuluTime, formatZuluDate, fetchMapImageDataUrl } from '@/lib/utils'
 import { formatDD } from '@/lib/calculations/coordinates'
+import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -95,14 +96,15 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     evaluation.latitude != null && evaluation.longitude != null
       ? formatDD({ lat: evaluation.latitude, lon: evaluation.longitude })
       : '—'
-  const rwClass = evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`
-  // Runway Class is a UFC concept; Part 77 rows show the surface set instead
-  // (civilian rows may carry a placeholder runway_class — never print it).
-  // Legacy rows with NULL surface_set are treated as UFC for backward compatibility.
-  const surfaceSetRows: [string, string][] =
-    evaluation.surface_set === 'faa_part77'
-      ? [['Surface Set', 'FAA Part 77 (14 CFR §77.19)']]
-      : [['Surface Set', 'UFC 3-260-01'], ['Runway Class', rwClass]]
+  // Single set-and-class-aware label, resolved through the surface-standards
+  // registry so this never hand-rolls "Class ${runway_class}" (which would
+  // print "Class null" for Part 77 rows, whose runway_class is now NULL).
+  // Legacy rows with NULL surface_set are treated as UFC for backward
+  // compatibility, matching resolveStandardLabel's own UFC default.
+  const surfaceStandardLabel = resolveStandardLabel(
+    evaluation.surface_set === 'faa_part77' ? 'faa_part77' : 'ufc_3_260_01',
+    evaluation.runway_class,
+  )
 
   autoTable(doc, {
     startY: y,
@@ -114,7 +116,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       ['Ground Elevation MSL', `${evaluation.object_elevation_msl?.toFixed(0) ?? '—'} ft`],
       ['Distance from Centerline', `${evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft`],
       ['Coordinates', coordsText],
-      ...surfaceSetRows,
+      ['Surface Standard', surfaceStandardLabel],
     ],
     theme: 'grid',
     headStyles: { fillColor: [30, 41, 59], fontSize: 8, fontStyle: 'bold' },

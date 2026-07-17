@@ -20,6 +20,16 @@ The obstruction map, its legend, and the evaluation header all follow the active
 
 ---
 
+## Choosing a surface evaluation standard
+
+The base's governing standard — Air Force Class A, Air Force Class B, Army Class B, or FAA Part 77 — lives on its own card in Base Configuration → Runways, above the runway list. Picking one of the three UFC options writes the base's standard and batch-sets every runway's class to match, since an evaluation takes one class per run rather than a class per runway; picking FAA Part 77 only sets the base-level standard and leaves each runway's own FAA approach type in place. If a base's runways carry different classes, the card shows a **Mixed (per-runway)** state instead of a selected option until every runway is brought onto the same class — evaluations use the first runway's class until then. Civilian Part 139 bases are pinned to FAA Part 77: the standard picker doesn't appear for them, since Part 139 airfields evaluate under Part 77 by regulation.
+
+The Surface Set picker on the New Evaluation form always starts on the base's governing standard, but any of the four standards can be chosen for that one evaluation — a what-if comparison against a different class, or against FAA Part 77, without touching the base's configuration. The picker is disabled while editing a previously saved evaluation, so the standard and class the saved results were actually computed under stay fixed; to check the same object against a different standard, start a new evaluation instead.
+
+Air Force Class A and Army Class B now evaluate and draw their own imaginary surfaces rather than reusing Air Force Class B's numbers — each class's primary surface width, approach-departure clearance surface, transitional slope, clear zone, and Accident Potential Zones follow its own UFC 3-260-01 Table 3-7 / 3-5 / 3-6 dimensions. Selecting Class A or Army Class B, whether as the base's standard or as a what-if override, changes the geometry the evaluation actually checks against, not just the label on the results.
+
+---
+
 ## Key Concepts
 
 | Concept | Meaning |

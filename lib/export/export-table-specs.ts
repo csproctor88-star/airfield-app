@@ -4,6 +4,7 @@
 import { EXPORT_MODULES } from './export-modules'
 import type { TableModuleSpec } from './export-pdf'
 import { humanize } from './export-format'
+import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
 
 function mod(key: string) {
   const m = EXPORT_MODULES.find((x) => x.key === key)
@@ -114,21 +115,31 @@ interface ObstructionLike {
   display_id: string | null
   description: string | null
   object_height_agl: number
-  runway_class: string
+  runway_class: string | null
+  surface_set: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14' | null
   has_violation: boolean
   controlling_surface: string | null
   created_at: string
 }
 
+// Table specs have no base context to fall back on for a legacy NULL
+// surface_set (unlike the [id] detail page, which has currentInstallation),
+// so any set other than 'faa_part77' — including NULL/icao_annex14 (staged,
+// not yet selectable) — resolves through the UFC branch, matching
+// resolveStandardLabel's own historical-default treatment of legacy rows.
+function obstructionStandardLabel(r: ObstructionLike): string {
+  return resolveStandardLabel(r.surface_set === 'faa_part77' ? 'faa_part77' : 'ufc_3_260_01', r.runway_class)
+}
+
 export const OBSTRUCTIONS_SPEC: TableModuleSpec<ObstructionLike> = {
   module: mod('obstructions'),
-  columns: ['ID', 'Description', 'Height AGL', 'Runway Class', 'Violation', 'Surface', 'Logged'],
+  columns: ['ID', 'Description', 'Height AGL', 'Standard', 'Violation', 'Surface', 'Logged'],
   getDate: (r) => r.created_at,
   toRow: (r) => [
     dash(r.display_id),
     dash(r.description),
     `${r.object_height_agl} ft`,
-    humanize(r.runway_class),
+    obstructionStandardLabel(r),
     yesNo(r.has_violation),
     r.controlling_surface ? humanize(r.controlling_surface) : '—',
     dateOnly(r.created_at),

@@ -251,7 +251,10 @@ type Part77SurfaceSet = {
  * Per-approach-type Part 77 dimension table. Each row is the full
  * surface-metadata set used by both the engine (numeric criteria) and
  * the UI legend (color / ref / description). Conical and transitional
- * slopes are constant across all approach types per §77.19(d-e).
+ * slopes are constant across all approach types per §77.19(b) and (e).
+ * (Verified lettering: (a) Horizontal, (b) Conical, (c) Primary,
+ * (d) Approach, (e) Transitional — 14 CFR Part 77, eCFR PDF current as
+ * of 2026-07-14.)
  *
  * Default (when faa_approach_type is NULL) is `non_utility_non_precision_low`
  * which matches the Phase 1 hardcoded PART77_SURFACES constant — preserves
@@ -262,7 +265,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     primary: {
       name: 'Primary Surface',
       criteria: { halfWidth: 125, extension: 200, maxHeight: 0 }, // 250 ft total width
-      ufcRef: '14 CFR §77.19(a) — Primary surface (utility / visual)',
+      ufcRef: '14 CFR §77.19(c) — Primary surface (utility / visual)',
       ufcCriteria: 'No object may protrude above the primary surface elevation within 125 ft of centerline (250 ft total width) and 200 ft beyond each runway end.',
       description: '250 ft wide × runway length + 200 ft (utility / visual).',
       color: '#EF4444',
@@ -270,7 +273,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     approach: {
       name: 'Approach Surface',
       criteria: { slope: 20, innerHalfWidth: 125, outerHalfWidth: 625, length: 5000 },
-      ufcRef: '14 CFR §77.19(c) — Approach surface (utility / visual)',
+      ufcRef: '14 CFR §77.19(d) — Approach surface (utility / visual)',
       ufcCriteria: '20:1 slope extending 5,000 ft from the runway end, expanding from 250 ft to 1,250 ft wide.',
       description: '20:1 slope, 5,000 ft long, 1,250 ft outer width.',
       color: '#F97316',
@@ -278,7 +281,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     horizontal: {
       name: 'Horizontal Surface',
       criteria: { height: 150, radius: 5000 },
-      ufcRef: '14 CFR §77.19(b) — Horizontal surface (utility)',
+      ufcRef: '14 CFR §77.19(a) — Horizontal surface (utility)',
       ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 5,000 ft radius of each runway end (utility runway).',
       description: '150 ft above airport elevation within 5,000 ft (utility).',
       color: '#22C55E',
@@ -286,7 +289,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     conical: {
       name: 'Conical Surface',
       criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcRef: '14 CFR §77.19(b) — Conical surface',
       ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
       description: '20:1 slope, 4,000 ft horizontal extent.',
       color: '#3B82F6',
@@ -304,7 +307,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     primary: {
       name: 'Primary Surface',
       criteria: { halfWidth: 250, extension: 200, maxHeight: 0 }, // 500 ft total
-      ufcRef: '14 CFR §77.19(a) — Primary surface (utility / non-precision)',
+      ufcRef: '14 CFR §77.19(c) — Primary surface (utility / non-precision)',
       ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
       description: '500 ft wide × runway length + 200 ft (utility / non-precision).',
       color: '#EF4444',
@@ -312,7 +315,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     approach: {
       name: 'Approach Surface',
       criteria: { slope: 20, innerHalfWidth: 250, outerHalfWidth: 1000, length: 5000 },
-      ufcRef: '14 CFR §77.19(c) — Approach surface (utility / non-precision)',
+      ufcRef: '14 CFR §77.19(d) — Approach surface (utility / non-precision)',
       ufcCriteria: '20:1 slope extending 5,000 ft from the runway end, expanding from 500 ft to 2,000 ft wide.',
       description: '20:1 slope, 5,000 ft long, 2,000 ft outer width.',
       color: '#F97316',
@@ -320,7 +323,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     horizontal: {
       name: 'Horizontal Surface',
       criteria: { height: 150, radius: 5000 },
-      ufcRef: '14 CFR §77.19(b) — Horizontal surface (utility)',
+      ufcRef: '14 CFR §77.19(a) — Horizontal surface (utility)',
       ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 5,000 ft radius of each runway end (utility runway).',
       description: '150 ft above airport elevation within 5,000 ft (utility).',
       color: '#22C55E',
@@ -328,7 +331,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     conical: {
       name: 'Conical Surface',
       criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcRef: '14 CFR §77.19(b) — Conical surface',
       ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
       description: '20:1 slope, 4,000 ft horizontal extent.',
       color: '#3B82F6',
@@ -346,7 +349,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     primary: {
       name: 'Primary Surface',
       criteria: { halfWidth: 250, extension: 200, maxHeight: 0 }, // 500 ft total
-      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility / visual)',
+      ufcRef: '14 CFR §77.19(c) — Primary surface (non-utility / visual)',
       ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
       description: '500 ft wide × runway length + 200 ft (non-utility / visual).',
       color: '#EF4444',
@@ -354,7 +357,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     approach: {
       name: 'Approach Surface',
       criteria: { slope: 20, innerHalfWidth: 250, outerHalfWidth: 750, length: 5000 },
-      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility / visual)',
+      ufcRef: '14 CFR §77.19(d) — Approach surface (non-utility / visual)',
       ufcCriteria: '20:1 slope extending 5,000 ft from the runway end, expanding from 500 ft to 1,500 ft wide.',
       description: '20:1 slope, 5,000 ft long, 1,500 ft outer width.',
       color: '#F97316',
@@ -365,8 +368,11 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
       // runways designated as utility or visual" — a visual runway takes the
       // 5,000-ft arc regardless of utility/non-utility. Previously mis-grouped
       // with the 10,000-ft set. law.cornell.edu/cfr/text/14/77.19, 2026-07-16.
+      // ufcRef qualifier corrected from "(non-utility)" to "(visual)" to match:
+      // the 5,000-ft radius here is driven by visual status, not utility status
+      // (see the ufcCriteria/description below, already "(visual runway)"/"(visual)").
       criteria: { height: 150, radius: 5000 },
-      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcRef: '14 CFR §77.19(a) — Horizontal surface (visual)',
       ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 5,000 ft radius of each runway end (visual runway).',
       description: '150 ft above airport elevation within 5,000 ft (visual).',
       color: '#22C55E',
@@ -374,7 +380,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     conical: {
       name: 'Conical Surface',
       criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcRef: '14 CFR §77.19(b) — Conical surface',
       ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
       description: '20:1 slope, 4,000 ft horizontal extent.',
       color: '#3B82F6',
@@ -392,7 +398,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     primary: {
       name: 'Primary Surface',
       criteria: { halfWidth: 250, extension: 200, maxHeight: 0 },
-      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility non-precision ≥¾ mi)',
+      ufcRef: '14 CFR §77.19(c) — Primary surface (non-utility non-precision ≥¾ mi)',
       ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
       description: '500 ft wide × runway length + 200 ft (non-utility non-precision ≥¾ mi).',
       color: '#EF4444',
@@ -402,7 +408,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
       // outerHalfWidth verified 1,750 ft (3,500-ft total end width) per
       // 14 CFR §77.19(d), law.cornell.edu/cfr/text/14/77.19 fetch 2026-07-16.
       criteria: { slope: 34, innerHalfWidth: 250, outerHalfWidth: 1750, length: 10000 },
-      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility non-precision ≥¾ mi)',
+      ufcRef: '14 CFR §77.19(d) — Approach surface (non-utility non-precision ≥¾ mi)',
       ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 500 ft to 3,500 ft wide (visibility ≥ ¾ mile).',
       description: '34:1 slope, 10,000 ft long, 3,500 ft outer width.',
       color: '#F97316',
@@ -410,7 +416,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     horizontal: {
       name: 'Horizontal Surface',
       criteria: { height: 150, radius: 10000 },
-      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcRef: '14 CFR §77.19(a) — Horizontal surface (non-utility)',
       ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
       description: '150 ft above airport elevation within 10,000 ft (non-utility).',
       color: '#22C55E',
@@ -418,7 +424,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     conical: {
       name: 'Conical Surface',
       criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcRef: '14 CFR §77.19(b) — Conical surface',
       ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
       description: '20:1 slope, 4,000 ft horizontal extent.',
       color: '#3B82F6',
@@ -443,7 +449,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
       // as low as three-fourths of a statute mile". Previously encoded
       // 250/500 ft. law.cornell.edu/cfr/text/14/77.19, 2026-07-16.
       criteria: { halfWidth: 500, extension: 200, maxHeight: 0 },
-      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility non-precision <¾ mi)',
+      ufcRef: '14 CFR §77.19(c) — Primary surface (non-utility non-precision <¾ mi)',
       ufcCriteria: 'No object may protrude above the primary surface elevation within 500 ft of centerline (1,000 ft total width) and 200 ft beyond each runway end.',
       description: '1,000 ft wide × runway length + 200 ft (non-utility non-precision <¾ mi).',
       color: '#EF4444',
@@ -454,7 +460,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
       // §77.19(d): "The inner edge of the approach surface is the same width
       // as the primary surface." law.cornell.edu fetch 2026-07-16.
       criteria: { slope: 34, innerHalfWidth: 500, outerHalfWidth: 2000, length: 10000 },
-      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility non-precision <¾ mi)',
+      ufcRef: '14 CFR §77.19(d) — Approach surface (non-utility non-precision <¾ mi)',
       ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 1,000 ft to 4,000 ft wide (visibility < ¾ mile).',
       description: '34:1 slope, 10,000 ft long, 4,000 ft outer width.',
       color: '#F97316',
@@ -462,7 +468,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     horizontal: {
       name: 'Horizontal Surface',
       criteria: { height: 150, radius: 10000 },
-      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcRef: '14 CFR §77.19(a) — Horizontal surface (non-utility)',
       ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
       description: '150 ft above airport elevation within 10,000 ft (non-utility).',
       color: '#22C55E',
@@ -470,7 +476,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     conical: {
       name: 'Conical Surface',
       criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcRef: '14 CFR §77.19(b) — Conical surface',
       ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
       description: '20:1 slope, 4,000 ft horizontal extent.',
       color: '#3B82F6',
@@ -490,7 +496,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     primary: {
       name: 'Primary Surface',
       criteria: { halfWidth: 500, extension: 200, maxHeight: 0 }, // 1000 ft total
-      ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility precision)',
+      ufcRef: '14 CFR §77.19(c) — Primary surface (non-utility precision)',
       ufcCriteria: 'No object may protrude above the primary surface elevation within 500 ft of centerline (1,000 ft total width) and 200 ft beyond each runway end.',
       description: '1,000 ft wide × runway length + 200 ft (non-utility precision).',
       color: '#EF4444',
@@ -507,7 +513,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
         secondSegmentSlope: 40,
         segmentLength: 10000,
       },
-      ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility precision instrument)',
+      ufcRef: '14 CFR §77.19(d) — Approach surface (non-utility precision instrument)',
       ufcCriteria: '50:1 slope for first 10,000 ft then 40:1 for the next 40,000 ft, expanding from 1,000 ft to 16,000 ft wide.',
       description: '50:1 (first 10kft) then 40:1 (next 40kft), 50,000 ft long, 16,000 ft outer width.',
       color: '#F97316',
@@ -515,7 +521,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     horizontal: {
       name: 'Horizontal Surface',
       criteria: { height: 150, radius: 10000 },
-      ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
+      ufcRef: '14 CFR §77.19(a) — Horizontal surface (non-utility)',
       ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
       description: '150 ft above airport elevation within 10,000 ft (non-utility).',
       color: '#22C55E',
@@ -523,7 +529,7 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     conical: {
       name: 'Conical Surface',
       criteria: { slope: 20, horizontalExtent: 4000, baseHeight: 150 },
-      ufcRef: '14 CFR §77.19(d) — Conical surface',
+      ufcRef: '14 CFR §77.19(b) — Conical surface',
       ufcCriteria: '20:1 slope extending 4,000 ft outward from the horizontal surface boundary.',
       description: '20:1 slope, 4,000 ft horizontal extent.',
       color: '#3B82F6',

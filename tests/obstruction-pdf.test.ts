@@ -2,18 +2,15 @@ import { describe, it, expect } from 'vitest'
 import { generateObstructionPdf } from '@/lib/obstruction-pdf'
 import type { ObstructionRow } from '@/lib/supabase/obstructions'
 
-// Covers the set-aware details-table row (P77 Task 5b): Part 77 evaluations
-// show a "Surface Set" row instead of "Runway Class" (a UFC-only concept);
-// UFC evaluations — including legacy rows with a NULL surface_set — keep
-// "Runway Class" and gain a "Surface Set" row above it for symmetry.
-// The Part 77 case below fixtures runway_class: null so the
-// `not.toContain('Class null')` assertion is load-bearing: `rwClass` is
-// computed unconditionally in the generator as `Class ${runway_class}`, so a
-// non-null fixture value could never produce the literal "Class null" even
-// if a regression leaked rwClass into the Part 77 branch. (Checked against
-// the live schema: obstruction_evaluations.runway_class is NOT NULL, so this
-// is a defensive test input for the generator's null-handling, not a value
-// the column can hold today.)
+// Covers the "Surface Standard" details-table row (SSE Task 8): the old
+// set-aware "Surface Set" + "Runway Class" pair was collapsed into a single
+// row driven by resolveStandardLabel(set, runway_class) — the same registry
+// function the [id] detail page and Records Export use, so the three never
+// disagree. UFC rows resolve to "UFC 3-260-01 — <label>"; Part 77 rows
+// (whose runway_class is now NULL) resolve to "FAA Part 77 (14 CFR §77.19)".
+// Legacy rows with a NULL surface_set fall back to UFC for backward
+// compatibility, matching resolveStandardLabel's own default.
+//
 // `doc.output()` is safe to substring-search here because these generators
 // construct the jsPDF with no `compress` option (defaults to false), so the
 // content stream's text-showing operators are plain, un-deflated bytes.
@@ -46,8 +43,8 @@ function evaluation(overrides: Omit<Partial<ObstructionRow>, 'runway_class'> & {
   } as ObstructionRow
 }
 
-describe('generateObstructionPdf — surface-set details row', () => {
-  it('Part 77 evaluations print a Surface Set row and never a Runway Class row', async () => {
+describe('generateObstructionPdf — Surface Standard row', () => {
+  it('Part 77 evaluations print the FAA label and never a bare Class cell', async () => {
     const { doc, filename } = await generateObstructionPdf({
       evaluation: evaluation({ surface_set: 'faa_part77', runway_class: null }),
       photoDataUrls: [],
@@ -57,14 +54,17 @@ describe('generateObstructionPdf — surface-set details row', () => {
     })
 
     const raw = doc.output()
-    expect(raw).toContain('Surface Set')
+    expect(raw).toContain('Surface Standard')
+    // Literal parens are backslash-escaped inside a PDF content stream (per
+    // the format's string-literal syntax), so the searched substring can't
+    // include them — 'FAA Part 77' alone is still load-bearing.
     expect(raw).toContain('FAA Part 77')
     expect(raw).not.toContain('Runway Class')
     expect(raw).not.toContain('Class null')
     expect(filename).toMatch(/\.pdf$/i)
   })
 
-  it('UFC evaluations keep Runway Class and add a Surface Set row above it', async () => {
+  it('UFC evaluations resolve the class into the same row (Army Class B)', async () => {
     const { doc } = await generateObstructionPdf({
       evaluation: evaluation({ surface_set: 'ufc_3_260_01', runway_class: 'Army_B' }),
       photoDataUrls: [],
@@ -74,14 +74,27 @@ describe('generateObstructionPdf — surface-set details row', () => {
     })
 
     const raw = doc.output()
-    expect(raw).toContain('Surface Set')
+    expect(raw).toContain('Surface Standard')
     expect(raw).toContain('UFC 3-260-01')
-    expect(raw).toContain('Runway Class')
     expect(raw).toContain('Army Class B')
     expect(raw).not.toContain('FAA Part 77')
+    expect(raw).not.toContain('Class null')
   })
 
-  it('legacy rows with a NULL surface_set fall back to the UFC row (backward compatibility)', async () => {
+  it('UFC Class A evaluations resolve to Air Force Class A', async () => {
+    const { doc } = await generateObstructionPdf({
+      evaluation: evaluation({ surface_set: 'ufc_3_260_01', runway_class: 'A' }),
+      photoDataUrls: [],
+      mapDataUrl: null,
+      baseName: 'Test AFB',
+      baseIcao: 'KTST',
+    })
+
+    const raw = doc.output()
+    expect(raw).toContain('Air Force Class A')
+  })
+
+  it('legacy rows with a NULL surface_set fall back to UFC (backward compatibility)', async () => {
     const { doc } = await generateObstructionPdf({
       evaluation: evaluation({ surface_set: null, runway_class: 'B' }),
       photoDataUrls: [],
@@ -91,8 +104,25 @@ describe('generateObstructionPdf — surface-set details row', () => {
     })
 
     const raw = doc.output()
-    expect(raw).toContain('Surface Set')
+    expect(raw).toContain('Surface Standard')
     expect(raw).toContain('UFC 3-260-01')
-    expect(raw).toContain('Runway Class')
+    expect(raw).toContain('Air Force Class B')
+  })
+
+  it('a legacy row with BOTH surface_set and runway_class NULL still never prints "Class null"', async () => {
+    // Defensive input: the live schema doesn't allow this combination today
+    // (obstruction_evaluations.runway_class is NOT NULL for UFC rows), but
+    // resolveStandardLabel's NULL-class default (Class B) must hold even here.
+    const { doc } = await generateObstructionPdf({
+      evaluation: evaluation({ surface_set: null, runway_class: null }),
+      photoDataUrls: [],
+      mapDataUrl: null,
+      baseName: 'Test AFB',
+      baseIcao: 'KTST',
+    })
+
+    const raw = doc.output()
+    expect(raw).not.toContain('Class null')
+    expect(raw).toContain('Air Force Class B')
   })
 })

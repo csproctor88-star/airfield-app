@@ -198,12 +198,12 @@ export function generatePart77TransitionalPolygons(
 // §77.19(a)/(b) Horizontal + Conical stadiums
 // ---------------------------------------------------------------------------
 
-/** §77.19(b): horizontal-surface stadium at the per-runway arc radius. */
+/** §77.19(a): horizontal-surface stadium at the per-runway arc radius. */
 export function generatePart77HorizontalPolygon(rwy: RunwayGeometry, radiusFt: number): [number, number][] {
   return generateStadiumPolygon(rwy, radiusFt)
 }
 
-/** §77.19(a): conical-surface stadium — horizontal radius + conical horizontal extent. */
+/** §77.19(b): conical-surface stadium — horizontal radius + conical horizontal extent. */
 export function generatePart77ConicalPolygon(
   rwy: RunwayGeometry,
   radiusFt: number,

@@ -7,17 +7,23 @@ import { useInstallation } from '@/lib/installation-context'
 import { formatDistanceToNow } from 'date-fns'
 import { Map, List, History as HistoryIcon, ArrowLeft, Search, X, Trash2 } from 'lucide-react'
 import { formatZuluDate } from '@/lib/utils'
+import { getSurfaceSet } from '@/lib/airport-mode'
+import type { SurfaceSet } from '@/lib/calculations/obstructions'
+import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
 
 const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view-google'))
 
-function matchesSearch(ev: ObstructionRow, query: string): boolean {
+// Searched in place of a bare runway_class — NULL-safe (Part 77 rows may
+// carry NULL) and matches on the resolved standard label ("UFC 3-260-01 —
+// Air Force Class A", "FAA Part 77 (14 CFR §77.19)") instead of the raw enum.
+function matchesSearch(ev: ObstructionRow, query: string, standardLabel: string): boolean {
   const q = query.toLowerCase()
   const fields: string[] = [
     ev.display_id ?? '',
     ev.notes ?? '',
     ev.description ?? '',
     ev.controlling_surface ?? '',
-    ev.runway_class ?? '',
+    standardLabel,
     ev.has_violation ? 'violation' : 'clear',
     ev.object_height_agl != null ? `${ev.object_height_agl}` : '',
     ev.distance_from_centerline_ft != null ? `${ev.distance_from_centerline_ft}` : '',
@@ -33,7 +39,7 @@ function matchesSearch(ev: ObstructionRow, query: string): boolean {
 
 export default function ObstructionHistoryPage() {
   const router = useRouter()
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const [evaluations, setEvaluations] = useState<ObstructionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -69,8 +75,17 @@ export default function ObstructionHistoryPage() {
     setDeletingId(null)
   }
 
+  // Legacy rows (NULL surface_set) fall back to the base's current default —
+  // mirrors the [id] detail page's `pinnedSet ?? base default` idiom, so
+  // search never disagrees with what the detail page displays.
+  const standardLabelFor = (ev: ObstructionRow): string =>
+    resolveStandardLabel(
+      (ev.surface_set as SurfaceSet | null | undefined) ?? getSurfaceSet(currentInstallation),
+      ev.runway_class,
+    )
+
   const filtered = search.trim()
-    ? evaluations.filter((ev) => matchesSearch(ev, search.trim()))
+    ? evaluations.filter((ev) => matchesSearch(ev, search.trim(), standardLabelFor(ev)))
     : evaluations
 
   return (

@@ -58,7 +58,7 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(def.approach.criteria.outerHalfWidth).toBe(2000)  // 4,000 ft total (low vis)
   })
 
-  // ── Primary surface widths per §77.19(a) — total widths = halfWidth × 2 ──
+  // ── Primary surface widths per §77.19(c) — total widths = halfWidth × 2 ──
 
   it('utility_visual primary is 250 ft total (125 half-width)', () => {
     expect(getPart77Surfaces('utility_visual').primary.criteria.halfWidth).toBe(125)
@@ -89,7 +89,7 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(getPart77Surfaces('non_utility_precision').primary.criteria.halfWidth).toBe(500)
   })
 
-  // ── Approach surface slopes per §77.19(c) ──
+  // ── Approach surface slopes per §77.19(d) ──
 
   it('visual approaches use 20:1 slope', () => {
     expect(getPart77Surfaces('utility_visual').approach.criteria.slope).toBe(20)
@@ -110,7 +110,7 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(c.length).toBe(50000)
   })
 
-  // ── Approach surface lengths per §77.19(c) ──
+  // ── Approach surface lengths per §77.19(d) ──
 
   it('visual approaches are 5,000 ft long', () => {
     expect(getPart77Surfaces('utility_visual').approach.criteria.length).toBe(5000)
@@ -126,7 +126,7 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(getPart77Surfaces('non_utility_precision').approach.criteria.length).toBe(50000)
   })
 
-  // ── Approach outer half-widths per §77.19(c) ──
+  // ── Approach outer half-widths per §77.19(d) ──
 
   it('non_utility_non_precision_low outer half-width is 2,000 ft (4,000 ft total)', () => {
     expect(getPart77Surfaces('non_utility_non_precision_low').approach.criteria.outerHalfWidth).toBe(2000)
