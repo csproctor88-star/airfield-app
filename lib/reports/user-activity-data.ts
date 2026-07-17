@@ -5,6 +5,7 @@ import {
   getSlotLabel,
   type DailyReviewSlot,
   type SignerInfo,
+  type SlotLabelSource,
 } from '@/lib/supabase/daily-reviews'
 
 // ── NAMO/NAMT Report Tool — data module ─────────────────────
@@ -89,6 +90,13 @@ export interface UserActivityData {
   rows: UserActivityRow[]
   totals: Record<UserActivityDomain, number>
   coverageNotes: { domain: UserActivityDomain; coverageStart: string; affected: number }[]
+  /**
+   * Set when the zero-activity (base_members) lookup failed. The report still
+   * renders — the matrix simply omits any all-zero rows, since we couldn't
+   * confirm base membership — but the caller should surface a subtle notice
+   * rather than treat this as the all-or-nothing throw contract below.
+   */
+  zeroActivityUnavailable?: boolean
 }
 
 /** Base member candidate for zero-activity injection (role from profiles, authoritative). */
@@ -376,8 +384,16 @@ export interface DailyReviewSignoffSource {
   afm_signed_at: string | null
 }
 
-/** Five-slot fan-out: one raw row per non-null `*_signed_by` slot. */
-export function expandDailyReviewRows(rows: DailyReviewSignoffSource[]): RawDomainRow[] {
+/**
+ * Five-slot fan-out: one raw row per non-null `*_signed_by` slot.
+ * `base` threads through to `getSlotLabel` so civilian Part 139 bases get
+ * their mode-appropriate slot labels (e.g. "Day Shift Lead" / "Ops
+ * Supervisor") instead of the USAF default; omit/null for the USAF default.
+ */
+export function expandDailyReviewRows(
+  rows: DailyReviewSignoffSource[],
+  base?: SlotLabelSource | null,
+): RawDomainRow[] {
   const out: RawDomainRow[] = []
   for (const row of rows) {
     for (const slot of DAILY_REVIEW_SLOTS) {
@@ -390,7 +406,7 @@ export function expandDailyReviewRows(rows: DailyReviewSignoffSource[]): RawDoma
         actorId: signedBy,
         actorName: null,
         ts: signedAt ?? row.review_date,
-        label: `Daily review ${row.review_date} — ${getSlotLabel(slot, null)}`,
+        label: `Daily review ${row.review_date} — ${getSlotLabel(slot, base)}`,
         href: null,
       })
     }
@@ -401,7 +417,7 @@ export function expandDailyReviewRows(rows: DailyReviewSignoffSource[]): RawDoma
 type Db = Record<string, unknown>
 const s = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null)
 
-function mapDomainRows(domain: UserActivityDomain, data: Db[]): RawDomainRow[] {
+function mapDomainRows(domain: UserActivityDomain, data: Db[], base?: SlotLabelSource | null): RawDomainRow[] {
   switch (domain) {
     case 'wildlife_sightings':
       return data.map((r) => ({
@@ -454,7 +470,7 @@ function mapDomainRows(domain: UserActivityDomain, data: Db[]): RawDomainRow[] {
         label: `QRC ${r.qrc_number} — ${s(r.label) ?? s(r.title) ?? 'Execution'}`, href: null,
       }))
     case 'daily_review_signoffs':
-      return expandDailyReviewRows(data as unknown as DailyReviewSignoffSource[])
+      return expandDailyReviewRows(data as unknown as DailyReviewSignoffSource[], base)
     case 'ppr':
       return data.map((r) => ({
         domain, id: String(r.id),
@@ -474,6 +490,7 @@ async function fetchDomainRows(
   domain: UserActivityDomain,
   startIso: string,
   endIso: string,
+  base?: SlotLabelSource | null,
 ): Promise<RawDomainRow[]> {
   const plan = buildDomainQueryPlan(domain, startIso, endIso)
   let query = supabase
@@ -486,41 +503,53 @@ async function fetchDomainRows(
   if (plan.status) query = query.eq(plan.status.column, plan.status.value)
   const { data, error } = await query
   if (error) throw new Error(`User activity fetch failed (${domain}): ${error.message}`)
-  return mapDomainRows(domain, (data ?? []) as Db[])
+  return mapDomainRows(domain, (data ?? []) as Db[], base)
 }
 
 /**
  * Fetch + aggregate per-user activity for the selected domains.
  * Promise.all fan-out per domain (mirrors analytics-data.ts), then ONE batched
  * profiles lookup covering actor uuids + zero-activity members (mirrors
- * fetchSignersForRows). Query errors throw — a leadership report must never
- * silently render zeros.
+ * fetchSignersForRows). Domain/profile query errors throw — a leadership
+ * report must never silently render zeros. The base_members lookup (used
+ * only for the zero-activity opt-in) is the one exception: it degrades
+ * gracefully (see below) rather than aborting an otherwise-successful report.
  */
 export async function fetchUserActivityData(
   baseId: string,
   startIso: string,
   endIso: string,
   domains: UserActivityDomain[],
-  opts?: { includeZeroActivity?: boolean },
+  opts?: {
+    includeZeroActivity?: boolean
+    /** Base config for civilian-aware daily-review slot labels; omit/null = USAF default. */
+    base?: SlotLabelSource | null
+  },
 ): Promise<UserActivityData> {
   const supabase = createClient()
   if (!supabase || !baseId || domains.length === 0) return emptyData()
 
   const rawArrays = await Promise.all(
-    domains.map((d) => fetchDomainRows(supabase, baseId, d, startIso, endIso)),
+    domains.map((d) => fetchDomainRows(supabase, baseId, d, startIso, endIso, opts?.base)),
   )
   const raw: RawDomainRow[] = ([] as RawDomainRow[]).concat(...rawArrays)
 
   // Zero-activity candidates: base members (membership), roles from profiles
-  // (authoritative — base_members.role is legacy/stale).
+  // (authoritative — base_members.role is legacy/stale). A failure here is
+  // NOT fatal: the report is still useful without the zero-activity rows, so
+  // we note it (zeroActivityUnavailable) instead of throwing.
   let memberIds: string[] = []
+  let zeroActivityUnavailable = false
   if (opts?.includeZeroActivity) {
     const { data: members, error } = await supabase
       .from('base_members')
       .select('user_id')
       .eq('base_id', baseId)
-    if (error) throw new Error(`User activity fetch failed (base members): ${error.message}`)
-    memberIds = ((members ?? []) as { user_id: string }[]).map((m) => m.user_id)
+    if (error) {
+      zeroActivityUnavailable = true
+    } else {
+      memberIds = ((members ?? []) as { user_id: string }[]).map((m) => m.user_id)
+    }
   }
 
   // ONE batched profiles lookup for actor uuids + member ids.
@@ -547,7 +576,7 @@ export async function fetchUserActivityData(
 
   let result = buildActivityMatrix(raw, profileMap, domains, startIso)
 
-  if (opts?.includeZeroActivity) {
+  if (opts?.includeZeroActivity && !zeroActivityUnavailable) {
     const memberIdSet = new Set(memberIds)
     const members: ZeroActivityMember[] = profileRows
       .filter((p) => memberIdSet.has(p.id) && p.is_active !== false && p.role != null)
@@ -557,6 +586,8 @@ export async function fetchUserActivityData(
       }))
     result = injectZeroActivityRows(result, members)
   }
+
+  if (zeroActivityUnavailable) result = { ...result, zeroActivityUnavailable: true }
 
   return result
 }

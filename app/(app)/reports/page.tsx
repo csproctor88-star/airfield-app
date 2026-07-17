@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb, Loader2, ChevronRight } from 'lucide-react'
+import { FileText, AlertTriangle, TrendingUp, Clock, Lightbulb, Loader2, ChevronRight, Users } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { fetchAnalyticsData, type AnalyticsData } from '@/lib/reports/analytics-data'
 
 const CHECK_TYPE_LABELS: Record<string, string> = {
@@ -11,12 +12,23 @@ const CHECK_TYPE_LABELS: Record<string, string> = {
   ife: 'IFE', ground_emergency: 'Ground Emergency', heavy_aircraft: 'Heavy Aircraft',
 }
 
-const REPORT_CARDS = [
+interface ReportCard {
+  title: string
+  description: string
+  href: string
+  icon: typeof FileText
+  color: string
+  /** When set, the card only renders for viewers holding this permission. */
+  perm?: string
+}
+
+const REPORT_CARDS: ReportCard[] = [
   { title: 'Daily Operations Summary', description: 'All activity for a selected date or range.', href: '/reports/daily', icon: FileText, color: 'var(--color-cyan)' },
   { title: 'Discrepancy Report', description: 'Filtered exports by status, type, shop, or location.', href: '/reports/discrepancies', icon: AlertTriangle, color: 'var(--color-warning)' },
   { title: 'Discrepancy Trends', description: 'Opened vs closed over time.', href: '/reports/trends', icon: TrendingUp, color: 'var(--color-purple)' },
   { title: 'Aging Discrepancies', description: 'By aging tier and shop with filtered exports.', href: '/reports/aging', icon: Clock, color: 'var(--color-danger)' },
   { title: 'Airfield Lighting Report', description: 'System health, outages, feature inventory.', href: '/reports/lighting', icon: Lightbulb, color: 'var(--color-status-pass)' },
+  { title: 'NAMO/NAMT Report Tool', description: 'Activity counts by individual user across selected modules.', href: '/reports/user-activity', icon: Users, color: 'var(--color-accent)', perm: PERM.REPORTS_USER_ACTIVITY },
 ]
 
 const TIME_FRAMES = [
@@ -29,6 +41,8 @@ const TIME_FRAMES = [
 
 export default function ReportsPage() {
   const { installationId } = useInstallation()
+  const { has } = usePermissions()
+  const visibleCards = REPORT_CARDS.filter((card) => !card.perm || has(card.perm))
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(30)
@@ -69,7 +83,7 @@ export default function ReportsPage() {
 
       {/* Report links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-        {REPORT_CARDS.map((card) => (
+        {visibleCards.map((card) => (
           <Link key={card.href} href={card.href} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div style={{
               padding: '10px 14px', display: 'flex', gap: 12, alignItems: 'center',

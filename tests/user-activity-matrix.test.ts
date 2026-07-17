@@ -264,6 +264,37 @@ describe('daily-review slot fan-out', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].ts).toBe('2026-07-01')
   })
+
+  it('defaults to the USAF slot label when no base is threaded through', () => {
+    const rows = expandDailyReviewRows([
+      reviewRow({ namo_signed_by: U1, namo_signed_at: '2026-07-01T20:00:00.000Z' }),
+    ])
+    expect(rows[0].label).toBe('Daily review 2026-07-01 — NAMO')
+  })
+
+  it('threads the base config through to getSlotLabel for civilian slot labels', () => {
+    const rows = expandDailyReviewRows(
+      [
+        reviewRow({
+          day_amsl_signed_by: U1, day_amsl_signed_at: '2026-07-01T14:00:00.000Z',
+          namo_signed_by: U1, namo_signed_at: '2026-07-01T20:00:00.000Z',
+        }),
+      ],
+      { airport_type: 'faa_part139' },
+    )
+    const dayLabel = rows.find((r) => r.id === 'dr-1:day_amsl')!.label
+    const namoLabel = rows.find((r) => r.id === 'dr-1:namo')!.label
+    expect(dayLabel).toBe('Daily review 2026-07-01 — Day Shift Lead')
+    expect(namoLabel).toBe('Daily review 2026-07-01 — Ops Supervisor')
+  })
+
+  it('honors a base custom shift name over the civilian default', () => {
+    const rows = expandDailyReviewRows(
+      [reviewRow({ day_amsl_signed_by: U1, day_amsl_signed_at: '2026-07-01T14:00:00.000Z' })],
+      { airport_type: 'faa_part139', shift_name_day: 'Alpha' },
+    )
+    expect(rows[0].label).toBe('Daily review 2026-07-01 — Alpha Lead')
+  })
 })
 
 describe('injectZeroActivityRows', () => {
