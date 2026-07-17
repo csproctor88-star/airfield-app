@@ -4135,6 +4135,195 @@ export type Database = {
         }
         Relationships: []
       }
+      driving_check_items: {
+        Row: {
+          base_id: string
+          created_at: string
+          guidance: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          guidance?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          guidance?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driving_check_items_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driving_check_results: {
+        Row: {
+          check_id: string
+          created_at: string
+          id: string
+          item_id: string | null
+          item_label: string
+          notes: string | null
+          sort_order: number
+          status: string
+        }
+        Insert: {
+          check_id: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_label: string
+          notes?: string | null
+          sort_order?: number
+          status: string
+        }
+        Update: {
+          check_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_label?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driving_check_results_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "driving_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driving_check_results_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "driving_check_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driving_checks: {
+        Row: {
+          base_id: string
+          checked_at: string
+          completed_by: string | null
+          completed_by_name: string | null
+          completed_by_oi: string | null
+          contractor_id: string | null
+          created_at: string
+          driver_name: string
+          driver_office_symbol: string | null
+          driver_phone: string | null
+          driver_rank: string | null
+          driver_unit: string | null
+          form_483_expires: string | null
+          form_483_status: string
+          id: string
+          location: string
+          notes: string | null
+          overall_result: string
+          pov_pass_number: string | null
+          updated_at: string
+          vehicle_id: string | null
+          vehicle_type: string | null
+          violation_description: string | null
+        }
+        Insert: {
+          base_id: string
+          checked_at?: string
+          completed_by?: string | null
+          completed_by_name?: string | null
+          completed_by_oi?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          driver_name: string
+          driver_office_symbol?: string | null
+          driver_phone?: string | null
+          driver_rank?: string | null
+          driver_unit?: string | null
+          form_483_expires?: string | null
+          form_483_status: string
+          id?: string
+          location: string
+          notes?: string | null
+          overall_result: string
+          pov_pass_number?: string | null
+          updated_at?: string
+          vehicle_id?: string | null
+          vehicle_type?: string | null
+          violation_description?: string | null
+        }
+        Update: {
+          base_id?: string
+          checked_at?: string
+          completed_by?: string | null
+          completed_by_name?: string | null
+          completed_by_oi?: string | null
+          contractor_id?: string | null
+          created_at?: string
+          driver_name?: string
+          driver_office_symbol?: string | null
+          driver_phone?: string | null
+          driver_rank?: string | null
+          driver_unit?: string | null
+          form_483_expires?: string | null
+          form_483_status?: string
+          id?: string
+          location?: string
+          notes?: string | null
+          overall_result?: string
+          pov_pass_number?: string | null
+          updated_at?: string
+          vehicle_id?: string | null
+          vehicle_type?: string | null
+          violation_description?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driving_checks_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driving_checks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driving_checks_contractor_id_fkey"
+            columns: ["contractor_id"]
+            isOneToOne: false
+            referencedRelation: "airfield_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_broadcasts: {
         Row: {
           body: string
@@ -4851,6 +5040,149 @@ export type Database = {
           },
         ]
       }
+      fpr_check_results: {
+        Row: {
+          check_id: string
+          created_at: string
+          id: string
+          item_id: string | null
+          item_label: string
+          notes: string | null
+          sort_order: number
+          status: string
+        }
+        Insert: {
+          check_id: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_label: string
+          notes?: string | null
+          sort_order?: number
+          status: string
+        }
+        Update: {
+          check_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          item_label?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fpr_check_results_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "fpr_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fpr_check_results_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "fpr_checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fpr_checklist_items: {
+        Row: {
+          base_id: string
+          created_at: string
+          guidance: string | null
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          guidance?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          guidance?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fpr_checklist_items_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fpr_checks: {
+        Row: {
+          base_id: string
+          check_date: string
+          completed_at: string | null
+          completed_by: string | null
+          completed_by_oi: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          shift: string
+          started_at: string
+        }
+        Insert: {
+          base_id: string
+          check_date: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          shift: string
+          started_at?: string
+        }
+        Update: {
+          base_id?: string
+          check_date?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          completed_by_oi?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          shift?: string
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fpr_checks_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fpr_checks_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       infrastructure_features: {
         Row: {
           bar_group_id: string | null
@@ -5264,6 +5596,127 @@ export type Database = {
             columns: ["base_id"]
             isOneToOne: false
             referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      local_regulation_reviews: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          initials_snapshot: string | null
+          regulation_id: string
+          reviewed_at: string
+          user_id: string
+          version_at_review: number
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          initials_snapshot?: string | null
+          regulation_id: string
+          reviewed_at?: string
+          user_id: string
+          version_at_review: number
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          initials_snapshot?: string | null
+          regulation_id?: string
+          reviewed_at?: string
+          user_id?: string
+          version_at_review?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "local_regulation_reviews_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "local_regulation_reviews_regulation_id_fkey"
+            columns: ["regulation_id"]
+            isOneToOne: false
+            referencedRelation: "local_regulations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "local_regulation_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      local_regulations: {
+        Row: {
+          base_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          file_size_bytes: number | null
+          id: string
+          is_archived: boolean
+          mime_type: string | null
+          review_interval: string
+          storage_path: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          file_size_bytes?: number | null
+          id?: string
+          is_archived?: boolean
+          mime_type?: string | null
+          review_interval?: string
+          storage_path: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          file_size_bytes?: number | null
+          id?: string
+          is_archived?: boolean
+          mime_type?: string | null
+          review_interval?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "local_regulations_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "local_regulations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -6856,6 +7309,20 @@ export type Database = {
             columns: ["base_id"]
             isOneToOne: false
             referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrc_executions_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qrc_executions_opened_by_fkey"
+            columns: ["opened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -9374,6 +9841,13 @@ export type Database = {
             referencedRelation: "inspections"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "wildlife_sightings_observed_by_id_fkey"
+            columns: ["observed_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       wildlife_strikes: {
@@ -9528,6 +10002,13 @@ export type Database = {
             columns: ["discrepancy_id"]
             isOneToOne: false
             referencedRelation: "discrepancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wildlife_strikes_reported_by_id_fkey"
+            columns: ["reported_by_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

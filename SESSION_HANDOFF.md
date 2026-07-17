@@ -1,228 +1,339 @@
 # Session Handoff
 
-**Date:** 2026-07-17 (session 5 — started 2026-07-16 evening)
-**Branch:** `main`. **20 commits** this session (`dbdde930`..`c9c4f955`), all
-**pushed**; tree clean, level with origin.
-**Build:** verified at wrap on the final tree: tsc ✓ · lint 0 errors · vitest
-**1368 passed | 0 skipped** (144 files — +107 tests / +4 test files this
+**Date:** 2026-07-17 (session 6 — overnight autonomous run, owner asleep)
+**Branch:** `main`. **33 commits** this session (`90360dff`..`7a01609c`), all
+**LOCAL — NOT PUSHED** (push authorization pending; see Next session tasks).
+**Build:** verified on the final tree: tsc ✓ · lint 0 errors · vitest
+**1731 passed | 0 skipped** (170 files — +363 tests / +26 test files this
 session) · `npm run build` ✓ (middleware 80.8 kB).
-**HEAD:** `c9c4f955`.
-**DB:** no new migrations — both features shipped zero-migration; latest
-applied remains `2026071600_seed_airfield_status_rows`.
+**HEAD:** `7a01609c`. (The last two commits landed post-wrap: the owner
+supplied the ICAO Annex 14 PDF, unblocking the arm the overnight run had
+skipped — see the ICAO subsection below. The owner also removed the
+superpowers plugin from `~/.claude/settings.json` mid-session; future
+sessions plan directly, per memory.)
+**DB:** **all 14 migrations APPLIED 2026-07-17** (owner-run via the `!`
+one-liner after the permission layer correctly refused my unattended
+attempts). One apply-time fix: `2026071741`'s backfill hit a 23503 FK
+violation on an orphaned `saved_by_id` (deleted profile) — made orphan-safe
+with an `EXISTS (profiles)` guard; exactly 1 completed check keeps
+`completed_by_id` NULL and falls to the report's "Former user" fallback by
+design. Verification query confirmed every expected count (30 new RLS
+policies, 9 permission keys, 66-base local_regs backfill, realtime
+publication membership, 342 checks backfilled, ICAO columns + widened
+CHECKs + nullable runway_class). `lib/supabase/types.ts` regenerated
+post-apply per its documented GENERATED+MANUAL procedure (purely additive
+diff; hand-narrowings re-applied). Latest applied:
+`2026071762_obstruction_evaluations_runway_class_nullable`.
 
 ---
 
 ## What shipped this session
 
-Two features built end-to-end via subagent-driven development (per-task
-implementer/reviewer subagents with per-task model selection, final
-whole-branch reviews), plus the complete regulatory verification that
-unblocks the surface-set expansion build. Every commit passed the four-gate
-check (tsc / lint / full vitest / build) before landing; both features'
-final review verdicts were "Ready to merge: Yes."
+Six features built end-to-end via subagent-driven development (per-task
+implementer/reviewer subagents, per-task model selection, adversarial final
+review per feature). Every commit passed the four-gate check (tsc / lint /
+full vitest / build); every feature's final review verdict is **"Ready to
+merge: Yes"** after its fix wave. Per-feature SDD ledgers with full review
+history live untracked in `.superpowers/sdd/progress-*.md`;
+`overnight-wrap-notes.md` there is the condensed morning checklist.
 
-### Obstruction manual coordinate entry (`dbdde930`, `d7c73f6e`, `8ffc4b11`, `6ee581cd`, `fce9abee`)
+### Surface-set expansion (`90360dff`..`732daa4a`, 12 commits)
 
-Users can now type coordinates into `/obstructions` instead of tapping the
-map. `lib/calculations/coordinates.ts` is a pure auto-detecting parser
-(DD / DDM / DMS / packed FAA-NOTAM / MGRS via the new zero-dep `mgrs@2.2.0`
-package) plus four formatters; `components/ui/coordinate-entry-input.tsx`
-is a generic smart-parse field (live format preview, specific validation
-errors, Place Pin / Enter commit) designed for later reuse by
-wildlife/discrepancy pickers. The page wiring reuses the existing
-flyTo→pin→elevation pipeline unchanged (typed point ≡ map tap), replaces
-the Selected Location coordinates cell with a DD/DMS/DDM/MGRS stack with
-per-line copy — killing the hardcoded `°N`/`°W` bug there and in the PDF —
-and adds a >30 NM advisory toast on typed entry. Review process caught the
-formatters' 60.0-carry defect class (seconds in `formatDMS`, then the final
-review caught the sibling minutes edge in `formatDDM` — a point ~9 m below
-an integer degree line rendered `60.00'` that the module's own parser
-rejected on copy-paste). Both fixed with carry logic + tests.
+The owner-ruled UFC corrections shipped: encoded Class B criteria corrected
+to the verified Table 3-7 values (inner horizontal 13,120 → 7,500 ft; ADCS
+remodeled as one 50,000-ft trapezoid flaring 2,000 → 16,000 ft with the
+horizontal portion capped at EAE + 500 ft — the owner's 25,100-ft worked
+example is a passing test; outer horizontal 44,500 ft), a verified
+**Air Force Class A (IFR)** criteria entry, and **Army Class B** corrected
+from its false byte-copy of AF (500-ft half-widths). The evaluator caps ADCS
+height at EAE + 500 at both interpolation sites; the five UFC map builders
+are criteria-parameterized so each class draws at its real dimensions; a new
+`lib/calculations/surface-standards.ts` registry powers a **4-standard
+what-if picker** on /obstructions (AF A / AF B / Army B / FAA Part 77) with
+class-aware save (`runway_class` NULL for Part 77 rows — requires migration
+`2026071762` before deploy), edit-mode (set, class) pinning, and a
+**Surface Evaluation Standard card** in Base Configuration → Runways that
+writes the base set + all runway classes with a confirm. PDF/history/export
+print a resolved Surface Standard label (never "Class null"); the §77.19
+subsection lettering debt is fixed repo-wide ((a) Horizontal … (e)
+Transitional); all ten UFC `ufcRef` citations were corrected to
+reference-supported items during the final-review fix wave. The ICAO Annex 14 arm was skipped overnight
+(the planning session never recorded the Table 4-1/4-2 transcription, and
+encoding it from model memory would violate the no-fabrication rule) — then
+**unblocked and built post-wrap** when the owner supplied the Annex 14 Vol I
+7th Ed. PDF:
 
-### UFC 3-260-01 verification + owner rulings (`974e95a7`, `4706f841`, `50fa4e71`, `fad18868`, `a3f4a384`, `b6d36b97` — doc-only)
+### ICAO Annex 14 arm (`24f90355`, `7a01609c` — post-wrap)
 
-The owner supplied UFC 3-260-01 **Change 3 (4 Feb 2026)** pages (Figure
-3-17/3-19, Table 3-7 items 1–15, the table NOTES, glossary content) and
-ruled on every open question blocking the surface-set expansion build:
+Tables 4-1/4-2/1-1 and the §4.1/§4.2/§3.4 rules were transcribed from the
+owner's PDF with two independent extractions agreeing cell-for-cell
+(binding source: `docs/references/icao-annex14-verified.md`, untracked like
+its UFC sibling). `24f90355` landed the engine: `annex14-criteria.ts`
+(metres as published, single `M_TO_FT` boundary; CAT II/III × code 1/2
+throws; the as-printed CAT I code-1,2 column — no horizontal section,
+3 000 m @ 2.5% then 12 000 m @ 3% — is encoded and test-locked),
+`annex14-geometry.ts` (approach trapezoids, inner-horizontal stadium,
+conical ring, strip-or-runway-edge transitionals, take-off climb that goes
+PARALLEL after reaching final width per §4.1.26), the evaluator arm with
+per-section piecewise approach heights, and the registry's fifth standard.
+`7a01609c` wired the UI: per-runway `icao_*` variant plumbing on
+/obstructions (exactly the `faa_approach_type` pattern), a14 map layer
+toggles, detail-page legend, PDF label + phase-2 caveat, and wizard ICAO
+selectors (Code Number / Approach Classification / Strip Width with §3.4
+hint defaults). Phase 1 honesty per the spec: inner approach, inner
+transitional, and balked landing are NOT evaluated — the CAT I–III caveat
+renders on the page and PDF. One documented judgment call: the PDF's caveat
+prints for every ICAO row (saved rows don't persist the classification, so
+precision-only gating isn't re-derivable there); the on-page caveat is
+precisely precision-gated. Every encoded value traces to the reference doc
+("NATO requirements" per the owner's request — the standard itself is ICAO
+Annex 14, which NATO airfields apply, and the in-app label stays
+"ICAO Annex 14" per the approved spec).
 
-- **Correct the encoded Class B criteria to the UFC values** (inner
-  horizontal 13,120 → 7,500 ft — the encoded value is the ICAO 4,000 m;
-  ADCS half-width schedule 1,000 → 4,500 → 8,000 ft).
-- **ADCS geometry, final:** horizontal portion at **EAE + 500 ft** (item 11
-  as printed, both classes); slope (50:1 B / 40:1 A) runs **from the nearest
-  threshold's elevation** to EAE + 500, so its length varies per Note 4
-  (owner worked example: EAE 380 / threshold 378 → 25,100 ft); total ADCS
-  length **50,000 ft both classes** (Class A confirmed by the owner's
-  constant-splay derivation; two earlier readings were superseded en route —
-  see the reference doc's history). The evaluator already baselines the
-  slope on threshold elevation (`obstructions.ts` approach_departure
-  branch), so the expansion build only adds the EAE+500 horizontal cap +
-  the value corrections.
-- **Conical / outer horizontal (glossary, class-invariant, fixed-wing
-  only):** conical 20:1 from the inner horizontal's edge, 7,000-ft extent;
-  outer horizontal 500 ft × 30,000 ft beyond the conical. Derivation rule:
-  no inner horizontal → no conical → no outer horizontal (Class A VFR has
-  only primary + sloped ADCS + transitionals).
-- **What-if picker offers all five standards** — confirmed.
+### NAMO/NAMT attribution groundwork (`66e9a46e`)
 
-Full transcription with provenance lives in
-`docs/references/ufc-3-260-01-table3-7-verified.md` — **untracked**
-(`docs/references/` is gitignored); the spec carries the resolution
-summaries. **The surface-set expansion build has zero open blockers.**
+Phase A of the report tool, landed early so history accrues from apply-day:
+staged permission `reports:user_activity` (leadership-only; amops excluded
+by design), `airfield_checks.completed_by_id` with a deterministic same-row
+backfill from `saved_by_id` (verified sound: drafts are deleted, never
+promoted, so `saved_by_id` on completed rows is always the completer), NOT
+VALID profile FKs on the QRC/wildlife actor columns, and `createCheck` now
+writes `completed_by_id` (the offline `check_file` path inherits it).
 
-### FAA Part 77 surface polygons (`a2ab1eab`, `675f7f2c`, `99a78a16`, `2a1cfad2`, `18ec7535`, `9dc2a250`, `392cfdc4`, `436bf1ee`, `c9c4f955`)
+### Flight Planning Room Check module (`4e71bdac`..`83890e54`, 6 commits)
 
-Civilian/Part 77 bases previously saw §77.19 numbers next to a map drawing
-UFC-only surfaces at UFC dimensions. Now the obstruction map draws the
-active set: per-runway §77.19 surfaces (primary, approach trapezoids
-dimensioned by each runway's `faa_approach_type` with the precision
-50:1→40:1 break line, transitionals, per-runway horizontal/conical
-stadiums, shared runway outline) from the new pure builder module
-`lib/calculations/part77-geometry.ts`; per-set legend/toggles with live
-overlay swap on the picker; set-aware page header, `identifySurface`
-(defaulted 5th param — existing callers untouched), and
-`withinApproachDeparture` key; edit-load pins the row's `surface_set` into
-state (plus an `editId` guard on the installation-reseed effect — without
-it a cold edit-URL load could clobber the pinned set and *persist the
-wrong `surface_set` on save*); PDF prints a Surface Set row instead of a
-meaningless UFC runway class for Part 77 rows; the base-config FAA
-approach selectors unlock for USAF bases whose `obstruction_surface_set`
-is `faa_part77`. Prerequisite commits corrected three verified §77.19
-mis-encodings in the engine criteria (approach outer width 2,000 → 3,500 ft
-for non-precision >¾ mi; horizontal radius 10,000 → 5,000 ft for visual
-non-utility; primary 500 → 1,000 ft + approach/transitional mirrors for the
-≤¾-mi category — **the engine default for unconfigured runways**, so future
-evaluations there change; that is the point). Values verified against the
-live CFR (law.cornell.edu fetches, verbatim quotes in provenance comments);
-a new invariant test locks approach-inner = primary across all six types.
+New opt-in USAF module at `/fpr`, SCN-patterned: per-shift today cards from
+`getActiveShifts`, a 3-state check modal (Satisfactory / Issue / N/A,
+required issue notes, quick-fill), 30-day history, monthly PDF, a Base Setup
+wizard checklist tab with editable per-base items ("suggested starting
+point" seeds — no DAFMAN citations anywhere per the regulatory-honesty
+stance), and a manual page. Saves route through the **offline queue**
+(`fpr_save`, upsert by (base, date, shift) so replay is idempotent) with the
+AF Form 3616 Events Log entry written by the queue handler after actual
+persistence — deliberately not by the CRUD module (house rule) nor at
+enqueue time. The final review caught an SCN-inherited **Critical**: editing
+a historical check rewrote *today's* natural key. Fixed (modal carries its
+check's date), along with snapshot-preserving edit drafts and a
+retriable-save reclassification. **SCN shares the same three bugs verbatim
+and still needs its own fix wave** (Known issues).
+
+### Airfield Driving Spot Check module (`dcf3c74a`..`18cefa42`, 4 commits)
+
+The former "483 Check log", renamed per the owner's 2026-07-17 ruling —
+"Airfield Driving Spot Check" everywhere user-facing ("43 Check" survives
+only as search keywords). New opt-in USAF module at `/driving-checks`:
+Start Spot Check mobile modal (driver identification + contractor lookup
+prefill from `airfield_contractors`, AF Form 483 segmented verification,
+vehicle incl. POV pass, locally-editable check items with required
+discrepancy notes, location datalist from base areas, live computed outcome
+with a violation flag requiring description), filterable history + stat
+strip, an AOB-ready date-range PDF (pass rate, common discrepancies,
+by-checker table), wizard items tab, manual page. It is an unbounded event
+log (plain inserts, no natural key) with typed driver columns. Review fixes
+worth knowing: `updateDrivingCheck` structurally cannot reassign checker
+attribution (a typo fix by another user no longer moves checks between
+AOB by-checker rows), and create/update assemble their return from insert
+responses (no re-fetch → no duplicate-on-transient-retry window).
+
+### Local Regulations Review module (`ad4d31af`..`17c1ade9`, 5 commits)
+
+"Base Regs" — a third tab on `/regulations` (deep-linkable, self-gated):
+base admins upload local regulation PDFs (25 MB, PDF-only, versioned with
+an optimistic replace lock); a required-reviewer roster re-reviews each doc
+on a per-doc monthly/quarterly day-based cadence with QRC-parity status
+semantics (`updated` beats `overdue`; re-upload resets everyone's cycle —
+enforced by an RLS version-equality insert policy from inception, plus a
+base_id-pin hardening added while the migration was still staged); a red
+due-dot rides the Reference Library sidebar entry (gated on module
+enablement AND permission — /regulations is ALWAYS_ON, so the permission
+alone would strand an unclearable dot); attests route through the offline
+queue with stale-version drains failing NonRetriable *by design* (the doc
+changed; the user must re-review the new edition — surfaced with honest
+"updated to a new edition" copy, not a permission error). The compliance
+PDF includes an **Archived (history)** section (the final review caught
+archived docs vanishing from the report the spec promised they'd stay in).
+The staged tables migration also adds both tables to the
+`supabase_realtime` publication (guarded DO-blocks) — without it the
+promised realtime badge would silently never fire.
+
+### NAMO/NAMT Report Tool (`392e6ade`..`1c66209b`, 4 commits)
+
+The report UI over Phase A's attribution: `/reports/user-activity` behind
+the staged `reports:user_activity` permission (pre-apply, everyone sees the
+access notice — correct). Nine-domain picker (per-domain checkboxes disabled
+with a "requires view access" note when the viewer lacks that module's view
+permission), users × domains matrix with Unlinked ("unlinked" chip) and
+Unattributed ("Former user") sections, drill-down from memory, coverage
+footnotes ("N record(s) … lack per-user attribution" — worded to match what
+the count actually measures), landscape PDF + Excel (Summary + per-domain
+drill-down sheets) + EmailPdfModal delivery, all consuming only the
+snapshotted generated data so exports can never desync from the preview.
+The data layer **throws on any domain fetch failure** rather than rendering
+silent zeros — a leadership count is all-or-nothing. Final-review fixes:
+a cleared date input could brick Generate (stuck spinner), and the two
+DATE-column domains (strikes, daily reviews) counted one extra calendar day
+because day-strings were sliced from UTC boundaries — the picker's local day
+strings are now threaded through, and the test that had locked the wrong
+behavior in was rewritten with both-direction UTC± assertions.
 
 ## Migrations status
 
+**All 14 STAGED, none applied.** Apply in this order with
+`npx supabase db query --linked --file supabase/migrations/<file>` (never
+`db push`), then run each file's header verification queries, then
+regenerate `lib/supabase/types.ts` (retires the session's additive
+hand-patches and untyped-client idioms).
+
 | File | Status | What it does |
 |---|---|---|
-| `2026071600_seed_airfield_status_rows.sql` | Applied 2026-07-16 | Prior latest — airfield_status backfill + seed trigger |
-| (this session) | — | Both features zero-migration by design; spec-assigned ranges `20260716xx` still reserved for the remaining builds (renumber to implementation date) |
+| `2026071720_fpr_permissions.sql` | Applied 2026-07-17 | fpr:view/write/manage_checklist + grants (note: atc gets view — confirm) |
+| `2026071721_fpr_tables.sql` | Applied 2026-07-17 | fpr_checklist_items / fpr_checks / fpr_check_results + matrix RLS |
+| `2026071730_local_regs_permissions.sql` | Applied 2026-07-17 | local_regs:view/manage + grants (civilian-roster broadening left open — see header) |
+| `2026071731_local_regs_tables.sql` | Applied 2026-07-17 | local_regulations / local_regulation_reviews + version-equality & base-pinned RLS + realtime publication membership |
+| `2026071732_local_regs_storage.sql` | Applied 2026-07-17 | private `local-regulations` bucket + path-scoped policies |
+| `2026071733_local_regs_enable_module.sql` | Applied 2026-07-17 | **owner-row UPDATE**: enabled_modules backfill (module is default-on) |
+| `2026071740_namo_namt_report_permission.sql` | Applied 2026-07-17 | reports:user_activity + leadership grants (civilian grants flagged in header — confirm) |
+| `2026071741_checks_completed_by_id.sql` | Applied 2026-07-17 | completed_by_id + deterministic backfill + partial index — **apply before deploying** (createCheck writes it) |
+| `2026071742_attribution_profile_fks.sql` | Applied 2026-07-17 | NOT VALID profile FKs on QRC/wildlife actor columns |
+| `2026071750_driving_check_permissions.sql` | Applied 2026-07-17 | driving_checks:view/write/manage_items + grants (no kiosk/atc — driver PII) |
+| `2026071751_driving_check_tables.sql` | Applied 2026-07-17 | driving_check_items / driving_checks / driving_check_results + matrix RLS |
+| `2026071760_surface_set_icao_annex14.sql` | Applied 2026-07-17 | widen surface-set CHECKs to include icao_annex14 — **now live-code-required** (the ICAO arm shipped post-wrap) |
+| `2026071761_runways_icao_classification.sql` | Applied 2026-07-17 | nullable icao_* columns on base_runways — **now live-code-required** (wizard writes them) |
+| `2026071762_obstruction_evaluations_runway_class_nullable.sql` | Applied 2026-07-17 | runway_class nullable + CHECK widened to A/B/Army_B (name-independent DO-block drop) — **apply before deploying** (Part 77 saves write NULL; Army what-if saves violate the old CHECK) |
 
 ## Bugs fixed during the session
 
+All caught by the review loop before any user saw them; listed because each
+is a class future sessions should watch for.
+
 | Symptom | Root cause | Commit |
 |---|---|---|
-| Selected Location + PDF showed `°N/°W` for every hemisphere | hardcoded hemisphere strings, `Math.abs(lon)` | `6ee581cd` |
-| formatDMS/formatDDM could render `60.0"`/`60.00'` fields their own parser rejects | `toFixed` rounding with no carry into minutes/degrees | `d7c73f6e`, `fce9abee` |
-| Part 77 approach drawn/evaluated at 2,000-ft outer width (should be 3,500), visual non-utility horizontal at 10,000 ft (should be 5,000), ≤¾-mi primary at 500 ft (should be 1,000) | criteria table mis-encodings vs §77.19 — verified against live CFR text | `a2ab1eab`, `675f7f2c` |
-| Editing a saved Part 77 evaluation recomputed/rendered under UFC | page never passed `surfaceSet` on edit re-eval; no state pin existed; reseed effect could clobber a pin on cold loads (and persist the wrong `surface_set` on save) | `9dc2a250`, `392cfdc4` |
-| Runway pavement outline vanished under Part 77 overlays | Part 77 branch omitted the shared `runway` layer (spec listed it as shared) | `c9c4f955` |
+| Save after switching the what-if standard could persist Class-B numbers labeled Class A | picker change never invalidated `multiAnalysis`; save columns derived from live state, results from the last run | `caab85e3` |
+| Edits never persisted `runway_class` (and would have silently reclassified legacy rows once classes mattered) | `updateObstructionEvaluation` never accepted the column; edit-load pinned the set but not the class | `11efbad7` |
+| Editing a historical FPR check overwrote today's check + logged a false completion | modal discarded the edited check's date; save hardcoded `todayZuluDate()` (SCN-inherited) | `83890e54` |
+| FPR edit after a template change silently dropped snapshot rows | draft builder seeded from active items only; delete-and-rewrite then removed orphans | `83890e54` |
+| A typo fix by another user moved a driving check between AOB by-checker rows | update path routed attribution through the shared payload builder | `351dccd3` |
+| Transient re-fetch failure after a committed driving-check save could duplicate the check on queue retry | post-insert re-fetch error classified retriable on a no-natural-key INSERT | `351dccd3` |
+| Disabling the Local Regs module left a stuck, unclearable red sidebar dot | badge gated on permission only; /regulations is ALWAYS_ON so the dot has no module-gated nav item to hide with | `527516e1` |
+| Archived local regs vanished from the compliance report the UI promised they'd stay in | report passed active docs only | `17c1ade9` |
+| Clearing a date input bricked the report Generate button (stuck spinner) | boundary conversion threw outside the try, after `setLoading(true)` | `1c66209b` |
+| Wildlife-strike / daily-review counts included one extra calendar day | DATE-column day-strings sliced from UTC boundaries, not the picker's local days; a test locked the bug in | `1c66209b` |
 
 ## Lessons from this session
 
-- **Owner's standing ruling: encode verified regulatory values.** When an
-  encoded criterion conflicts with the verified publication (UFC Table 3-7,
-  §77.19), correct it — changed evaluation results are the point, not a
-  risk to avoid. Verbatim source quotes go in provenance comments.
-- **The ADCS construction is the constant-splay method**: the sloped run's
-  widths set the splay; the horizontal portion continues at that splay to
-  the end width; totals are implicit, never printed. The horizontal
-  portion's elevation datum is EAE; the slope's datum is the nearest
-  threshold (already implemented in the evaluator).
-- **Table 3-7 has no conical/outer-horizontal rows** — they're
-  class-invariant and live in the glossary. Don't go hunting the table for
-  them again.
-- **Brief-authoring bugs are a real failure mode of SDD** — two briefs this
-  session asserted code state that didn't exist (a test point actually
-  inside the UFC clear zone; a `setSurfaceSet` call that was never there).
-  Implementer deviation reports + reviewer adjudication caught both; keep
-  briefs' claims about existing code verifiable and expect pushback.
-- **Per-task model selection worked**: opus for dense logic/integration and
-  their reviews, sonnet for well-specified components/wiring, fable for
-  final whole-branch reviews. The two review-loop Importants (edit-mode
-  clobber, runway outline) were both caught by reviewers one tier above
-  the "it compiles" bar. (saved as feedback memory)
-- **`docs/references/` is gitignored** — the UFC verified-values
-  transcription lives there untracked; the committed spec carries the
-  binding summaries. Don't `git add` that directory; do keep load-bearing
-  conclusions in the spec.
+- **The per-task + final-review loop earns its cost**: ten bugs above, all
+  invisible to tsc/tests-as-written, several in compliance-record paths.
+  The final reviews (fable) caught cross-task classes the per-task reviews
+  structurally could not (SCN-inheritance, always-on-nav interactions,
+  test-locked wrong behavior).
+- **Unattended sessions cannot touch the prod DB** — the permission
+  classifier blocks it, correctly. The staged-files + morning-apply pattern
+  worked well; migrations got extra hardening precisely because they were
+  still editable at review time (name-independent constraint drops,
+  realtime publication membership, base-pinned RLS).
+- **"Mirror the sibling" propagates bugs as faithfully as features.** FPR
+  inherited SCN's history-edit bug; DSC nearly inherited FPR's re-fetch
+  pattern minus the upsert that made it safe; read-file's archived-report
+  gap resurfaced in Local Regs. When cloning a module, diff the template's
+  known defects first (SCN fix wave is now queued debt).
+- **A test can lock a bug in** — the DATE-boundary test asserted the wrong
+  day and read as coverage. Boundary tests need both-direction (UTC±)
+  fixtures.
+- **Repo RLS suites are live-DB integration tests**, not SQL replays —
+  they cannot cover staged tables; static SQL-parsing guards are the
+  staged-phase substitute, live coverage extends post-apply.
+- Two transient agent API 500s and one Windows build-worker crash
+  (0xC0000142) — all recovered by resume/re-run; nothing environmental
+  outstanding.
 
 ## Known issues / tech debt
 
-New (accepted debt from the two feature reviews — details in
-`.superpowers/sdd/progress-manual-coordinates.md` / `progress-part77.md`):
+New this session (details in the module ledgers):
 
 | Item | Severity | Notes |
 |---|---|---|
-| Picker flip re-initializes the whole map (pan/zoom lost, tile flash) | low | Brief-directed effect-deps design; split-effect refactor candidate. Check feel during in-browser QA. |
-| Picker-note fallback copy promises a base surface-set control that doesn't exist yet | low | Becomes true when the expansion build ships the standard selector (its natural home). Make the copy accurate there. |
-| Entry-input polish bundle (MGRS mid-typing red flicker on odd digit counts; `kind` discriminant on parser errors; literal MGRS-error test; aria-live on the status line) | low | Do together when the component is reused by wildlife/discrepancy pickers. |
-| `ufcRef` §77.19 lettering strings still wrong (incl. one "(non-utility)" label on the corrected visual radius; also sweep `part77-geometry.ts` section-header comments) | med | Fix is specced in the surface-set expansion build — verified lettering: (a) Horizontal (b) Conical (c) Primary (d) Approach (e) Transitional. |
-| Evaluator's transitional `approachCutoff` unclamped vs builder's clamped formula | low | Identical for all six real types; unify in the expansion registry refactor. |
+| **SCN twin-bug fix wave** | **high** | SCN shares FPR's history-edit Critical, snapshot-drop, and quick-fill-notes bugs verbatim. First code task next session. |
+| Graded-area (clear zone) widths unverified | med | Army graded half-width clamped to 500 as a consistency bound; map polygon still draws legacy 500 ft for all classes (default-off layer). Owner supplies Table 3-5 → one pass closes criteria + evaluator + map. |
+| read-file archived-docs report gap | med | Same contradiction Local Regs fixed; read-file's report is still active-only vs its copy. |
+| Platform read-RLS posture | info | Domain tables' SELECT policies are base-access-only (the 2026042203-06 matrix swap converted writes); per-domain :view gating is UI-level. Pre-existing, not a regression — worth a deliberate read-policy pass someday. |
+| FPR/LR queued-save UI gaps | low | No "pending sync" card state (FPR); Base Regs tab has the WRITE_COMMITTED listener but FPR's today card doesn't mark queued saves. |
+| majcom_rfm x driving checks | decision | Sees driver-named Events Log lines via activity_log:view but lacks driving_checks:view — grant or accept. |
+| Driver-PII retention on driving_checks | decision | Spec open question; fold into Records disposition work. |
+| getUser() per badge tick | low | local-regs + read-file both do an auth roundtrip per refresh; swap to session-derived id (auth-quota history). |
+| UA base-switch export mislabel | low | Switching bases after Generate exports old data under the new base's header (daily-report parity); clear data on installation change. |
+| Assorted per-module minors | low | Ledgered per module: picker outside-tap dismissal on the DSC phone form, expand-key collisions, em-dash/copy nits, zero-render "—" vs "0", 0-runway UFC pick, revert-toast phrasing, etc. |
 
-Carried forward (unchanged): encoded UFC Class B criteria conflict — **now
-owner-ruled, fix ships with the expansion build** · ShopsTab/ArffTab
-frozen-prop pattern · NIPR uploads (closed, don't re-propose) · hero
-redline strings · demo user on Demo AFB / KDRA prep · proof band empty ·
-NAVAID marker dials · QRC draft flow · demo seeds `shift_name_*` ·
-track-page SEO · civilian tenant status chips · status-page weather race ·
-account-deactivation live sessions · Selfridge 1098 dedup · 2 unused
-exported types · reports "hgjhj" row · anonymous-submission gap.
-
-## glidepath-site — remaining roadmap
-
-Unchanged from the prior handoff (no site work this session): owner
-preview-checks the CSP then promotes (CI green at `9dd00ad`); this-month
-tier-2 items (module H1 pass, /about expansion, clip compression, scoped
-DB credential, demo-route tests, `regulation.cites`); this-quarter traffic
-engine; www→apex 308.
+Carried forward (unchanged): picker flip re-initializes the obstruction map
+(pan/zoom lost) · entry-input polish bundle · evaluator transitional
+`approachCutoff` unification · ShopsTab/ArffTab frozen-prop pattern · NIPR
+uploads (closed) · hero redline strings · demo user on Demo AFB / KDRA
+prep · proof band empty · NAVAID marker dials · QRC draft flow · demo seeds
+`shift_name_*` · track-page SEO · civilian tenant status chips · status-page
+weather race · account-deactivation live sessions · Selfridge 1098 dedup ·
+2 unused exported types · reports "hgjhj" row · anonymous-submission gap.
+Resolved and dropped: picker-note copy (`970994ea`), §77.19 `ufcRef`
+lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`).
 
 ## Next session tasks
 
-1. **Build the surface-set expansion**
-   (`docs/superpowers/specs/2026-07-16-airfield-surface-set-expansion-design.md`)
-   — **fully unblocked**; every dimension verified or owner-ruled (§13
-   items resolved in place; full derivations in the untracked
-   `docs/references/ufc-3-260-01-table3-7-verified.md`). Includes: Class B
-   corrections + ADCS horizontal-portion model (changes future evaluation
-   results fleet-wide — owner-approved), Class A entry, ICAO Annex 14 set,
-   5-standard picker, §77.19 lettering fix, base-level standard selector
-   (also fixes the picker-note copy), migrations `20260716xx` →
-   renumber.
-2. **Then per the specs index build order**: NAMO/NAMT attribution
-   migrations early (`2026071641`–`42` equivalents) · FPR Check · 43 Check
-   log · local regs review · NAMO/NAMT report UI.
-3. **glidepath-site**: next tier-2/3 item (DAFMAN 13-204 hub or module H1
-   pass).
-4. **Civilian capture day** (owner-scheduled): "prep KDRA" → run
-   `docs/references/civilian-capture-plan.md`.
-
-(For whenever the owner tests the new features: the manual QA scripts live
-in the two specs' §Testing sections; known feel item — the surface-set
-picker flip re-centers the map.)
+1. **REMAINING OWNER STEPS** (migrations ✅ applied · types ✅ regenerated)
+   1. Authorize/perform the push of the local commits. Migrations are
+      already in, so promote whenever ready after CI.
+   2. Post-apply follow-up: extend the live RLS suites for the fpr_*,
+      driving_check_*, and local_reg* tables (ledgered); manual QA scripts
+      live in each spec's §Testing (visual PDF render of a 20-user
+      NAMO/NAMT report + one live Resend email are the named pre-promote
+      checks).
+   3. Rulings when convenient: atc fpr:view grant, civilian grants in
+      `2026071740`, civilian roster for local_regs, majcom_rfm ×
+      driving checks, FPR pending-sync card state.
+2. **SCN twin-bug fix wave** — port `83890e54`'s three fixes to
+   `/scn` (history-edit date pinning, snapshot-preserving edit drafts,
+   quick-fill note clearing).
+3. **ICAO Annex 14 — DONE post-wrap** (`24f90355` + `7a01609c`). Remaining
+   ICAO phase-2 (deferred by spec, unchanged): inner approach / inner
+   transitional / balked landing surfaces, code-letter-F 155 m widths, the
+   1 800 m take-off variant, §4.2.9/17 variable horizontal section. Manual
+   QA for the new arm: wizard → set ICAO on a test base → configure code 4
+   / precision CAT I → 5 a14 layers draw, caveat note renders, evaluation
+   names Annex 14 surfaces, PDF Surface Standard row + caveat correct.
+4. **read-file archived-report pass** — mirror `17c1ade9`'s fix.
+5. **glidepath-site: module H1 pass** — deliberately skipped overnight
+   (taste-gated by the owner's gut-test standard); do with the owner
+   present. The rest of the site tier-2 list is unchanged.
+6. **Part 139 cert-audit resume** — from `.superpowers/sdd/progress.md`
+   Task 2.5c (owner decision recorded 2026-07-07: additive migration for
+   civilian cover fields), then 2.6, then phases 3-6.
 
 ### Long-running carryover
-Hero + coverage redline pass · Part 139 cert-inspection audit build (resume
-from `.superpowers/sdd/progress.md`) · SEO / rich-results · deferred audit
-items · Next 16 — owner-scheduled, unchanged.
+Hero + coverage redline pass · SEO / rich-results · deferred audit items ·
+Next 16 · civilian capture day ("prep KDRA") — owner-scheduled, unchanged.
 
 ## Build snapshot
 ```
-airfield-app @ c9c4f955 (verified at wrap, local): tsc ✓ · lint 0 errors ·
-  vitest 1368 passed | 0 skipped (144 files — +107 tests: coordinates,
-  coordinate-entry-input, part77-geometry, obstruction-pdf new; part77-
-  surfaces, obstruction-evaluation, pdf-generators-smoke extended) ·
-  build ✓ · shared First Load JS 106 kB · middleware 80.8 kB.
-  /obstructions 20.2 kB · 211 kB First Load (grew this session: entry
-  input + four-format display + set-aware map branch; mgrs adds ~6 kB to
-  the obstruction chunks only).
-glidepath-site @ 9dd00ad: unchanged this session (tsc/lint/CI green as of
-  session 4).
+airfield-app @ 7a01609c (verified post-ICAO, local): tsc ✓ · lint 0 errors ·
+  vitest 1731 passed | 0 skipped (170 files — +363 tests: annex14-criteria,
+  annex14-geometry, surface-criteria,
+  surface-standards, ufc-surface-geometry, fpr-*, driving-check-*,
+  local-regs, user-activity-* new; obstruction-evaluation, export-table-
+  specs, write-queue-handlers, permission-matrix-roles, modules-config
+  extended) · build ✓ · shared First Load JS 106 kB · middleware 80.8 kB.
+  New routes: /fpr 8.48 kB · 198 kB First Load; /driving-checks 12.9 kB ·
+  203 kB; /reports/user-activity 15.1 kB · 204 kB. Changed: /obstructions
+  19.8 kB · 214 kB (from 20.2/211 — registry split); /regulations 21 kB ·
+  232 kB (Base Regs tab).
+glidepath-site @ 9dd00ad: untouched this session.
 ```
 
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
-| **Unreleased** | 2026-07-17 (session 5) | Obstruction manual coordinate entry (DD/DDM/DMS/NOTAM/MGRS smart-parse field, four-format display + copy, hemisphere fixes) · FAA Part 77 surface polygons (set-aware map/legend/header/PDF, per-runway §77.19 dimensioning, base-config gate) · three verified §77.19 criteria corrections · UFC Table 3-7 fully verified + owner rulings recorded — surface-set expansion unblocked. 20 commits, zero migrations. |
-| **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: 37/64 bases had no `airfield_status` row — fleet-wide backfill + seed trigger (migration `2026071600`, applied) · setup-wizard import staleness fixed · autosave pill registers deletes/updates · +2 invariant tests. |
-| **Unreleased** | 2026-07-16 (spec planning) | Seven implementation specs in `docs/superpowers/specs/` · Part 77 §77.19 lettering resolved · Class B criteria mis-sourcing discovered. |
-| **Unreleased** | 2026-07-16 (late) | Supabase type regen (43 casts removed) · fan-out silent-error sweep (27 sites) · glidepath-site 4-pass review + SEO/security tier-1/2 · NIPR uploads closed as DISA-CBII-blocked. |
-| **Unreleased** | 2026-07-16 | Two-repo code audit + remediation · RLS security-test suite wired (0 skipped). |
+| **Unreleased** | 2026-07-17 (session 6, overnight + post-wrap) | Seven features, review-gated: surface-set expansion (Class A + corrected Class B/Army B + base standard selector) · **ICAO Annex 14 fifth standard** (owner-supplied PDF, dual-extraction-verified values, 5-standard picker) · FPR Check module · Airfield Driving Spot Check module (renamed per owner) · Local Regulations Review (Base Regs) · NAMO/NAMT attribution + Report Tool. 33 commits, 14 staged migrations (none applied), +363 tests. NOT PUSHED. |
+| **Unreleased** | 2026-07-17 (session 5) | Obstruction manual coordinate entry · FAA Part 77 surface polygons · three §77.19 criteria corrections · UFC Table 3-7 verified + owner rulings — surface-set expansion unblocked. 20 commits, zero migrations. |
+| **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: fleet-wide airfield_status backfill + seed trigger (migration `2026071600`, applied) · setup-wizard import staleness fixed · autosave pill registers deletes/updates. |
+| **Unreleased** | 2026-07-16 (spec planning) | Seven implementation specs · Part 77 §77.19 lettering resolved · Class B criteria mis-sourcing discovered. |
+| **Unreleased** | 2026-07-16 (late) | Supabase type regen · fan-out silent-error sweep · glidepath-site 4-pass review + SEO/security · NIPR uploads closed. |
+| **Unreleased** | 2026-07-16 | Two-repo code audit + remediation · RLS security-test suite wired. |
 | **Unreleased** | 2026-07-15 (late) | Taxiway-step freeze fix (RDP decimation) · NIPR proxy plan (superseded). |
 | **Unreleased** | 2026-07-13 | Configurable shifts; migration `2026071300` applied. |
 | **v2.35.0** | 2026-06-30 | Customizable widget dashboard; FLIP; PPR calendar; AMTR 803/1098; C2IMERA; WWA expiry; brand refresh. |
@@ -231,28 +342,36 @@ glidepath-site @ 9dd00ad: unchanged this session (tsc/lint/CI green as of
 ## Key docs / files touched this session
 
 ### New files
-- `lib/calculations/coordinates.ts` — coordinate parser + four formatters.
-- `components/ui/coordinate-entry-input.tsx` — generic smart-parse entry field.
-- `lib/calculations/part77-geometry.ts` — §77.19 plan-view polygon builders.
-- `docs/references/ufc-3-260-01-table3-7-verified.md` — **untracked**
-  (gitignored dir): verified Table 3-7 transcription + ADCS derivation +
-  glossary values.
-- `.superpowers/sdd/progress-manual-coordinates.md` / `progress-part77.md` —
-  SDD ledgers (untracked), accepted-debt lists live here.
+- `lib/calculations/surface-standards.ts` — 4-standard registry (options,
+  labels, resolveStandard/Label, per-set legend/layers/builders).
+- `lib/supabase/fpr.ts` · `lib/fpr-default-items.ts` · `lib/fpr-pdf.ts` ·
+  `app/(app)/fpr/page.tsx` · `components/base-setup/fpr-checklist-tab.tsx`
+- `lib/supabase/driving-checks.ts` · `lib/driving-check-default-items.ts` ·
+  `lib/driving-check-pdf.ts` · `app/(app)/driving-checks/page.tsx` ·
+  `components/base-setup/driving-check-items-tab.tsx`
+- `lib/local-regs/review-status.ts` · `lib/supabase/local-regulations.ts` ·
+  `lib/local-regs-review-pdf.ts` · `components/local-regs/base-regs-tab.tsx`
+- `lib/reports/user-activity-data.ts` · `user-activity-pdf.ts` ·
+  `user-activity-excel.ts` · `app/(app)/reports/user-activity/page.tsx` ·
+  `components/reports/user-activity-matrix.tsx`
+- `docs/manual/24_flight_planning_room.md` · `25_driving_spot_check.md` ·
+  `26_local_regulations.md`
+- 14 staged migrations (table above).
 
 ### Modified files
-- `app/(app)/obstructions/page.tsx` — entry field wiring, four-format
-  display, distance toast, set-aware header/calls/keys, edit-load pin +
-  reseed guard, conditional picker note.
-- `components/obstructions/airfield-map-google.tsx` — surface-set renderer
-  branch, per-set legends/toggles, runway outline in both sets.
-- `lib/calculations/obstructions.ts` — three §77.19 criteria corrections +
-  set-aware `identifySurface`.
-- `lib/obstruction-pdf.ts` — hemisphere fix + set-aware Surface Set row.
-- `app/(app)/base-config/setup/page.tsx` — FAA approach-selector gate
-  widening only.
-- `docs/manual/10_obstructions.md` — typed-coordinates + set-aware overlay
-  sections.
-- `docs/superpowers/specs/2026-07-16-airfield-surface-set-expansion-design.md`
-  — all §13 blockers resolved in place (owner rulings + verified values).
-- `package.json` — `mgrs@2.2.0`.
+- `lib/calculations/surface-criteria.ts` / `obstructions.ts` /
+  `geometry.ts` — corrected criteria, EAE+500 cap, class-aware surface
+  info, criteria-driven builders.
+- `app/(app)/obstructions/page.tsx` + `[id]/page.tsx` +
+  `components/obstructions/airfield-map-google.tsx` — picker, pinning,
+  registry wiring, standard labels.
+- `app/(app)/base-config/setup/page.tsx` — standard card + two wizard tabs.
+- `lib/sync/handlers.ts` — fpr_save / driving_check_save/_update /
+  local_reg_review handlers (Events Log writes live here, post-persist).
+- `lib/supabase/checks.ts` (completed_by_id) · `lib/permissions.ts` ·
+  `lib/modules-config.ts` · `lib/sidebar-config.ts` ·
+  `components/layout/sidebar-nav.tsx` · `app/(app)/more/page.tsx` ·
+  `hooks/use-sidebar-badge-counts.ts` · `app/(app)/regulations/page.tsx` ·
+  `app/(app)/reports/page.tsx` · `docs/manual/18_reports_analytics.md` ·
+  `docs/manual/README.md` · `lib/supabase/types.ts` (additive hand-patches
+  pending regen).

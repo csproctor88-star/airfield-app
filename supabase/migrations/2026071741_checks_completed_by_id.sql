@@ -26,11 +26,21 @@
 -- independent of each other in content, but this ordering matches the
 -- spec's numbering and the report-writeup sequence).
 --
+-- APPLY-TIME FIX (2026-07-17): the first apply attempt failed with a
+-- 23503 FK violation — at least one completed row's saved_by_id points at
+-- a DELETED profile (saved_by_id itself has no FK, so orphans survived
+-- profile deletions). The backfill now copies only uuids that still
+-- resolve in profiles; orphaned rows keep completed_by_id NULL and fall
+-- into the report's free-text/"Former user" fallback, which is the
+-- designed semantics for exactly this case. File is idempotent
+-- (IF NOT EXISTS guards) — safe to re-run after the rollback.
+--
 -- Post-apply verification:
 --   SELECT count(*) FROM airfield_checks
---    WHERE status = 'completed' AND completed_by_id IS DISTINCT FROM saved_by_id;
---   -- expect: 0 (every completed row's completed_by_id now matches its
---   --         same-row saved_by_id, or both are NULL)
+--    WHERE status = 'completed' AND completed_by_id IS NULL
+--      AND saved_by_id IS NOT NULL;
+--   -- expect: small (= completed rows whose saver's profile was deleted;
+--   --         these intentionally stay NULL)
 -- ============================================================
 
 ALTER TABLE airfield_checks
@@ -42,7 +52,8 @@ ALTER TABLE airfield_checks
 -- completed check since the column existed.
 UPDATE airfield_checks
 SET completed_by_id = saved_by_id
-WHERE status = 'completed' AND completed_by_id IS NULL AND saved_by_id IS NOT NULL;
+WHERE status = 'completed' AND completed_by_id IS NULL AND saved_by_id IS NOT NULL
+  AND EXISTS (SELECT 1 FROM profiles p WHERE p.id = airfield_checks.saved_by_id);
 
 CREATE INDEX IF NOT EXISTS idx_airfield_checks_completed_by
   ON airfield_checks (base_id, completed_by_id) WHERE status = 'completed';

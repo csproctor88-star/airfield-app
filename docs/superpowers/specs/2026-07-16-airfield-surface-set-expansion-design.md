@@ -547,6 +547,20 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
 
 ## 13. Assumptions & open questions
 
+**RESOLVED 2026-07-17 — owner supplied the ICAO Annex 14 Vol I 7th Ed. PDF.** Tables 4-1, 4-2,
+and 1-1 are fully transcribed (dual-extraction verified, cell-for-cell agreement) in
+`docs/references/icao-annex14-verified.md` — the binding source for the ICAO arm, which was
+skipped in the 2026-07-17 overnight build for lack of exactly this transcription. That file also
+resolves: item 4 (strip half-widths per §3.4.3–3.4.5: precision/non-precision 150 m code 3/4,
+75 m code 1/2; non-instrument 75/40/30 m — Standard for precision, Recommendation otherwise; use
+as wizard-hint defaults, NULL-approximation fallback stands) and refines item 5 (the §4.2.9/17
+rule references the 2.5% slope against 150 m-above-threshold or the OCA/H object plane; phase 1
+keeps the fixed Table 4-1 lengths as a documented simplification). Notable as-printed facts the
+implementation must honor: CAT I code 1,2 has no horizontal section (3 000 m @ 2.5% then
+12 000 m @ 3%, total fixed 15 000 m); CAT II/III exists only for code 3,4 (other combos throw);
+non-precision code 1,2 is single-section; footnote e widths (155 m at code letter F) remain
+phase-2 (no code-letter column).
+
 1. **PARTIALLY RESOLVED 2026-07-16 — owner supplied UFC 3-260-01 Change 3
    (4 Feb 2026) Figure 3-19 (p. 65) + Table 3-7 items 1–15 (pp. 79–82); verified
    transcription at `docs/references/ufc-3-260-01-table3-7-verified.md`.** Now
