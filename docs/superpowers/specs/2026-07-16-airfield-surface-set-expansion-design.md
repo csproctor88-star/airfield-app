@@ -537,30 +537,45 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
 
 ## 13. Assumptions & open questions
 
-1. **BLOCKING — UFC Class A/B conical + outer horizontal dimensions unverified.** They
-   live in UFC 3-260-01 Appendix C (glossary), which the research could not retrieve
-   (Drive text truncated at ~p.178; direct PDF blocked). Class A ships with
-   PLACEHOLDER values (copied from Class B, dashed on the map, marked in code) until
-   verified against the current publication. The commonly quoted 20:1 × 7,000 ft /
-   500 ft × 30,000 ft figures must not be encoded as verified.
-2. **BLOCKING — existing Class B criteria audit.** Two verified conflicts with
-   Table 3-7: code's inner_horizontal radius 13,120 ft vs verified 7,500 ft (item 12
-   — 13,120 ft is suspiciously exactly 4 000 m, the ICAO radius); and the ADCS model
-   (50:1 × 25,000 ft, outer half-width 2,550 ft) vs verified 50,000-ft total length
-   with 9,000-ft width at the horizontal portion and 16,000-ft end width (items 6–10;
-   the bundle also notes an internal slope/length tension in the printed table).
-   Changing Class B alters every future evaluation on every existing base — owner
-   decision required; this spec does **not** silently change Class B, and Class A's
-   verified 7,500-ft inner horizontal will disagree with Class B's 13,120 until
-   resolved. Army_B's ADCS outer half-width is PLACEHOLDER pending the same audit.
-   The ADCS-model gap also applies to **Class A**: the new `A` entry encodes only
-   the verified 40:1 × 20,000 ft sloped portion; the verified horizontal portion
-   (7,000 → 16,000 ft width at 500 ft above airfield elevation, items 9–11) is
-   unmodeled until the ADCS shape gains horizontal-portion fields in this audit —
-   marked PLACEHOLDER in code and noted in §4.
-3. Class A **VFR** variant (no inner horizontal; 40:1 × 10,000 ft ADCS, unverified
-   outer width) is deferred — the `A` entry encodes the verified IFR column. If a
-   VFR-only Class A airfield onboard, a per-runway VFR/IFR flag is a small follow-on.
+1. **PARTIALLY RESOLVED 2026-07-16 — owner supplied UFC 3-260-01 Change 3
+   (4 Feb 2026) Figure 3-19 (p. 65) + Table 3-7 items 1–15 (pp. 79–82); verified
+   transcription at `docs/references/ufc-3-260-01-table3-7-verified.md`.** Now
+   verified: primary surface (items 1–3), ADCS start/lengths/slopes/widths/
+   horizontal-portion (items 5–11, incl. Class A VFR/IFR split), inner horizontal
+   7,500-ft radius / 15,000-ft width / 150-ft elevation (items 12–14, **N/A for
+   Class A VFR**), transitional 7:1 (item 15); conical slope 20:1 and outer
+   horizontal 500-ft elevation (Figure 3-19 legend). **STILL BLOCKING for conical
+   + outer horizontal *dimensions*:** the table rows after item 15 and the table
+   NOTES (incl. Note 4) were not in the extract — owner to supply document
+   pp. 83–84. The commonly quoted 20:1 × 7,000 ft / 500 ft × 30,000 ft figures
+   still must not be encoded as verified (the 7,000-ft conical extent is
+   *derivable* from verified slope+elevations but awaits the printed row).
+2. **OWNER DECISION 2026-07-16: correct the encoded Class B criteria to the UFC
+   values** (and offer **all five** standards in the per-evaluation what-if
+   picker — decision (c) confirmed). Verified corrections (reference doc above):
+   inner_horizontal radius 13,120 ft → **7,500 ft** (item 12); ADCS width
+   schedule half-widths 1,000 ft (AF start) → 4,500 ft (horizontal-portion
+   start) → 8,000 ft (end), replacing the encoded 2,550-ft outer half-width.
+   **One open sub-item — ADCS sloped-portion length:** item 6 as printed says
+   50,000 ft sloped (Change-3 edit), which at 50:1 contradicts item 11's 500-ft
+   horizontal elevation (50:1 reaches 500 ft at 25,000 ft). Internally-coherent
+   reading: sloped 25,000 ft to 500 ft, then horizontal to 50,000 ft total.
+   Await the table NOTES (Note 4) / glossary ADCS definition or owner
+   adjudication before encoding the length split; every other Class B value is
+   encodable now. The ADCS horizontal-portion model gap also applies to
+   **Class A IFR** (7,000 → 16,000 ft at 500 ft, items 9–11 — now verified);
+   the ADCS shape gains horizontal-portion fields in this build for both
+   classes. Army_B's ADCS outer half-width remains PLACEHOLDER pending an
+   Army-specific source (Table 3-7's width rows split Army vs AF only at the
+   start-width, items 8; Army ADCS horizontal-portion widths are the same
+   printed cells — encode Army_B from the same verified rows, with the Army
+   1,000-ft start width).
+3. Class A **VFR** variant is deferred — the `A` entry encodes the verified IFR
+   column. Update 2026-07-16: the VFR column is now itself verified (no inner
+   horizontal — items 12–14 N/A; no ADCS horizontal portion — items 9–11 N/A;
+   40:1 × 10,000 ft ADCS), **except its ADCS end width**, which items 1–15 do
+   not state. If a VFR-only Class A airfield onboards, a per-runway VFR/IFR
+   flag is a small follow-on.
 4. **ICAO strip width**: Annex 14 §3.4 defaults were not extracted; users enter
    `icao_strip_width_m`, NULL → runway-edge approximation with a visible flag. Verify
    §3.4 before encoding defaults.
