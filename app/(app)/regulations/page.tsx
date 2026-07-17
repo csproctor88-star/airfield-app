@@ -9,11 +9,15 @@ import type { UserRole, RegulationPubType } from '@/lib/supabase/types'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
+import { usePermissions, PERM } from '@/lib/permissions'
 import { getRegSource } from '@/lib/airport-mode'
 import { userDocService, type UserDocument } from '@/lib/userDocuments'
 import { idbGet, idbSet, idbGetAllKeys, idbDelete, STORE_BLOBS } from '@/lib/idb'
 import { sanitizeRegId as sanitizeFileName, formatZuluDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { BaseRegsTab } from '@/components/local-regs/base-regs-tab'
+import { fetchLocalRegs, fetchMyRegReviews } from '@/lib/supabase/local-regulations'
+import { computeDueRegIds } from '@/lib/local-regs/review-status'
 
 const RegulationPDFViewer = dynamic(
   () => import('@/components/RegulationPDFViewer'),
@@ -57,14 +61,60 @@ function formatFileSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-type Tab = 'regulations' | 'my-docs'
+type Tab = 'regulations' | 'my-docs' | 'base-regs'
 
 // ═══════════════════════════════════════════════════════════════
 // Main Page
 // ═══════════════════════════════════════════════════════════════
 
 export default function RegulationsPage() {
+  const { installationId, enabledModules } = useInstallation()
+  const { has } = usePermissions()
   const [tab, setTab] = useState<Tab>('regulations')
+
+  // Base Regs is a self-gated third tab: shown only when the module is enabled
+  // for this base AND the user holds local_regs:view. /regulations itself is
+  // ALWAYS_ON, so the gate lives here, not in the module-enable href map.
+  const showBaseRegs = enabledModules.includes('local_regs') && has(PERM.LOCAL_REGS_VIEW)
+
+  // Red due-count chip on the Base Regs tab (never | updated | overdue for the
+  // current user). Fetch only when the tab is permitted; refetch on
+  // glidepath:badges-refresh so the chip decrements the instant a review is
+  // attested inside BaseRegsTab.
+  const [dueCount, setDueCount] = useState(0)
+  const refreshDue = useCallback(async () => {
+    if (!showBaseRegs || !installationId) { setDueCount(0); return }
+    const [regs, reviews] = await Promise.all([
+      fetchLocalRegs(installationId),
+      fetchMyRegReviews(installationId),
+    ])
+    setDueCount(computeDueRegIds(regs, reviews).length)
+  }, [showBaseRegs, installationId])
+  useEffect(() => { refreshDue() }, [refreshDue])
+  useEffect(() => {
+    const handler = () => refreshDue()
+    window.addEventListener('glidepath:badges-refresh', handler)
+    return () => window.removeEventListener('glidepath:badges-refresh', handler)
+  }, [refreshDue])
+
+  // Deep link: honor ?tab=base-regs once, after gating resolves. Parse
+  // location.search in an effect — never useSearchParams, which opts the whole
+  // /regulations page out of static generation (Next 15 house rule).
+  const didDeepLink = useRef(false)
+  useEffect(() => {
+    if (didDeepLink.current || typeof window === 'undefined') return
+    const wanted = new URLSearchParams(window.location.search).get('tab')
+    if (wanted !== 'base-regs') return
+    if (!showBaseRegs) return // wait for gating to resolve before honoring
+    setTab('base-regs')
+    didDeepLink.current = true
+  }, [showBaseRegs])
+
+  // If the module is disabled mid-session while its tab is active, fall back
+  // to References so the page never shows an empty body.
+  useEffect(() => {
+    if (tab === 'base-regs' && !showBaseRegs) setTab('regulations')
+  }, [tab, showBaseRegs])
 
   // ── PDF viewer state (shared by both tabs) ─────────────────
   const [viewingReg, setViewingReg] = useState<{ reg: RegulationEntry; page?: number } | null>(null)
@@ -106,16 +156,18 @@ export default function RegulationsPage() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {([
-          { key: 'regulations' as Tab, label: 'References' },
-          { key: 'my-docs' as Tab, label: 'My Documents' },
-        ]).map(t => (
+        {(([
+          { key: 'regulations', label: 'References' },
+          { key: 'my-docs', label: 'My Documents' },
+          ...(showBaseRegs ? [{ key: 'base-regs', label: 'Base Regs', due: dueCount }] : []),
+        ] as { key: Tab; label: string; due?: number }[]).map(t => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             style={{
               flex: 1,
               padding: '8px 0',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
               background: tab === t.key
                 ? 'color-mix(in srgb, var(--color-cyan) 14%, var(--color-bg-surface))'
                 : 'var(--color-bg-inset)',
@@ -132,8 +184,18 @@ export default function RegulationsPage() {
             }}
           >
             {t.label}
+            {t.due != null && t.due > 0 && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 18, height: 18, padding: '0 5px', borderRadius: 9,
+                background: 'var(--color-danger)', color: '#fff',
+                fontSize: 'var(--fs-2xs)', fontWeight: 800, lineHeight: 1,
+              }}>
+                {t.due > 9 ? '9+' : t.due}
+              </span>
+            )}
           </button>
-        ))}
+        )))}
       </div>
 
       {tab === 'regulations' && (
@@ -147,6 +209,8 @@ export default function RegulationsPage() {
           onViewDoc={(doc, userId) => setViewingUserDoc({ doc, userId })}
         />
       )}
+
+      {tab === 'base-regs' && showBaseRegs && <BaseRegsTab />}
     </div>
   )
 }

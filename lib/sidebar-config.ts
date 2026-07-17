@@ -88,7 +88,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Visual NAVAIDs', href: '/infrastructure', iconName: 'Lightbulb', keywords: ['lights', 'lighting', 'PAPI', 'VASI', 'navaid', 'outage'] },
   { name: 'Aircraft Parking', href: '/parking', iconName: 'PlaneLanding', keywords: ['ramp', 'apron', 'clearance'] },
   { name: 'Aircraft Database', href: '/aircraft', iconName: 'Plane', keywords: ['airframe', 'wingspan'] },
-  { name: 'Reference Library', href: '/regulations', iconName: 'BookOpen', keywords: ['regs', 'AFI', 'DAFMAN', 'UFC'] },
+  { name: 'Reference Library', href: '/regulations', iconName: 'BookOpen', keywords: ['regs', 'AFI', 'DAFMAN', 'UFC', 'base regs', 'local regulations', 'OI'] },
   { name: 'NOTAMs', href: '/notams', iconName: 'FileText', keywords: ['notice to airmen'] },
   { name: 'Reports & Analytics', href: '/reports', iconName: 'BarChart3', keywords: ['analytics', 'trends', 'aging'] },
   { name: 'Settings', href: '/settings', iconName: 'Settings', keywords: ['preferences', 'profile'] },

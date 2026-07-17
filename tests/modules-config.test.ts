@@ -7,6 +7,7 @@ import {
   getModulesByCategory,
   modulesForAirport,
   moduleAppliesToAirport,
+  MODULES,
   TYPICAL_BASE_PRESET,
   type SetupProgress,
 } from '@/lib/modules-config'
@@ -233,6 +234,39 @@ describe('modulesForAirport', () => {
   it('returns every module when airport type is unknown (fail open)', () => {
     const keys = modulesForAirport(null).map(m => m.key)
     for (const k of [...USAF_ONLY, ...PART139_ONLY]) expect(keys).toContain(k)
+  })
+})
+
+describe('local_regs module registration (Base Regs tab)', () => {
+  it('applies to both airport modes (no appliesTo restriction)', () => {
+    expect(moduleAppliesToAirport('local_regs' as never, 'usaf')).toBe(true)
+    expect(moduleAppliesToAirport('local_regs' as never, 'faa_part139')).toBe(true)
+  })
+
+  it('surfaces under Compliance & Reporting in both mode catalogs', () => {
+    expect(getModulesByCategory('usaf').compliance.map(m => m.key)).toContain('local_regs')
+    expect(getModulesByCategory('faa_part139').compliance.map(m => m.key)).toContain('local_regs')
+  })
+
+  it('is default-enabled with no nav hrefs or wizard steps (self-gated tab)', () => {
+    const mod = MODULES.find(m => m.key === 'local_regs')!
+    expect(mod).toBeDefined()
+    expect(mod.category).toBe('compliance')
+    expect(mod.defaultEnabled).toBe(true)
+    expect(mod.hrefs).toEqual([])
+    expect(mod.setupSteps).toEqual([])
+    expect(mod.appliesTo).toBeUndefined()
+  })
+
+  it('rides the always-on /regulations route (no HREF_TO_MODULE mapping of its own)', () => {
+    // hrefs: [] means isModuleEnabled never resolves /regulations through
+    // local_regs — /regulations stays ALWAYS_ON and the tab self-gates.
+    expect(isModuleEnabled('/regulations', [])).toBe(true)
+    expect(isModuleEnabled('/regulations', ['local_regs'])).toBe(true)
+  })
+
+  it('is included in TYPICAL_BASE_PRESET', () => {
+    expect(TYPICAL_BASE_PRESET).toContain('local_regs')
   })
 })
 

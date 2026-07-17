@@ -27,6 +27,7 @@ export type ModuleKey =
   | 'flip'
   | 'whmp'
   | 'read_file'
+  | 'local_regs'
   | 'fpr'
   | 'driving_checks'
 
@@ -330,6 +331,20 @@ export const MODULES: ModuleDef[] = [
     description: 'Read-and-initial continuity file — leadership uploads documents that airfield management personnel must read and acknowledge, with a per-version audit trail and a compliance report.',
     useCase: 'Distribute OIs, policy letters, and read-and-initial items to airfield management personnel and track who has reviewed each one.',
     hrefs: ['/read-file'],
+    setupSteps: [],
+    defaultEnabled: true,
+  },
+  {
+    key: 'local_regs',
+    label: 'Local Regulations',
+    category: 'compliance',
+    description: 'Recurring review of standing local regulations — base OIs, wing instructions, and local supplements. Leadership uploads the current PDFs; airfield management personnel re-review each on a monthly or quarterly cadence, with per-document compliance visibility and a review report.',
+    useCase: 'Keep airfield management personnel current on locally-issued regulations with a recurring read-and-attest cadence, and show at a glance who has reviewed the current edition of each document.',
+    // Surface is a self-gated "Base Regs" tab on the always-on /regulations
+    // route, so no hrefs (no nav item, no HREF_TO_MODULE mapping) and no
+    // wizard step. Applies to both airport modes (no appliesTo) — local SOPs
+    // follow the same rhythm on civilian Part 139 bases.
+    hrefs: [],
     setupSteps: [],
     defaultEnabled: true,
   },
