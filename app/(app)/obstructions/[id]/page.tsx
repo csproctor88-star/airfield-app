@@ -746,7 +746,7 @@ function SurfaceSetLegend({
   runwayClass,
 }: {
   base: { obstruction_surface_set?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14' | null } | null
-  pinnedSet?: 'ufc_3_260_01' | 'faa_part77' | null
+  pinnedSet?: 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14' | null
   runwayClass?: string | null
 }) {
   const [open, setOpen] = useState(false)

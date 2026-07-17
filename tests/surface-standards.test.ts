@@ -14,7 +14,7 @@ import {
   distanceFt,
   type LatLon,
 } from '@/lib/calculations/geometry'
-import { IMAGINARY_SURFACES, getPart77Surfaces } from '@/lib/calculations/obstructions'
+import { IMAGINARY_SURFACES, getPart77Surfaces, ANNEX14_SURFACE_META } from '@/lib/calculations/obstructions'
 
 // ─────────────────────────────────────────────────────────────
 // SSE Task 5 — surface-standards registry
@@ -56,23 +56,25 @@ function trapezoidDims(ring: [number, number][]) {
 // ── 1. SURFACE_STANDARD_OPTIONS locks all four tuples ────────────────────────
 
 describe('SURFACE_STANDARD_OPTIONS', () => {
-  it('locks the four (set, runwayClass, label, citation) tuples', () => {
+  it('locks the five (set, runwayClass, label, citation) tuples', () => {
     expect(SURFACE_STANDARD_OPTIONS).toEqual({
       af_class_a:   { set: 'ufc_3_260_01', runwayClass: 'A',      label: 'Air Force Class A', citation: 'UFC 3-260-01 Table 3-7' },
       af_class_b:   { set: 'ufc_3_260_01', runwayClass: 'B',      label: 'Air Force Class B', citation: 'UFC 3-260-01 Table 3-7' },
       army_class_b: { set: 'ufc_3_260_01', runwayClass: 'Army_B', label: 'Army Class B',      citation: 'UFC 3-260-01 Table 3-7' },
+      icao_annex14: { set: 'icao_annex14', runwayClass: null,     label: 'ICAO Annex 14',     citation: 'ICAO Annex 14 Vol I Table 4-1' },
       faa_part77:   { set: 'faa_part77',   runwayClass: null,     label: 'FAA Part 77',       citation: '14 CFR §77.19' },
     })
   })
 
   it('SURFACE_STANDARD_IDS is the stable display order', () => {
-    expect(SURFACE_STANDARD_IDS).toEqual(['af_class_a', 'af_class_b', 'army_class_b', 'faa_part77'])
+    expect(SURFACE_STANDARD_IDS).toEqual(['af_class_a', 'af_class_b', 'army_class_b', 'icao_annex14', 'faa_part77'])
   })
 
-  it('SURFACE_SET_LABELS locks both engine-set labels', () => {
+  it('SURFACE_SET_LABELS locks all three engine-set labels', () => {
     expect(SURFACE_SET_LABELS).toEqual({
       ufc_3_260_01: 'UFC 3-260-01',
       faa_part77: 'FAA Part 77 (14 CFR §77.19)',
+      icao_annex14: 'ICAO Annex 14 (Vol I, 7th Ed.)',
     })
   })
 })
@@ -102,6 +104,10 @@ describe('resolveStandard', () => {
     expect(resolveStandard('faa_part77', ['A', 'B', null, 'Army_B'])).toBe('faa_part77')
     expect(resolveStandard('faa_part77', [])).toBe('faa_part77')
   })
+  it('icao_annex14 + anything → icao_annex14', () => {
+    expect(resolveStandard('icao_annex14', ['A', 'B', null])).toBe('icao_annex14')
+    expect(resolveStandard('icao_annex14', [])).toBe('icao_annex14')
+  })
 })
 
 // ── 3. resolveStandardLabel ──────────────────────────────────────────────────
@@ -119,6 +125,10 @@ describe('resolveStandardLabel', () => {
   it('Part 77 label', () => {
     expect(resolveStandardLabel('faa_part77', null)).toBe('FAA Part 77 (14 CFR §77.19)')
     expect(resolveStandardLabel('faa_part77', 'B')).toBe('FAA Part 77 (14 CFR §77.19)')
+  })
+  it('ICAO Annex 14 label (no class suffix)', () => {
+    expect(resolveStandardLabel('icao_annex14', null)).toBe('ICAO Annex 14 (Vol I, 7th Ed.)')
+    expect(resolveStandardLabel('icao_annex14', 'B')).toBe('ICAO Annex 14 (Vol I, 7th Ed.)')
   })
 })
 
@@ -155,8 +165,8 @@ describe('deriveRunwayClassFromRunways', () => {
 // ── 4. Registry legend/layer constants locked to pre-move values ─────────────
 
 describe('SURFACE_SET_REGISTRY', () => {
-  it('holds both engine sets', () => {
-    expect(Object.keys(SURFACE_SET_REGISTRY).sort()).toEqual(['faa_part77', 'ufc_3_260_01'])
+  it('holds all three engine sets', () => {
+    expect(Object.keys(SURFACE_SET_REGISTRY).sort()).toEqual(['faa_part77', 'icao_annex14', 'ufc_3_260_01'])
   })
 
   it('UFC legendItems match the pre-move LEGEND_ITEMS verbatim', () => {
@@ -220,6 +230,45 @@ describe('SURFACE_SET_REGISTRY', () => {
       { id: 'p77-segment-break-end2', color: p77.approach.color, opacity: 0.32 },
       { id: 'p77-primary', color: p77.primary.color, opacity: 0.18 },
       { id: 'runway', color: '#FFFFFF', opacity: 0.5 },
+    ])
+  })
+
+  it('ICAO Annex 14 legendItems lock the five phase-1 surfaces', () => {
+    expect(SURFACE_SET_REGISTRY.icao_annex14.legendItems).toEqual([
+      { label: 'Conical', color: ANNEX14_SURFACE_META.conical.color, toggleKey: 'a14-conical', defaultOn: true },
+      { label: 'Inner Horizontal', color: ANNEX14_SURFACE_META.inner_horizontal.color, toggleKey: 'a14-inner-horizontal', defaultOn: true },
+      { label: 'Transitional', color: ANNEX14_SURFACE_META.transitional.color, toggleKey: 'a14-transitional', defaultOn: true },
+      { label: 'Approach', color: ANNEX14_SURFACE_META.approach.color, toggleKey: 'a14-approach', defaultOn: true },
+      { label: 'Take-Off Climb', color: ANNEX14_SURFACE_META.takeoff_climb.color, toggleKey: 'a14-takeoff-climb', defaultOn: true },
+    ])
+  })
+
+  it('ICAO Annex 14 surfaceLayers lock the a14-* ids + runway outline last', () => {
+    expect(SURFACE_SET_REGISTRY.icao_annex14.surfaceLayers).toEqual([
+      { id: 'a14-conical', color: ANNEX14_SURFACE_META.conical.color, opacity: 0.08 },
+      { id: 'a14-inner-horizontal', color: ANNEX14_SURFACE_META.inner_horizontal.color, opacity: 0.1 },
+      { id: 'a14-transitional-left', color: ANNEX14_SURFACE_META.transitional.color, opacity: 0.15 },
+      { id: 'a14-transitional-right', color: ANNEX14_SURFACE_META.transitional.color, opacity: 0.15 },
+      { id: 'a14-approach-end1', color: ANNEX14_SURFACE_META.approach.color, opacity: 0.14 },
+      { id: 'a14-approach-end2', color: ANNEX14_SURFACE_META.approach.color, opacity: 0.14 },
+      { id: 'a14-takeoff-climb-end1', color: ANNEX14_SURFACE_META.takeoff_climb.color, opacity: 0.12 },
+      { id: 'a14-takeoff-climb-end2', color: ANNEX14_SURFACE_META.takeoff_climb.color, opacity: 0.12 },
+      { id: 'runway', color: '#FFFFFF', opacity: 0.5 },
+    ])
+  })
+
+  it('ICAO Annex 14 buildPolygons emits the a14-* features + a shared runway outline', () => {
+    const feats = SURFACE_SET_REGISTRY.icao_annex14.buildPolygons([{ geometry: RWY }])
+    expect([...new Set(feats.map((f) => f.id))].sort()).toEqual([
+      'a14-approach-end1',
+      'a14-approach-end2',
+      'a14-conical',
+      'a14-inner-horizontal',
+      'a14-takeoff-climb-end1',
+      'a14-takeoff-climb-end2',
+      'a14-transitional-left',
+      'a14-transitional-right',
+      'runway',
     ])
   })
 })

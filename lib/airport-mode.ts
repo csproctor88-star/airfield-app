@@ -270,16 +270,16 @@ export function getRegSource(base: BaseLike): string[] {
  * Reads bases.obstruction_surface_set when present; falls back to
  * the mode default (UFC for USAF, Part 77 for civilian).
  *
- * Return type is deliberately narrower than `SurfaceSet`: the obstruction
- * evaluation engine (lib/calculations/obstructions.ts) only implements
- * ufc_3_260_01 and faa_part77 today. icao_annex14 is a valid DB value
- * (surface-set expansion, staged) but this resolver never selects it —
- * that engine support and the base-config UI to choose it are later work.
+ * All three engine sets — ufc_3_260_01, faa_part77, and icao_annex14 — are now
+ * implemented (lib/calculations/obstructions.ts), so a base configured with any
+ * of them resolves to that set. Bases with no explicit value fall back to the
+ * mode default (UFC for USAF, Part 77 for civilian) — ICAO is never a default,
+ * only an explicit selection.
  */
-export function getSurfaceSet(base: BaseLike): Exclude<SurfaceSet, 'icao_annex14'> {
+export function getSurfaceSet(base: BaseLike): SurfaceSet {
   if (base && typeof base === 'object' && 'obstruction_surface_set' in base) {
     const explicit = (base as { obstruction_surface_set?: SurfaceSet }).obstruction_surface_set
-    if (explicit === 'faa_part77' || explicit === 'ufc_3_260_01') return explicit
+    if (explicit === 'faa_part77' || explicit === 'ufc_3_260_01' || explicit === 'icao_annex14') return explicit
   }
   return isCivilian(base) ? 'faa_part77' : 'ufc_3_260_01'
 }

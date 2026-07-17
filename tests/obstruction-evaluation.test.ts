@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest'
 import {
   evaluateObstruction,
   evaluateObstructionPart77,
+  evaluateObstructionAnnex14,
   evaluateObstructionAllRunways,
   identifySurface,
   getUfcSurfaceInfo,
 } from '@/lib/calculations/obstructions'
 import { getRunwayGeometry, type LatLon } from '@/lib/calculations/geometry'
+import { M_TO_FT } from '@/lib/calculations/annex14-criteria'
 
 // ─────────────────────────────────────────────────────────────
 // Test fixtures — synthetic east-west runway centered at lat=0 lon=0
@@ -581,5 +583,118 @@ describe('UFC legend descriptions are class-aware (Fix 3 follow-up)', () => {
         expect(s.description).not.toMatch(/\{[a-z]+\}/i)
       }
     }
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// ICAO Task 1 — Annex 14 evaluator arm
+// ─────────────────────────────────────────────────────────────
+
+const ICAO_VARIANT = { classification: 'non_precision' as const, codeNumber: 4 as const }
+
+/** Reconstruct the along-approach distance (metres) from the analysis' own
+ *  along-track projection, so expectations don't depend on the test file's
+ *  flat-earth per-degree constants. */
+function annex14AlongApproachM(alongTrackFromMidpoint: number, distFromThresholdM: number): number {
+  const beyondEnd2Ft = alongTrackFromMidpoint - RUNWAY_HALF_LEN_FT
+  return (beyondEnd2Ft - distFromThresholdM * M_TO_FT) / M_TO_FT
+}
+
+/** Piecewise approach rise (metres) for non-precision code 4 (Table 4-1). */
+function npCode4Rise(dM: number): number {
+  const secs: [number, number][] = [[3000, 2], [3600, 2.5], [8400, 0]]
+  let rise = 0
+  let rem = dM
+  for (const [len, slope] of secs) {
+    if (rem <= 0) break
+    const seg = Math.min(rem, len)
+    rise += seg * (slope / 100)
+    rem -= seg
+  }
+  return rise
+}
+
+describe('evaluateObstructionAnnex14', () => {
+  it('emits the 5 phase-1 Annex 14 surfaces (no UFC / Part 77 ones)', () => {
+    const p = pointBeyondEastThreshold(500, 0)
+    const result = evaluateObstructionAnnex14(p, 50, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, ICAO_VARIANT)
+    const keys = result.surfaces.map(s => s.surfaceKey).sort()
+    expect(keys).toEqual(['approach', 'conical', 'inner_horizontal', 'takeoff_climb', 'transitional'])
+    // Annex 14 surface names, not the UFC/Part 77 ones.
+    expect(result.surfaces.find(s => s.surfaceKey === 'approach')!.surfaceName).toBe('Approach Surface')
+    expect(result.surfaces.find(s => s.surfaceKey === 'takeoff_climb')!.surfaceName).toBe('Take-Off Climb Surface')
+    // Citations flow through the ufcReference JSONB-compatibility field.
+    expect(result.surfaces.find(s => s.surfaceKey === 'conical')!.ufcReference).toContain('ICAO Annex 14')
+  })
+
+  it('approach allowable height in the SECOND section = threshold elev + section-1 rise + partial section-2 rise', () => {
+    // ~4,000 m along the approach → ~1,000 m into the 2.5% second section.
+    const p = pointBeyondEastThreshold(13320, 0)
+    const result = evaluateObstructionAnnex14(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, ICAO_VARIANT)
+    const approach = result.surfaces.find(s => s.surfaceKey === 'approach')!
+    const alongM = annex14AlongApproachM(result.alongTrackFromMidpoint, 60)
+    expect(alongM).toBeGreaterThan(3000)
+    expect(alongM).toBeLessThan(6600) // still within the second section
+    const expectedMSL = AIRFIELD_ELEV + npCode4Rise(alongM) * M_TO_FT
+    expect(approach.isWithinBounds).toBe(true)
+    expect(approach.maxAllowableHeightMSL).toBeCloseTo(expectedMSL, 3)
+  })
+
+  it('horizontal section returns the accumulated cap (150 m above threshold)', () => {
+    // ~8,600 m along → into the 8 400 m horizontal (0%) section.
+    const p = pointBeyondEastThreshold(28200, 0)
+    const result = evaluateObstructionAnnex14(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, ICAO_VARIANT)
+    const approach = result.surfaces.find(s => s.surfaceKey === 'approach')!
+    const alongM = annex14AlongApproachM(result.alongTrackFromMidpoint, 60)
+    expect(alongM).toBeGreaterThan(6600) // past the second section
+    expect(alongM).toBeLessThan(15000)
+    // 3 000×2% + 3 600×2.5% + horizontal 0% = 150 m, held flat.
+    expect(approach.maxAllowableHeightMSL).toBeCloseTo(AIRFIELD_ELEV + 150 * M_TO_FT, 4)
+  })
+
+  it('NULL variant falls back to non-precision code 4', () => {
+    const p = pointBeyondEastThreshold(500, 0)
+    const explicit = evaluateObstructionAnnex14(p, 50, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, ICAO_VARIANT)
+    const fallback = evaluateObstructionAnnex14(p, 50, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV)
+    expect(fallback.surfaces.map(s => s.maxAllowableHeightMSL))
+      .toEqual(explicit.surfaces.map(s => s.maxAllowableHeightMSL))
+  })
+
+  it('CAT II/III with code 1 throws (invalid Table 4-1 combination)', () => {
+    const p = pointBeyondEastThreshold(500, 0)
+    expect(() =>
+      evaluateObstructionAnnex14(p, 50, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, {
+        classification: 'precision_cat_ii_iii', codeNumber: 1,
+      }),
+    ).toThrow()
+  })
+})
+
+describe('ICAO dispatch — evaluateObstructionAllRunways / identifySurface', () => {
+  it('evaluateObstructionAllRunways dispatches to the Annex 14 evaluator', () => {
+    const p = pointBeyondEastThreshold(500, 0)
+    const result = evaluateObstructionAllRunways(
+      p, 50, AIRFIELD_ELEV,
+      [{ label: '09/27', geometry: RUNWAY, icaoClassification: 'non_precision', icaoCodeNumber: 4 }],
+      AIRFIELD_ELEV, 'B', 'icao_annex14',
+    )
+    const keys = result.perRunway[0].analysis.surfaces.map(s => s.surfaceKey).sort()
+    expect(keys).toEqual(['approach', 'conical', 'inner_horizontal', 'takeoff_climb', 'transitional'])
+  })
+
+  it('identifySurface returns an Annex 14 surface name under icao_annex14', () => {
+    const p = pointBeyondEastThreshold(3500, 0)
+    const name = identifySurface(
+      p,
+      [{ label: '09/27', geometry: RUNWAY, icaoClassification: 'non_precision', icaoCodeNumber: 4 }],
+      AIRFIELD_ELEV, 'B', 'icao_annex14',
+    )
+    expect([
+      'Approach Surface',
+      'Take-Off Climb Surface',
+      'Inner Horizontal Surface',
+      'Conical Surface',
+      'Transitional Surface',
+    ]).toContain(name)
   })
 })

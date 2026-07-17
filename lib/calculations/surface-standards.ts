@@ -10,7 +10,7 @@
 // lib/airport-mode.ts — this module keys off the engine's 2-member union.
 
 import type { SurfaceSet } from './obstructions'
-import { IMAGINARY_SURFACES, getPart77Surfaces } from './obstructions'
+import { IMAGINARY_SURFACES, getPart77Surfaces, ANNEX14_SURFACE_META } from './obstructions'
 import { getSurfaceCriteria } from './surface-criteria'
 import {
   generateRunwayPolygon,
@@ -28,6 +28,7 @@ import {
   type Part77RunwayInput,
   type SurfacePolygonFeature,
 } from './part77-geometry'
+import { buildAnnex14SurfacePolygons } from './annex14-geometry'
 
 // ---------------------------------------------------------------------------
 // Selectable standards
@@ -36,14 +37,14 @@ import {
 /** UFC runway classes that parameterize the UFC geometry generators. */
 export type UfcRunwayClass = 'A' | 'B' | 'Army_B'
 
-/** The four user-selectable obstruction standards. */
-export type SurfaceStandardId = 'af_class_a' | 'af_class_b' | 'army_class_b' | 'faa_part77'
+/** The five user-selectable obstruction standards. */
+export type SurfaceStandardId = 'af_class_a' | 'af_class_b' | 'army_class_b' | 'icao_annex14' | 'faa_part77'
 
 /**
  * Every selectable standard, keyed by id. `runwayClass` is non-null only for
- * the three UFC options; Part 77 carries null (its per-runway dimensions come
- * from each runway's faa_approach_type, not a class). A future standard is one
- * added record here.
+ * the three UFC options; Part 77 and ICAO carry null (their per-runway
+ * dimensions come from each runway's faa_approach_type / icao_* columns, not a
+ * UFC class). A future standard is one added record here.
  */
 export const SURFACE_STANDARD_OPTIONS: Record<SurfaceStandardId, {
   set: SurfaceSet
@@ -54,6 +55,7 @@ export const SURFACE_STANDARD_OPTIONS: Record<SurfaceStandardId, {
   af_class_a:   { set: 'ufc_3_260_01', runwayClass: 'A',      label: 'Air Force Class A', citation: 'UFC 3-260-01 Table 3-7' },
   af_class_b:   { set: 'ufc_3_260_01', runwayClass: 'B',      label: 'Air Force Class B', citation: 'UFC 3-260-01 Table 3-7' },
   army_class_b: { set: 'ufc_3_260_01', runwayClass: 'Army_B', label: 'Army Class B',      citation: 'UFC 3-260-01 Table 3-7' },
+  icao_annex14: { set: 'icao_annex14', runwayClass: null,     label: 'ICAO Annex 14',     citation: 'ICAO Annex 14 Vol I Table 4-1' },
   faa_part77:   { set: 'faa_part77',   runwayClass: null,     label: 'FAA Part 77',       citation: '14 CFR §77.19' },
 }
 
@@ -62,6 +64,7 @@ export const SURFACE_STANDARD_IDS: SurfaceStandardId[] = [
   'af_class_a',
   'af_class_b',
   'army_class_b',
+  'icao_annex14',
   'faa_part77',
 ]
 
@@ -69,6 +72,7 @@ export const SURFACE_STANDARD_IDS: SurfaceStandardId[] = [
 export const SURFACE_SET_LABELS: Record<SurfaceSet, string> = {
   ufc_3_260_01: 'UFC 3-260-01',
   faa_part77: 'FAA Part 77 (14 CFR §77.19)',
+  icao_annex14: 'ICAO Annex 14 (Vol I, 7th Ed.)',
 }
 
 /** Normalize a raw runway_class value to a valid UfcRunwayClass. NULL/
@@ -120,6 +124,7 @@ export function resolveStandard(
   runwayClasses: (string | null | undefined)[],
 ): SurfaceStandardId | 'mixed' {
   if (set === 'faa_part77') return 'faa_part77'
+  if (set === 'icao_annex14') return 'icao_annex14'
   const ids = new Set(runwayClasses.map((c) => ufcStandardIdForClass(c)))
   if (ids.size === 0) return 'af_class_b'
   if (ids.size === 1) return Array.from(ids)[0]
@@ -136,6 +141,7 @@ export function resolveStandardLabel(
   runwayClass: string | null | undefined,
 ): string {
   if (set === 'faa_part77') return SURFACE_SET_LABELS.faa_part77
+  if (set === 'icao_annex14') return SURFACE_SET_LABELS.icao_annex14
   const id = ufcStandardIdForClass(runwayClass)
   return `${SURFACE_SET_LABELS.ufc_3_260_01} — ${SURFACE_STANDARD_OPTIONS[id].label}`
 }
@@ -223,6 +229,33 @@ const PART77_SURFACE_LAYERS: SurfaceLayerDef[] = [
   { id: 'p77-segment-break-end1', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
   { id: 'p77-segment-break-end2', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
   { id: 'p77-primary', color: PART77_SURFACE_META.primary.color, opacity: 0.18 },
+  RUNWAY_LAYER,
+]
+
+// ── ICAO Annex 14 (Vol I, 7th Ed.) legend / layers ───────────────────────────
+// Five phase-1 surfaces. Colors read from ANNEX14_SURFACE_META (defined in
+// obstructions.ts alongside the Part 77 meta) — same palette idiom as the other
+// sets (approach orange / inner horizontal green / conical blue / transitional
+// yellow / take-off climb violet). The three precision inner surfaces (inner
+// approach / inner transitional / balked landing) are phase 2.
+const ANNEX14_LEGEND_ITEMS: LegendItem[] = [
+  { label: 'Conical', color: ANNEX14_SURFACE_META.conical.color, toggleKey: 'a14-conical', defaultOn: true },
+  { label: 'Inner Horizontal', color: ANNEX14_SURFACE_META.inner_horizontal.color, toggleKey: 'a14-inner-horizontal', defaultOn: true },
+  { label: 'Transitional', color: ANNEX14_SURFACE_META.transitional.color, toggleKey: 'a14-transitional', defaultOn: true },
+  { label: 'Approach', color: ANNEX14_SURFACE_META.approach.color, toggleKey: 'a14-approach', defaultOn: true },
+  { label: 'Take-Off Climb', color: ANNEX14_SURFACE_META.takeoff_climb.color, toggleKey: 'a14-takeoff-climb', defaultOn: true },
+]
+
+// Drawn bottom-to-top: conical (widest) first, then the narrower surfaces.
+const ANNEX14_SURFACE_LAYERS: SurfaceLayerDef[] = [
+  { id: 'a14-conical', color: ANNEX14_SURFACE_META.conical.color, opacity: 0.08 },
+  { id: 'a14-inner-horizontal', color: ANNEX14_SURFACE_META.inner_horizontal.color, opacity: 0.1 },
+  { id: 'a14-transitional-left', color: ANNEX14_SURFACE_META.transitional.color, opacity: 0.15 },
+  { id: 'a14-transitional-right', color: ANNEX14_SURFACE_META.transitional.color, opacity: 0.15 },
+  { id: 'a14-approach-end1', color: ANNEX14_SURFACE_META.approach.color, opacity: 0.14 },
+  { id: 'a14-approach-end2', color: ANNEX14_SURFACE_META.approach.color, opacity: 0.14 },
+  { id: 'a14-takeoff-climb-end1', color: ANNEX14_SURFACE_META.takeoff_climb.color, opacity: 0.12 },
+  { id: 'a14-takeoff-climb-end2', color: ANNEX14_SURFACE_META.takeoff_climb.color, opacity: 0.12 },
   RUNWAY_LAYER,
 ]
 
@@ -322,6 +355,23 @@ export const SURFACE_SET_REGISTRY: Record<SurfaceSet, SurfaceSetRenderConfig> = 
     surfaceLayers: PART77_SURFACE_LAYERS,
     buildPolygons: (runways) => [
       ...buildPart77SurfacePolygons(runways),
+      ...runways.map((r, ri) => ({
+        id: 'runway',
+        coords: generateRunwayPolygon(r.geometry),
+        rwyIndex: ri,
+      })),
+    ],
+  },
+  icao_annex14: {
+    // Like Part 77, the Annex 14 builder is pure OLS geometry; the shared runway
+    // outline is appended here. This registry entry passes only each runway's
+    // geometry, so every runway draws at ANNEX14_DEFAULT_VARIANT — wiring the
+    // per-runway icao_* columns (classification / code / strip width) into the
+    // builder is Task 2's map/page work.
+    legendItems: ANNEX14_LEGEND_ITEMS,
+    surfaceLayers: ANNEX14_SURFACE_LAYERS,
+    buildPolygons: (runways) => [
+      ...buildAnnex14SurfacePolygons(runways.map((r) => ({ geometry: r.geometry }))),
       ...runways.map((r, ri) => ({
         id: 'runway',
         coords: generateRunwayPolygon(r.geometry),

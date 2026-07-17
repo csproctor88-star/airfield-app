@@ -115,6 +115,14 @@ describe('getSurfaceSet', () => {
     expect(getSurfaceSet({ airport_type: 'usaf', obstruction_surface_set: 'faa_part77' })).toBe('faa_part77')
     expect(getSurfaceSet({ airport_type: 'faa_part139', obstruction_surface_set: 'ufc_3_260_01' })).toBe('ufc_3_260_01')
   })
+  it('resolves a configured ICAO Annex 14 base (no longer narrowed away)', () => {
+    expect(getSurfaceSet({ airport_type: 'usaf', obstruction_surface_set: 'icao_annex14' })).toBe('icao_annex14')
+    expect(getSurfaceSet({ airport_type: 'faa_part139', obstruction_surface_set: 'icao_annex14' })).toBe('icao_annex14')
+  })
+  it('never defaults to ICAO — an unset base takes the mode default', () => {
+    expect(getSurfaceSet({ airport_type: 'usaf' })).toBe('ufc_3_260_01')
+    expect(getSurfaceSet({ airport_type: 'faa_part139' })).toBe('faa_part77')
+  })
   it('defaults null to UFC', () => {
     expect(getSurfaceSet(null)).toBe('ufc_3_260_01')
   })

@@ -24,6 +24,13 @@ import {
   type RunwayClass,
   type ServiceBranch,
 } from './taxiway-criteria'
+import {
+  getAnnex14Criteria,
+  ANNEX14_DEFAULT_VARIANT,
+  M_TO_FT as ANNEX14_M_TO_FT,
+  type IcaoApproachClassification,
+  type IcaoCodeNumber,
+} from './annex14-criteria'
 
 // ---------------------------------------------------------------------------
 // Surface display metadata — UFC references, names, colors, descriptions
@@ -579,12 +586,38 @@ export const PART77_SURFACES = PART77_DIMENSIONS.non_utility_non_precision_low
  * Callers iterating should treat each set's keys as authoritative for
  * that mode.
  */
-export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77'
+export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14'
 export function getSurfaces(
   surfaceSet: SurfaceSet = 'ufc_3_260_01',
   approachType: FaaApproachType = 'non_utility_non_precision_low',
 ) {
   return surfaceSet === 'faa_part77' ? getPart77Surfaces(approachType) : IMAGINARY_SURFACES
+}
+
+// ---------------------------------------------------------------------------
+// ICAO Annex 14 surface display metadata — names, colors, citations.
+//
+// Class-invariant display data for the five phase-1 Annex 14 surfaces. Numeric
+// dimensions come from annex14-criteria.ts (the metre-published single source of
+// truth); this holds only names/colors/citations. Colors follow the existing
+// sets' palette idiom (approach orange / horizontal green / conical blue /
+// transitional yellow), with take-off climb in a distinct violet. Used by the
+// evaluator (result rows) and the surface-standards registry (legend colors).
+// ---------------------------------------------------------------------------
+
+export type Annex14SurfaceKey =
+  | 'approach'
+  | 'inner_horizontal'
+  | 'conical'
+  | 'transitional'
+  | 'takeoff_climb'
+
+export const ANNEX14_SURFACE_META: Record<Annex14SurfaceKey, { name: string; color: string; icaoRef: string }> = {
+  approach:         { name: 'Approach Surface',         color: '#F97316', icaoRef: 'ICAO Annex 14 Vol I §4.1.7–4.1.10; Table 4-1' },
+  inner_horizontal: { name: 'Inner Horizontal Surface', color: '#22C55E', icaoRef: 'ICAO Annex 14 Vol I §4.1.4–4.1.6; Table 4-1' },
+  conical:          { name: 'Conical Surface',          color: '#3B82F6', icaoRef: 'ICAO Annex 14 Vol I §4.1.1–4.1.3; Table 4-1' },
+  transitional:     { name: 'Transitional Surface',     color: '#EAB308', icaoRef: 'ICAO Annex 14 Vol I §4.1.13–4.1.16; Table 4-1' },
+  takeoff_climb:    { name: 'Take-Off Climb Surface',   color: '#8B5CF6', icaoRef: 'ICAO Annex 14 Vol I §4.1.25–4.1.27; Table 4-2' },
 }
 
 // ---------------------------------------------------------------------------
@@ -1474,14 +1507,321 @@ export function evaluateObstructionPart77(
 }
 
 /**
- * Per-runway input shape — includes optional Part 77 approach type so
- * each runway can drive its own surface dimensions. Class III/IV airports
- * commonly mix visual GA runways with non-precision commercial runways.
+ * Full obstruction evaluation against the 5 phase-1 ICAO Annex 14 Vol I obstacle
+ * limitation surfaces (approach, inner horizontal, conical, transitional,
+ * take-off climb). The three precision inner surfaces (inner approach, inner
+ * transitional, balked landing) are phase 2 — the page surfaces the CAT I–III
+ * caveat.
+ *
+ * Mirrors evaluateObstructionPart77's per-surface structure. Dimensions come
+ * from annex14-criteria.ts in metres; this converts to feet at the M_TO_FT
+ * boundary (heights/distances here are all feet, matching the rest of the
+ * engine). Surface citations are stored in the `ufcReference` field — the field
+ * name is a JSONB compatibility contract (saved obstruction_evaluations.results
+ * rows key on it), kept for Annex 14 rows per spec §13 item 10.
+ *
+ * Vertical datums per the verified doc: approach inner edge at threshold
+ * elevation (§4.1.9) with piecewise section slopes (horizontal section holds the
+ * accumulated cap); take-off climb from the runway-end elevation (same
+ * threshold/end source Part 77 uses, airfield fallback); inner horizontal at
+ * 45 m above established airfield elevation; conical rising from that 45 m datum;
+ * transitional rising from the strip/runway edge, capped at 45 m. A NULL/absent
+ * variant falls back to ANNEX14_DEFAULT_VARIANT.
+ */
+export function evaluateObstructionAnnex14(
+  point: LatLon,
+  obstructionHeightAGL: number,
+  groundElevationMSL: number | null,
+  rwy: RunwayGeometry,
+  airfieldElevMSL = 580,
+  variant?: {
+    classification?: IcaoApproachClassification | null
+    codeNumber?: IcaoCodeNumber | null
+    stripWidthM?: number | null
+  },
+): ObstructionAnalysis {
+  const classification = variant?.classification ?? ANNEX14_DEFAULT_VARIANT.classification
+  const codeNumber = variant?.codeNumber ?? ANNEX14_DEFAULT_VARIANT.codeNumber
+  // Throws for combinations Table 4-1 doesn't print (e.g. CAT II/III code 1/2).
+  const criteria = getAnnex14Criteria(classification, codeNumber)
+  const M = ANNEX14_M_TO_FT
+
+  const airfieldElev = airfieldElevMSL
+  const groundElev = groundElevationMSL ?? airfieldElev
+  const obstructionTopMSL = groundElev + obstructionHeightAGL
+
+  const relation = pointToRunwayRelation(point, rwy)
+  const stadiumDist = distanceFromStadiumCenter(point, rwy)
+
+  const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 })
+  const airfieldBaselineLabel = 'Airfield elevation'
+
+  const surfaces: SurfaceEvaluation[] = []
+  const halfLength = rwy.lengthFt / 2
+
+  // Distance beyond each threshold (positive = past the runway end, away from
+  // the runway). The approach and take-off climb inner edges are measured from
+  // the nearer threshold / runway end.
+  const beyondEnd1 = Math.max(0, -(relation.alongTrackFromMidpoint + halfLength))
+  const beyondEnd2 = Math.max(0, relation.alongTrackFromMidpoint - halfLength)
+  const nearerEnd = relation.nearerEnd
+  const beyondNearest = nearerEnd === 'end1' ? beyondEnd1 : beyondEnd2
+
+  // Nearer end's threshold/end elevation — same source (with airfield fallback)
+  // the Part 77 and UFC approach evaluators use.
+  const endElev = nearerEnd === 'end1'
+    ? (rwy.end1ElevationMSL ?? airfieldElev)
+    : (rwy.end2ElevationMSL ?? airfieldElev)
+  const nearerDesignator = nearerEnd === 'end1' ? rwy.end1Designator : rwy.end2Designator
+  const usedThreshold = nearerEnd === 'end1'
+    ? rwy.end1ElevationMSL !== undefined
+    : rwy.end2ElevationMSL !== undefined
+  const thresholdLabel = nearerDesignator
+    ? `RWY ${nearerDesignator} threshold`
+    : usedThreshold
+      ? `Nearest threshold (${nearerEnd})`
+      : 'Airfield elevation (threshold not set)'
+
+  // --- 1. Approach Surface (piecewise sections) ---
+  {
+    const ap = criteria.approach
+    const distFromThresholdFt = ap.distFromThresholdM * M
+    const innerHalfFt = (ap.innerEdgeM / 2) * M
+    const planLengthM = ap.totalLengthM ?? ap.sections.reduce((s, sec) => s + sec.lengthM, 0)
+    const planLengthFt = planLengthM * M
+    const divergence = ap.divergencePct / 100
+
+    // Along the approach, measured from the inner edge (distFromThreshold past the threshold).
+    const alongApproachFt = beyondNearest - distFromThresholdFt
+    const withinLength = alongApproachFt >= 0 && alongApproachFt <= planLengthFt
+    const halfWidthAt = innerHalfFt + Math.max(0, alongApproachFt) * divergence
+    const withinWidth = relation.distanceFromCenterline <= halfWidthAt
+    const isWithin = withinLength && withinWidth
+
+    // Piecewise vertical: inner-edge elevation = threshold elevation (§4.1.9).
+    // The horizontal section (slopePct 0) holds the accumulated cap.
+    const alongApproachM = Math.max(0, alongApproachFt) / M
+    let riseM = 0
+    let remainingM = alongApproachM
+    for (const sec of ap.sections) {
+      if (remainingM <= 0) break
+      const segM = Math.min(remainingM, sec.lengthM)
+      riseM += segM * (sec.slopePct / 100)
+      remainingM -= segM
+    }
+    const maxMSL = endElev + riseM * M
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    const sectionsStr = ap.sections.map((s) => `${s.lengthM} m @ ${s.slopePct}%`).join(' + ')
+    surfaces.push({
+      surfaceKey: 'approach',
+      surfaceName: ANNEX14_SURFACE_META.approach.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.approach.icaoRef,
+      ufcCriteria: `Annex 14 approach surface — inner edge ${ap.innerEdgeM} m at ${ap.distFromThresholdM} m from threshold, ${ap.divergencePct}% divergence per side; sections ${sectionsStr}.`,
+      color: ANNEX14_SURFACE_META.approach.color,
+      baselineElevation: endElev,
+      baselineLabel: thresholdLabel,
+      calculationBreakdown: `${fmt(endElev)} ft (${thresholdLabel}) + ${fmt(riseM * M)} ft (piecewise rise over ${fmt(alongApproachM)} m) = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- 2. Transitional Surface ---
+  {
+    const trans = criteria.transitional
+    const ih = criteria.innerHorizontal
+    const slope = trans.slopePct / 100
+    // Lower edge along the strip when configured, else the runway edge.
+    const lowerHalfFt = variant?.stripWidthM != null ? (variant.stripWidthM / 2) * M : rwy.widthFt / 2
+    const runFt = (ih.heightM / slope) * M // horizontal run to reach the 45 m inner-horizontal plane
+    const distFromEdge = Math.max(0, relation.distanceFromCenterline - lowerHalfFt)
+    const abeam = Math.abs(relation.alongTrackFromMidpoint) <= halfLength
+    const isWithin = abeam && distFromEdge > 0 && distFromEdge <= runFt
+    const cappedRiseFt = Math.min(distFromEdge * slope, ih.heightM * M)
+    const maxMSL = airfieldElev + cappedRiseFt
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'transitional',
+      surfaceName: ANNEX14_SURFACE_META.transitional.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.transitional.icaoRef,
+      ufcCriteria: `Annex 14 transitional surface — ${trans.slopePct}% slope from the strip edge up to the inner horizontal surface (${ih.heightM} m).`,
+      color: ANNEX14_SURFACE_META.transitional.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: isWithin
+        ? `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(cappedRiseFt)} ft (${trans.slopePct}% slope from strip edge, capped at ${ih.heightM} m) = ${fmt(maxMSL)} ft MSL`
+        : undefined,
+    })
+  }
+
+  // --- 3. Inner Horizontal Surface ---
+  // Excludes areas already governed by the approach or transitional surfaces.
+  {
+    const ih = criteria.innerHorizontal
+    const radiusFt = ih.radiusM * M
+    const heightFt = ih.heightM * M
+    const inMoreSpecific = surfaces.some(
+      (s) => s.isWithinBounds && (s.surfaceKey === 'approach' || s.surfaceKey === 'transitional'),
+    )
+    const isWithin = stadiumDist <= radiusFt && !inMoreSpecific
+    const maxMSL = airfieldElev + heightFt
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'inner_horizontal',
+      surfaceName: ANNEX14_SURFACE_META.inner_horizontal.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: maxAGL,
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.inner_horizontal.icaoRef,
+      ufcCriteria: `Annex 14 inner horizontal surface — ${ih.heightM} m above the established aerodrome elevation within a ${ih.radiusM} m radius.`,
+      color: ANNEX14_SURFACE_META.inner_horizontal.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(heightFt)} ft (${ih.heightM} m) = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- 4. Conical Surface ---
+  // Rises from the inner-horizontal periphery. The 45 m inner-horizontal height
+  // is the datum (added once here); the column's conical heightM is measured
+  // ABOVE it, so the conical top = 45 m + heightM — never double-counted.
+  {
+    const con = criteria.conical
+    const ih = criteria.innerHorizontal
+    const innerRFt = ih.radiusM * M
+    const extentFt = (con.heightM / (con.slopePct / 100)) * M
+    const distFromIH = Math.max(0, stadiumDist - innerRFt)
+    const isWithin = stadiumDist > innerRFt && distFromIH <= extentFt
+    const baseHeightFt = ih.heightM * M // 45 m datum
+    const riseFt = distFromIH * (con.slopePct / 100)
+    const maxHeightAboveField = baseHeightFt + riseFt
+    const maxMSL = airfieldElev + maxHeightAboveField
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'conical',
+      surfaceName: ANNEX14_SURFACE_META.conical.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.conical.icaoRef,
+      ufcCriteria: `Annex 14 conical surface — ${con.slopePct}% slope rising ${con.heightM} m above the inner horizontal surface.`,
+      color: ANNEX14_SURFACE_META.conical.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(baseHeightFt)} ft (inner horizontal 45 m) + ${fmt(riseFt)} ft (${con.slopePct}% slope) = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- 5. Take-Off Climb Surface ---
+  {
+    const toc = criteria.takeoffClimb
+    const distFromEndFt = toc.distFromEndM * M
+    const innerHalfFt = (toc.innerEdgeM / 2) * M
+    const finalHalfFt = (toc.finalWidthM / 2) * M
+    const divergence = toc.divergencePct / 100
+    const flareLenFt = (finalHalfFt - innerHalfFt) / divergence
+    const lengthFt = toc.lengthM * M
+    const slope = toc.slopePct / 100
+
+    const alongTOCFt = beyondNearest - distFromEndFt
+    const withinLength = alongTOCFt >= 0 && alongTOCFt <= lengthFt
+    // Diverging to the final width, then parallel at the final width.
+    const halfWidthAt = alongTOCFt <= flareLenFt
+      ? innerHalfFt + Math.max(0, alongTOCFt) * divergence
+      : finalHalfFt
+    const withinWidth = relation.distanceFromCenterline <= halfWidthAt
+    const isWithin = withinLength && withinWidth
+    const riseFt = Math.max(0, alongTOCFt) * slope
+    const maxMSL = endElev + riseFt
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'takeoff_climb',
+      surfaceName: ANNEX14_SURFACE_META.takeoff_climb.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.takeoff_climb.icaoRef,
+      ufcCriteria: `Annex 14 take-off climb surface — inner edge ${toc.innerEdgeM} m at ${toc.distFromEndM} m from the runway end, ${toc.divergencePct}% divergence to ${toc.finalWidthM} m final width, ${toc.slopePct}% slope over ${toc.lengthM} m.`,
+      color: ANNEX14_SURFACE_META.takeoff_climb.color,
+      baselineElevation: endElev,
+      baselineLabel: thresholdLabel,
+      calculationBreakdown: `${fmt(endElev)} ft (${thresholdLabel}) + ${fmt(riseFt)} ft (${toc.slopePct}% slope) = ${fmt(maxMSL)} ft MSL`,
+    })
+  }
+
+  // --- Aggregate ---
+  const violatedSurfaces = surfaces.filter((s) => s.violated)
+  const hasViolation = violatedSurfaces.length > 0
+  const applicable = surfaces.filter((s) => s.isWithinBounds && s.maxAllowableHeightMSL !== -1)
+  const controllingSurface = applicable.length > 0
+    ? applicable.reduce((min, s) => (s.maxAllowableHeightMSL < min.maxAllowableHeightMSL ? s : min))
+    : null
+
+  const waiverGuidance: string[] = []
+  if (hasViolation) {
+    waiverGuidance.push('ICAO ANNEX 14 OBSTACLE LIMITATION SURFACE PENETRATION DETECTED — Required actions:')
+    waiverGuidance.push('1. Conduct an aeronautical study per ICAO Annex 14 Vol I §4.2 to determine the operational impact of the obstacle.')
+    waiverGuidance.push('2. Coordinate with the appropriate ATS authority and aerodrome operator; publish, mark, and light the obstacle as required.')
+    waiverGuidance.push('3. Record the penetration in the aerodrome obstacle register and flag it for the safety-management review.')
+    for (const vs of violatedSurfaces) {
+      waiverGuidance.push(`4. ${vs.surfaceName} penetration ${vs.penetrationFt.toFixed(1)} ft — ${vs.ufcReference}`)
+    }
+  }
+
+  return {
+    point,
+    groundElevationMSL: groundElev,
+    obstructionHeightAGL,
+    obstructionTopMSL,
+    distanceFromCenterline: relation.distanceFromCenterline,
+    alongTrackFromMidpoint: relation.alongTrackFromMidpoint,
+    nearerEnd: relation.nearerEnd,
+    side: relation.side,
+    surfaces,
+    hasViolation,
+    controllingSurface,
+    violatedSurfaces,
+    waiverGuidance,
+  }
+}
+
+/**
+ * Per-runway input shape — includes optional Part 77 approach type and ICAO
+ * Annex 14 variant (classification / code number / strip width) so each runway
+ * can drive its own surface dimensions. Class III/IV airports commonly mix
+ * visual GA runways with non-precision commercial runways.
  */
 export type RunwayEvalInput = {
   label: string
   geometry: RunwayGeometry
   approachType?: FaaApproachType | null
+  icaoClassification?: IcaoApproachClassification | null
+  icaoCodeNumber?: IcaoCodeNumber | null
+  icaoStripWidthM?: number | null
 }
 
 /**
@@ -1500,7 +1840,7 @@ export function evaluateObstructionAllRunways(
   runwayClass = 'B',
   surfaceSet: SurfaceSet = 'ufc_3_260_01',
 ): MultiRunwayAnalysis {
-  const perRunway = runwayGeometries.map(({ label, geometry, approachType }) => {
+  const perRunway = runwayGeometries.map(({ label, geometry, approachType, icaoClassification, icaoCodeNumber, icaoStripWidthM }) => {
     const analysis = surfaceSet === 'faa_part77'
       ? evaluateObstructionPart77(
           point,
@@ -1509,6 +1849,15 @@ export function evaluateObstructionAllRunways(
           geometry,
           airfieldElevMSL,
           approachType ?? 'non_utility_non_precision_low',
+        )
+      : surfaceSet === 'icao_annex14'
+      ? evaluateObstructionAnnex14(
+          point,
+          obstructionHeightAGL,
+          groundElevationMSL,
+          geometry,
+          airfieldElevMSL,
+          { classification: icaoClassification, codeNumber: icaoCodeNumber, stripWidthM: icaoStripWidthM },
         )
       : evaluateObstruction(
           point,
@@ -1605,11 +1954,16 @@ export function identifySurface(
   let bestSurface: SurfaceEvaluation | null = null
   let bestLandUse: SurfaceEvaluation | null = null
 
-  for (const { geometry, approachType } of runways) {
+  for (const { geometry, approachType, icaoClassification, icaoCodeNumber, icaoStripWidthM } of runways) {
     const analysis = surfaceSet === 'faa_part77'
       ? evaluateObstructionPart77(
           point, 0, null, geometry, airfieldElevMSL,
           approachType ?? 'non_utility_non_precision_low',
+        )
+      : surfaceSet === 'icao_annex14'
+      ? evaluateObstructionAnnex14(
+          point, 0, null, geometry, airfieldElevMSL,
+          { classification: icaoClassification, codeNumber: icaoCodeNumber, stripWidthM: icaoStripWidthM },
         )
       : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
     if (analysis.controllingSurface) {
