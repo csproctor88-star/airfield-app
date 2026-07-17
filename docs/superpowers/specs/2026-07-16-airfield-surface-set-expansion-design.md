@@ -512,10 +512,11 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
   `tests/part77-surfaces.test.ts`'s dimension-locking style); locks the
   glossary-verified conical (20:1 × 7,000 ft, 150 → 500 ft) and outer horizontal
   (500 ft × 30,000 ft beyond the conical) values with provenance comments;
-  locks the modeled ADCS horizontal portion (Class A: sloped 40:1 × 20,000 then
-  500-ft horizontal to 50,000 ft total — confirmed; Class B: sloped 50:1 ×
-  50,000 then horizontal to 100,000 ft total per the §13 item 2 construction,
-  with the horizontal-portion elevation encoded per the pending owner ruling);
+  locks the modeled ADCS horizontal portion (both classes: slope from threshold
+  elevation to EAE + 500 ft — nominal breakpoints 20,000 ft (A) / 25,000 ft
+  (B) — then level at EAE + 500 to the 50,000-ft total, per the §13 item 2
+  final ruling; include a non-nominal-threshold-elevation case mirroring the
+  owner's 25,100-ft worked example);
   `getSurfaceCriteria('A')` no longer falls back.
 - **`tests/annex14-criteria.test.ts` (new)** — locks all Table 4-1 columns (conical
   slope/height, inner horizontal 45 m + radii 2 000/2 500/3 500/4 000 m, approach
@@ -575,22 +576,23 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
    inner_horizontal radius 13,120 ft → **7,500 ft** (item 12); ADCS width
    schedule half-widths 1,000 ft (AF start) → 4,500 ft (horizontal-portion
    start) → 8,000 ft (end), replacing the encoded 2,550-ft outer half-width.
-   **ADCS geometry — owner constant-splay construction (2026-07-16; full
-   derivation in docs/references/ufc-3-260-01-table3-7-verified.md):** the
-   sides flare at a constant splay set by the sloped portion (item 8 → item 9
-   widths over item 6's length), and the horizontal portion continues at the
-   same splay to item 10's end width — the horizontal length and total are
-   implicit, never printed. Class A IFR: sloped 40:1 × 20,000 ft (topping at
-   exactly item 11's 500 ft ✓), splay 0.15/side, horizontal 30,000 ft,
-   **total 50,000 ft — CONFIRMED**. Class B: sloped 50:1 × 50,000 ft (owner
-   ruling on item 6; tops at 1,000 ft), splay 0.07/side, horizontal 50,000 ft,
-   **total 100,000 ft**, horizontal starting at 50,000 ft. **One open
-   sub-item — Class B horizontal-portion elevation:** item 11 prints 500 ft,
-   but the 50,000-ft sloped portion tops at 1,000 ft; either 1,000 ft (item 11
-   stale for Class B post-Change-3 → monotonic envelope) or 500 ft as printed
-   (allowable height steps down at 50,000 ft). Owner ruling or the glossary
-   ADCS definition required before encoding the Class B ADCS; Class A is fully
-   encodable now. Note 4's elevation-datum caveat applies to both classes. The ADCS horizontal-portion model gap also applies to
+   **ADCS geometry — FULLY RESOLVED (owner rulings 2026-07-16; full derivation
+   and worked example in docs/references/ufc-3-260-01-table3-7-verified.md):**
+   the horizontal portion sits at **EAE + 500 ft** (item 11 as printed, both
+   classes); the sloped portion runs (50:1 Class B / 40:1 Class A) **from the
+   nearest threshold's elevation** and ends where it reaches EAE + 500 — its
+   length varies with the threshold-vs-EAE delta (Note 4; owner example:
+   EAE 380, threshold 378 → sloped length 25,100 ft). Nominal breakpoints:
+   25,000 ft (B), 20,000 ft (A IFR). **Total ADCS length = 50,000 ft for both
+   classes** (Class A confirmed by the owner's constant-splay derivation;
+   Class B's item-6 50,000 reads as the full ADCS length under the final
+   ruling). Encodable model per end: one 50,000-ft trapezoid flaring uniformly
+   (B: 2,000 → 16,000 ft, nominal-25,000 width = printed 9,000 ✓; A: 1,000 →
+   16,000 ft, nominal-20,000 width = printed 7,000 ✓); vertical profile =
+   slope from threshold elevation to EAE + 500, then level to 50,000 ft.
+   Implementation note: the slope's vertical datum is the nearest threshold
+   elevation, NOT the EAE — check what the current UFC evaluator uses and
+   align while correcting Class B. The ADCS horizontal-portion model gap also applies to
    **Class A IFR** (7,000 → 16,000 ft at 500 ft, items 9–11 — now verified);
    the ADCS shape gains horizontal-portion fields in this build for both
    classes. Army_B's ADCS outer half-width remains PLACEHOLDER pending an
