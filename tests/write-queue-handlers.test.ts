@@ -709,6 +709,53 @@ describe('fpr_save handler', () => {
       expect(err).not.toBeInstanceOf(NonRetriableError)
     }
   })
+
+  // Controller-approved deviation (ledgered): the spec put the Events Log
+  // (AF Form 3616) write in the page's completion handler. It lives in this
+  // queue handler instead, run AFTER a successful save, so the completion
+  // entry is coupled to actual persistence (a queued/offline check logs on
+  // drain, not on enqueue). lib/supabase/fpr.ts still never touches
+  // activity_log. These tests lock that invariant.
+  it('writes the Events Log completion entry after a successful save', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: { id: 'fpr-1', check_date: '2026-07-17', shift: 'day' }, error: null }
+    await handler({
+      ...FPR_SAVE_PAYLOAD,
+      summary: 'Day Shift Flight Planning Room check complete — all items satisfactory',
+    })
+    expect(state.activity.calls).toHaveLength(1)
+    expect(state.activity.calls[0]).toMatchObject({
+      action: 'completed',
+      entity_type: 'fpr',
+      entity_id: 'fpr-1',
+      metadata: { details: 'DAY SHIFT FLIGHT PLANNING ROOM CHECK COMPLETE — ALL ITEMS SATISFACTORY' },
+      baseId: 'base-a',
+    })
+  })
+
+  it('does not write an Events Log entry when the save fails', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(
+      handler({ ...FPR_SAVE_PAYLOAD, summary: 'x' }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
+    expect(state.activity.calls).toHaveLength(0)
+  })
+
+  it('does not log when the payload carries no summary (replay/legacy)', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: { id: 'fpr-1', shift: 'day' }, error: null }
+    await handler(FPR_SAVE_PAYLOAD)
+    expect(state.activity.calls).toHaveLength(0)
+  })
+
+  it('a failing Events Log write does not fail the handler (best-effort)', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: { id: 'fpr-2', shift: 'day' }, error: null }
+    state.activity.throw = new Error('activity insert boom')
+    const result = await handler({ ...FPR_SAVE_PAYLOAD, summary: 'x' })
+    expect(result).toMatchObject({ id: 'fpr-2' })
+  })
 })
 
 describe('registerAllHandlers + queue end-to-end', () => {

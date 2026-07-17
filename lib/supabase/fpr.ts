@@ -1,7 +1,7 @@
 import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ShiftKey } from '@/lib/shifts'
+import type { ShiftDef, ShiftKey } from '@/lib/shifts'
 import { FPR_DEFAULT_ITEMS } from '@/lib/fpr-default-items'
 
 // ─────────────────────────────────────────────────────────────
@@ -147,6 +147,32 @@ export function summarizeFprCheck(check: FprCheckWithResults, shiftLabel: string
   }
   const parts = issues.map(r => (r.notes ? `${r.item_label} (${r.notes})` : r.item_label))
   return `${label} — issues: ${parts.join(', ')}${naSuffix}`
+}
+
+export type FprTodayCard = {
+  shift: ShiftKey
+  label: string
+  check: FprCheckWithResults | undefined
+}
+
+/**
+ * Derive today's per-shift cards. Pure — the today view's ordering source
+ * of truth. Card order follows `getActiveShifts` (canonical day → swing →
+ * mid), NOT the fetch order: `fetchTodayFprChecks` orders by `shift`
+ * alphabetically (day, mid, swing), which would mis-order a 3-shift base.
+ * Only currently-active shifts get a card; a check for a now-inactive
+ * shift (e.g. a `mid` check after the base dropped to 1 shift) has no
+ * today card here and surfaces only in history.
+ */
+export function deriveFprTodayCards(
+  activeShifts: ShiftDef[],
+  todayChecks: FprCheckWithResults[],
+): FprTodayCard[] {
+  return activeShifts.map((s) => ({
+    shift: s.key,
+    label: s.label,
+    check: todayChecks.find((c) => c.shift === s.key),
+  }))
 }
 
 // ─────────────────────────────────────────────────────────────

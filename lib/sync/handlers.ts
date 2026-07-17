@@ -384,7 +384,16 @@ async function dashboardBoardUpdateHandler(p: DashboardBoardUpdatePayload): Prom
 // fpr_save
 // ---------------------------------------------------------------------------
 
-export type FprSavePayload = Parameters<typeof saveFprCheck>[0]
+export type FprSavePayload = Parameters<typeof saveFprCheck>[0] & {
+  /**
+   * Pre-built Events Log (AF Form 3616) summary line — `summarizeFprCheck`
+   * output computed on the page, where the resolved shift label lives.
+   * Carried on the payload so this handler can write the completion entry
+   * AFTER the save commits without needing the base's shift config.
+   * Optional: replay/legacy payloads that lack it simply skip the log.
+   */
+  summary?: string
+}
 export type FprSaveResult = Awaited<ReturnType<typeof saveFprCheck>>['data']
 
 /**
@@ -392,12 +401,37 @@ export type FprSaveResult = Awaited<ReturnType<typeof saveFprCheck>>['data']
  * (base_id, check_date, shift) and delete-and-rewrites the child
  * results, so draining the same queued save twice (or after a
  * lost-response commit) converges on the same single check row.
+ *
+ * Events Log write (controller-approved deviation from the spec's letter,
+ * ledgered): the spec placed the `logActivity('completed', 'fpr', …)` call
+ * in the page's completion handler. It lives HERE instead — after a
+ * successful `saveFprCheck` — so the AF Form 3616 completion entry is
+ * coupled to actual persistence: a queued/offline check documents its
+ * completion when it truly commits (at drain), not when it was merely
+ * enqueued. The house rule still holds — `lib/supabase/fpr.ts` never
+ * touches `activity_log`; the log is hoisted out of the CRUD module into
+ * the queue handler. The log is best-effort: a failure must not fail the
+ * handler (that would retry the already-committed save and double-log).
  */
 const fprSaveHandler: WriteHandler<FprSavePayload, FprSaveResult> = async (
   payload,
 ) => {
   const { data, error } = await saveFprCheck(payload)
   if (error) throwForStructuredError(error)
+  if (data?.id && payload.summary) {
+    try {
+      await logActivity(
+        'completed',
+        'fpr',
+        data.id,
+        undefined,
+        { details: payload.summary.toUpperCase() },
+        payload.baseId,
+      )
+    } catch {
+      /* best-effort — the check is already saved; don't retry & double-log */
+    }
+  }
   return data
 }
 
