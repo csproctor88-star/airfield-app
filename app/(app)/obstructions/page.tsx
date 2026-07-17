@@ -14,6 +14,7 @@ import { getRunwayGeometry, pointToRunwayRelation, distanceFt, bearing } from '@
 import {
   evaluateObstruction,
   evaluateObstructionAllRunways,
+  evaluateObstructionPart77,
   evaluateObstructionTaxiways,
   identifySurface,
   FAA_APPROACH_TYPE_LABELS,
@@ -213,19 +214,31 @@ function ObstructionsContent() {
       if (existingPhotos.length) {
         setPhotos(existingPhotos.map((url) => ({ url })))
       }
+      // Restore the surface set this row was evaluated under (pinned at
+      // save time) so the header, map overlay, and the re-run below all
+      // match the saved results — not the page's current default. Legacy
+      // rows (NULL surface_set) fall back to the base's current default,
+      // same as the detail page's SurfaceSetLegend. Use this derived
+      // value directly below rather than the `surfaceSet` state variable,
+      // which won't reflect the setSurfaceSet call until the next render.
+      const rowSurfaceSet: SurfaceSet =
+        (existing.surface_set as SurfaceSet | null | undefined) ?? getSurfaceSet(currentInstallation)
+      setSurfaceSet(rowSurfaceSet)
       if (existing.latitude && existing.longitude) {
         const point: LatLon = { lat: existing.latitude, lon: existing.longitude }
         const allRwys = getAllRunways()
-        const allGeometries = allRwys.map((r) => r.geometry)
-        const surfaceName = identifySurface(point, allGeometries, airfieldElevMSL, runwayClass)
+        const surfaceName = identifySurface(point, allRwys, airfieldElevMSL, runwayClass, rowSurfaceSet)
         const groundElev = existing.object_elevation_msl ?? airfieldElevMSL
         const closest = findClosestRunway(point)
         const relation = pointToRunwayRelation(point, closest.geometry)
         const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
         const distToThreshold = distanceFt(point, nearerThreshold)
-        const withinAD = allRwys.some(({ geometry }) => {
-          const a = evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
-          return a.surfaces.some((s) => s.surfaceKey === 'approach_departure' && s.isWithinBounds)
+        const approachDepartureKey = rowSurfaceSet === 'faa_part77' ? 'approach' : 'approach_departure'
+        const withinAD = allRwys.some(({ geometry, approachType }) => {
+          const a = rowSurfaceSet === 'faa_part77'
+            ? evaluateObstructionPart77(point, 0, null, geometry, airfieldElevMSL, approachType ?? undefined)
+            : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+          return a.surfaces.some((s) => s.surfaceKey === approachDepartureKey && s.isWithinBounds)
         })
         setPointInfo({
           point,
@@ -241,7 +254,7 @@ function ObstructionsContent() {
         })
         // Auto-run evaluation against all runways
         if (h > 0) {
-          const result = evaluateObstructionAllRunways(point, h, groundElev, allRwys, airfieldElevMSL, runwayClass)
+          const result = evaluateObstructionAllRunways(point, h, groundElev, allRwys, airfieldElevMSL, runwayClass, rowSurfaceSet)
           setMultiAnalysis(result)
           if (taxiwayGeometries.length > 0) {
             setTaxiwayResults(evaluateObstructionTaxiways(point, taxiwayGeometries))
@@ -255,16 +268,18 @@ function ObstructionsContent() {
   // Handle map click
   const handlePointSelected = useCallback(async (point: LatLon) => {
     const allRwys = getAllRunways()
-    const allGeometries = allRwys.map((r) => r.geometry)
-    const surfaceName = identifySurface(point, allGeometries, airfieldElevMSL, runwayClass)
+    const surfaceName = identifySurface(point, allRwys, airfieldElevMSL, runwayClass, surfaceSet)
     // Find closest runway for distance display
     const closest = findClosestRunway(point)
     const relation = pointToRunwayRelation(point, closest.geometry)
     const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
     const distToThreshold = distanceFt(point, nearerThreshold)
-    const withinAD = allRwys.some(({ geometry }) => {
-      const a = evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
-      return a.surfaces.some((s) => s.surfaceKey === 'approach_departure' && s.isWithinBounds)
+    const approachDepartureKey = surfaceSet === 'faa_part77' ? 'approach' : 'approach_departure'
+    const withinAD = allRwys.some(({ geometry, approachType }) => {
+      const a = surfaceSet === 'faa_part77'
+        ? evaluateObstructionPart77(point, 0, null, geometry, airfieldElevMSL, approachType ?? undefined)
+        : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+      return a.surfaces.some((s) => s.surfaceKey === approachDepartureKey && s.isWithinBounds)
     })
     setPointInfo({
       point,
@@ -297,7 +312,7 @@ function ObstructionsContent() {
     } else {
       toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Elevation API unavailable' })
     }
-  }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
+  }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass, surfaceSet])
 
   // Commit a typed coordinate. Reuses the full map-tap pipeline unchanged;
   // setFlyToPoint always receives a freshly spread object so the map's flyTo
@@ -568,7 +583,9 @@ function ObstructionsContent() {
       </div>
 
       <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-        UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis
+        {surfaceSet === 'faa_part77'
+          ? 'FAA Part 77 (14 CFR §77.19) — Imaginary Surface Analysis'
+          : 'UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis'}
       </div>
       <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)', lineHeight: 1.4 }}>
         Surface overlays use FAA survey coordinates. Satellite imagery may not perfectly align with survey data due to basemap georegistration variance. All distance and surface calculations are based on published coordinates.
