@@ -590,9 +590,16 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
    (B: 2,000 → 16,000 ft, nominal-25,000 width = printed 9,000 ✓; A: 1,000 →
    16,000 ft, nominal-20,000 width = printed 7,000 ✓); vertical profile =
    slope from threshold elevation to EAE + 500, then level to 50,000 ft.
-   Implementation note: the slope's vertical datum is the nearest threshold
-   elevation, NOT the EAE — check what the current UFC evaluator uses and
-   align while correcting Class B. The ADCS horizontal-portion model gap also applies to
+   Implementation note (verified 2026-07-16, owner-confirmed): the current UFC
+   evaluator ALREADY baselines the ADCS slope on the nearer threshold's
+   elevation (`evaluateObstruction`'s approach_departure branch,
+   lib/calculations/obstructions.ts ~:683-743 — `thresholdElev` +
+   `baselineLabel`, airfield-elevation fallback only when thresholds are
+   unconfigured; the UI surfaces it as "Nearest Threshold Elev"). The Class B
+   correction therefore only adds the horizontal-portion cap — level at
+   EAE + 500 from the slope crossing (d = slope × (EAE + 500 − thresholdElev))
+   out to 50,000 ft — plus the length/width corrections; the slope-datum
+   machinery already exists. The ADCS horizontal-portion model gap also applies to
    **Class A IFR** (7,000 → 16,000 ft at 500 ft, items 9–11 — now verified);
    the ADCS shape gains horizontal-portion fields in this build for both
    classes. Army_B's ADCS outer half-width remains PLACEHOLDER pending an
