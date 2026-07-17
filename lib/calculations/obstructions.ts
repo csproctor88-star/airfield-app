@@ -62,9 +62,9 @@ export type UfcSurfaceMeta = {
   color: string
   ufcRef: string
   /** Either a class-invariant string, or a templater (like `ufcCriteria`) for
-   *  descriptions that quote a class-varying dimension. The two horizontal
-   *  surfaces template their radius so the legend never renders a literal
-   *  "{radius}" placeholder. */
+   *  descriptions that quote a class-varying dimension (slopes, widths,
+   *  lengths, radii) — so a pinned Class A / Army legend cites its own class's
+   *  numbers and never renders a literal placeholder. */
   description: string | ((criteria: SurfaceCriteria) => string)
   /** Class-aware criteria text — pass the evaluated class's SurfaceCriteria. */
   ufcCriteria: (criteria: SurfaceCriteria) => string
@@ -75,7 +75,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
     name: 'Runway Clear Zone',
     color: '#EC4899',
     ufcRef: 'UFC 3-260-01, Table 3-5 (Runway Clear Zone)',
-    description: 'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
+    description: (c) => `Obstruction-free zone extending ${withCommas(c.clear_zone.length)} ft from each runway threshold, ${withCommas(c.clear_zone.halfWidth * 2)} ft wide.`,
     ufcCriteria: (c) =>
       `The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within ${withCommas(c.clear_zone.length)} ft x ${withCommas(c.clear_zone.halfWidth * 2)} ft from each runway end unless meeting B13 permissible deviation criteria.`,
   },
@@ -83,7 +83,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
     name: 'Graded Portion of Clear Zone',
     color: '#F43F5E',
     ufcRef: 'UFC 3-260-01, Table 3-5 (graded area of clear zone)',
-    description: 'Rough-graded, obstruction-free portion of the clear zone extending 1,000 ft from each threshold, 3,000 ft wide.',
+    description: (c) => `Rough-graded, obstruction-free portion of the clear zone extending ${withCommas(c.graded_area.length)} ft from each threshold, ${withCommas(c.graded_area.halfWidth * 2)} ft wide.`,
     ufcCriteria: (c) =>
       `The graded portion (${withCommas(c.graded_area.length)} ft from runway end, ${withCommas(c.graded_area.halfWidth * 2)} ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.`,
   },
@@ -99,7 +99,7 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
     name: 'Approach-Departure Clearance Surface',
     color: '#F97316',
     ufcRef: 'UFC 3-260-01, Table 3-7, Items 5–11 (Approach-Departure Clearance Surface)',
-    description: '50:1 slope extending from each end of the primary surface.',
+    description: (c) => `${c.approach_departure.slope}:1 slope extending from each end of the primary surface.`,
     // Slope (50:1 Class B / 40:1 Class A) and total length are class-specific —
     // numeric provenance is in surface-criteria.ts (Table 3-7 items 6–11).
     ufcCriteria: (c) =>
@@ -140,16 +140,20 @@ export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   apz_i: {
     name: 'APZ I (Accident Potential Zone I)',
     color: '#D946EF',
-    ufcRef: 'UFC 3-260-01, Table 3-6 (APZ I)',
-    description: 'High accident risk zone extending 5,000 ft beyond the clear zone, 3,000 ft wide.',
+    // Table 3-6 carries the APZ dimensions; DoDI 4165.57 carries the land-use
+    // rules quoted in the ufcCriteria prose — both cited.
+    ufcRef: 'UFC 3-260-01, Table 3-6; DoD Instruction 4165.57 (APZ I)',
+    description: (c) => `High accident risk zone extending ${withCommas(c.apz_i.length)} ft beyond the clear zone, ${withCommas(c.apz_i.halfWidth * 2)} ft wide.`,
     ufcCriteria: () =>
       'APZ I — High accident risk zone. Only very low-density uses allowed: agriculture, grazing, open space, surface parking (no structures), roads with minimal traffic, and essential utility corridors. No residential, schools, hospitals, assembly uses, or high-occupancy facilities permitted.',
   },
   apz_ii: {
     name: 'APZ II (Accident Potential Zone II)',
     color: '#A78BFA',
-    ufcRef: 'UFC 3-260-01, Table 3-6 (APZ II)',
-    description: 'Moderate accident risk zone extending 7,000 ft beyond APZ I, 3,000 ft wide.',
+    // Table 3-6 carries the APZ dimensions; DoDI 4165.57 carries the land-use
+    // rules quoted in the ufcCriteria prose — both cited.
+    ufcRef: 'UFC 3-260-01, Table 3-6; DoD Instruction 4165.57 (APZ II)',
+    description: (c) => `Moderate accident risk zone extending ${withCommas(c.apz_ii.length)} ft beyond APZ I, ${withCommas(c.apz_ii.halfWidth * 2)} ft wide.`,
     ufcCriteria: () =>
       'APZ II — Moderate accident risk zone. Low-density commercial/industrial allowed: warehouses with low personnel density, open storage yards, and some limited community facilities (case-by-case). Residential strongly discouraged. High-density or high-occupancy uses prohibited.',
   },

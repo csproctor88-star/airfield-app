@@ -4,6 +4,7 @@ import {
   evaluateObstructionPart77,
   evaluateObstructionAllRunways,
   identifySurface,
+  getUfcSurfaceInfo,
 } from '@/lib/calculations/obstructions'
 import { getRunwayGeometry, type LatLon } from '@/lib/calculations/geometry'
 
@@ -509,5 +510,76 @@ describe('UFC surface info is class-aware (SSE Task 3)', () => {
     // reference (docs/references/ufc-3-260-01-table3-7-verified.md) disproves.
     expect(approach.ufcReference).toBe('UFC 3-260-01, Table 3-7, Items 5–11 (Approach-Departure Clearance Surface)')
     expect(approach.color).toBe('#F97316')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// Fix 3 follow-up (SSE final review) — legend descriptions are class-aware.
+//
+// Five UFC_SURFACE_META descriptions quoted class-varying numbers as static
+// strings, so a pinned Class A row's collapsed legend read "50:1 slope..."
+// (should be 40:1) and an Army row's clear-zone/graded/APZ lines read
+// "3,000 ft wide" (Army: 1,000 ft). All five now template from the class's
+// SurfaceCriteria via the same (criteria) => string mechanism as ufcCriteria.
+// Class B resolves byte-identical to the old static strings (regression lock).
+// ─────────────────────────────────────────────────────────────
+
+describe('UFC legend descriptions are class-aware (Fix 3 follow-up)', () => {
+  it('Class A approach-departure description cites the 40:1 Class A slope (Table 3-7 item 7 IFR)', () => {
+    const a = getUfcSurfaceInfo('A')
+    expect(a.approach_departure.description).toBe('40:1 slope extending from each end of the primary surface.')
+    expect(a.approach_departure.description).not.toContain('50:1')
+  })
+
+  it('Army clear-zone description cites the 1,000-ft Army width (Table 3-5 Army), not the 3,000-ft AF width', () => {
+    const army = getUfcSurfaceInfo('Army_B')
+    expect(army.clear_zone.description).toBe(
+      'Obstruction-free zone extending 3,000 ft from each runway threshold, 1,000 ft wide.',
+    )
+    expect(army.clear_zone.description).not.toContain('3,000 ft wide')
+  })
+
+  it('Class B descriptions resolve byte-identical to the pre-templating static strings', () => {
+    // These five were static strings before the templater conversion; Class B's
+    // criteria reproduce them exactly (provenance: Table 3-5 / 3-7 / 3-6 Class B
+    // values in surface-criteria.ts).
+    const b = getUfcSurfaceInfo('B')
+    expect(b.clear_zone.description).toBe(
+      'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
+    )
+    expect(b.graded_area.description).toBe(
+      'Rough-graded, obstruction-free portion of the clear zone extending 1,000 ft from each threshold, 3,000 ft wide.',
+    )
+    expect(b.approach_departure.description).toBe(
+      '50:1 slope extending from each end of the primary surface.',
+    )
+    expect(b.apz_i.description).toBe(
+      'High accident risk zone extending 5,000 ft beyond the clear zone, 3,000 ft wide.',
+    )
+    expect(b.apz_ii.description).toBe(
+      'Moderate accident risk zone extending 7,000 ft beyond APZ I, 3,000 ft wide.',
+    )
+  })
+
+  it('Class A APZ descriptions cite the 2,500-ft Class A lengths; Army APZs cite the 1,000-ft width', () => {
+    const a = getUfcSurfaceInfo('A')
+    expect(a.apz_i.description).toBe('High accident risk zone extending 2,500 ft beyond the clear zone, 3,000 ft wide.')
+    expect(a.apz_ii.description).toBe('Moderate accident risk zone extending 2,500 ft beyond APZ I, 3,000 ft wide.')
+    const army = getUfcSurfaceInfo('Army_B')
+    expect(army.apz_i.description).toBe('High accident risk zone extending 5,000 ft beyond the clear zone, 1,000 ft wide.')
+  })
+
+  it('APZ ufcRef cites Table 3-6 (dimensions) alongside DoDI 4165.57 (land-use rules in the criteria prose)', () => {
+    const b = getUfcSurfaceInfo('B')
+    expect(b.apz_i.ufcRef).toBe('UFC 3-260-01, Table 3-6; DoD Instruction 4165.57 (APZ I)')
+    expect(b.apz_ii.ufcRef).toBe('UFC 3-260-01, Table 3-6; DoD Instruction 4165.57 (APZ II)')
+  })
+
+  it('no resolved description contains an un-templated placeholder', () => {
+    for (const cls of ['A', 'B', 'Army_B']) {
+      for (const s of Object.values(getUfcSurfaceInfo(cls))) {
+        expect(s.description).not.toMatch(/\{[a-z]+\}/i)
+      }
+    }
   })
 })
