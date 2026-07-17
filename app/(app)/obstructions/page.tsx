@@ -973,9 +973,9 @@ function ObstructionsContent() {
               ) : (
                 <>
                   This what-if evaluation uses non-utility non-precision (&lt;¾ mi) defaults for
-                  every runway. Setting this base&apos;s obstruction surface set to Part 77 in{' '}
-                  <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Setup</a>{' '}
-                  unlocks per-runway FAA Approach Types.
+                  every runway and applies to this evaluation only. Set the base&apos;s governing
+                  surface evaluation standard in{' '}
+                  <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Configuration → Runways</a>.
                 </>
               )}
             </div>

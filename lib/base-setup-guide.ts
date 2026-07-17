@@ -49,9 +49,15 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
       runway_id:
         'The runway designator pair, e.g. "06L/24R" or "13/31". Use the same format published on the IAP and on signage.',
       runway_class:
-        'Class B is standard USAF (ARC III–IV). Army Class B is 5,000 ft. The class drives obstruction surface widths and parking ' +
-        'clearance envelopes per UFC 3-260-01. Civilian Part 139 airports leave this blank — the FAA Approach Type field drives ' +
-        'Part 77 surface dimensions instead.',
+        'Class A serves smaller/lighter-aircraft runways (UFC 3-260-01 Table 3-1 classification) with narrower primary and ' +
+        'approach-departure surfaces. Class B is standard USAF (ARC III–IV) — the common heavy/mixed case. Army Class B is ' +
+        '5,000 ft. The class drives obstruction surface widths and parking clearance envelopes per UFC 3-260-01 Table 3-7. ' +
+        'Civilian Part 139 airports leave this blank — the FAA Approach Type field drives Part 77 surface dimensions instead.',
+      obstruction_surface_set:
+        'Sets the base-wide standard the Obstruction Evaluation Tool defaults to. Choosing Air Force Class A, Air Force Class B, ' +
+        'or Army Class B also sets every runway\'s Class to match (UFC 3-260-01 Table 3-7 dimensions), since the evaluation ' +
+        'engine takes one class per run, not per-runway. Choosing FAA Part 77 leaves runway classes untouched — Part 77 dimensions ' +
+        'come from each runway\'s FAA Approach Type instead. Civilian Part 139 bases are pinned to FAA Part 77.',
       length_ft: 'Full landing length in feet, threshold to threshold.',
       width_ft: 'Paved runway width in feet, edge to edge.',
       surface: 'Pavement composition. Drives PCN/ACN and friction-test scheduling.',

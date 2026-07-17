@@ -10,6 +10,12 @@ import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
 import { isCivilian, getSurfaceSet } from '@/lib/airport-mode'
 import { FAA_APPROACH_TYPE_LABELS, type FaaApproachType } from '@/lib/calculations/obstructions'
+import {
+  SURFACE_STANDARD_IDS,
+  SURFACE_STANDARD_OPTIONS,
+  resolveStandard,
+  type SurfaceStandardId,
+} from '@/lib/calculations/surface-standards'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import QrcEditorDialog from '@/components/admin/qrc-editor-dialog'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
@@ -559,7 +565,7 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
         {!civilian && (
           <div><label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
             <select value={f.runway_class} onChange={e => setF(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
-              <option value="B">Class B</option><option value="Army_B">Army Class B</option>
+              <option value="A">Class A</option><option value="B">Class B</option><option value="Army_B">Army Class B</option>
             </select>
           </div>
         )}
@@ -1148,6 +1154,63 @@ function RunwayTab({
     setSaving(false)
   }
 
+  // Surface Evaluation Standard — persists bases.obstruction_surface_set and,
+  // for the three UFC options, batch-sets every runway's runway_class to match
+  // (the engine takes one class per evaluation, not per-runway). FAA Part 77
+  // only ever touches the base column; runway classes are left exactly as-is.
+  const [standardSaving, setStandardSaving] = useState(false)
+  const handleSelectStandard = async (id: SurfaceStandardId) => {
+    if (!installationId || civilian || standardSaving) return
+    const opt = SURFACE_STANDARD_OPTIONS[id]
+    const isUfc = opt.set === 'ufc_3_260_01'
+    const confirmMsg = isUfc
+      ? `Set the surface evaluation standard to ${opt.label}? This also sets the runway class on ${runways.length} runway(s).`
+      : `Set the surface evaluation standard to ${opt.label}? Runway classes are kept; Part 77 uses each runway's FAA approach type.`
+    if (!confirm(confirmMsg)) return
+
+    const prevSet = getSurfaceSet(currentInstallation)
+    const prevRunways = runways
+    setStandardSaving(true)
+    const supabase = createClient()
+    if (!supabase) { setStandardSaving(false); return }
+
+    const { error: baseError } = await supabase
+      .from('bases')
+      .update({ obstruction_surface_set: opt.set, updated_at: new Date().toISOString() } as any)
+      .eq('id', installationId)
+
+    if (baseError) {
+      toast.error(`Failed to set surface evaluation standard: ${friendlyError(baseError.message)}`)
+      setStandardSaving(false)
+      return
+    }
+
+    if (isUfc) {
+      const runwayClass = opt.runwayClass
+      setRunways(prev => prev.map(r => ({ ...r, runway_class: runwayClass })))
+      const { error: rwyError } = await supabase
+        .from('base_runways')
+        .update({ runway_class: runwayClass } as any)
+        .eq('base_id', installationId)
+      if (rwyError) {
+        // Best-effort compensating write — the runway batch didn't complete,
+        // so don't leave the base pointed at a standard whose runway classes
+        // never actually changed.
+        setRunways(prevRunways)
+        await supabase.from('bases').update({ obstruction_surface_set: prevSet } as any).eq('id', installationId)
+        toast.error(`Standard set, but failed to update runway classes: ${friendlyError(rwyError.message)}`)
+        await refreshCurrentInstallation()
+        setStandardSaving(false)
+        return
+      }
+    }
+
+    toast.success(`Surface evaluation standard set to ${opt.label}`)
+    markSaved?.('runways')
+    await refreshCurrentInstallation()
+    setStandardSaving(false)
+  }
+
   const fieldStyle = {
     padding: '8px 10px',
     borderRadius: 'var(--radius-sm)',
@@ -1159,6 +1222,10 @@ function RunwayTab({
     width: '100%',
     boxSizing: 'border-box' as const,
   }
+
+  // Current standard, resolved from the base's persisted set + its runways'
+  // classes — 'mixed' when UFC runways disagree on class.
+  const surfaceStandardId = resolveStandard(getSurfaceSet(currentInstallation), runways.map(r => r.runway_class))
 
   return (
     <div>
@@ -1244,6 +1311,89 @@ function RunwayTab({
             </label>
           ))}
         </div>
+      </div>
+
+      {/* Surface Evaluation Standard — persists bases.obstruction_surface_set
+          (+ runway_class on every runway for the three UFC options). */}
+      <div style={{
+        padding: '10px 14px', marginBottom: 12,
+        background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)' }}>
+            Surface Evaluation Standard
+          </label>
+          <FieldHint stepKey="runways" fieldId="obstruction_surface_set" />
+        </div>
+
+        {civilian ? (
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 280,
+            padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            border: '1px solid color-mix(in srgb, var(--color-cyan) 40%, transparent)',
+          }}>
+            <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-cyan)' }}>
+              ◉  {SURFACE_STANDARD_OPTIONS.faa_part77.label}
+            </span>
+            <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              {SURFACE_STANDARD_OPTIONS.faa_part77.citation} — Part 139 airports always evaluate under FAA Part 77.
+            </span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {SURFACE_STANDARD_IDS.map(id => {
+              const opt = SURFACE_STANDARD_OPTIONS[id]
+              const active = surfaceStandardId === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => handleSelectStandard(id)}
+                  disabled={standardSaving}
+                  style={{
+                    flex: '1 1 180px', minWidth: 0, padding: '8px 10px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: `1px solid ${active
+                      ? 'color-mix(in srgb, var(--color-cyan) 55%, transparent)'
+                      : 'var(--color-border)'}`,
+                    background: active
+                      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
+                      : 'transparent',
+                    color: active ? 'var(--color-cyan)' : 'var(--color-text-2)',
+                    fontFamily: 'inherit',
+                    fontSize: 'var(--fs-sm)',
+                    fontWeight: active ? 700 : 500,
+                    cursor: standardSaving ? 'wait' : 'pointer',
+                    opacity: standardSaving && !active ? 0.6 : 1,
+                    textAlign: 'left',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                  }}
+                >
+                  <span>{active ? '◉' : '○'}  {opt.label}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400 }}>
+                    {opt.citation}
+                  </span>
+                </button>
+              )
+            })}
+            {surfaceStandardId === 'mixed' && (
+              <div style={{
+                flex: '1 1 180px', minWidth: 0, padding: '8px 10px',
+                borderRadius: 'var(--radius-sm)',
+                border: '1px dashed var(--color-border)',
+                color: 'var(--color-text-2)',
+                display: 'flex', flexDirection: 'column', gap: 2,
+              }}>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700 }}>○  Mixed (per-runway)</span>
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                  Runways disagree on class — evaluations use the first runway&apos;s class until classes are aligned.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {runways.length === 0 && !adding && (
@@ -1349,6 +1499,7 @@ function RunwayTab({
               <div>
                 <label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
                 <select value={newRunway.runway_class} onChange={e => setNewRunway(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
+                  <option value="A">Class A</option>
                   <option value="B">Class B</option>
                   <option value="Army_B">Army Class B</option>
                 </select>
