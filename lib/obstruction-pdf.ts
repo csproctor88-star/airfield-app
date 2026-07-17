@@ -98,11 +98,15 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       : '—'
   // Single set-and-class-aware label, resolved through the surface-standards
   // registry so this never hand-rolls "Class ${runway_class}" (which would
-  // print "Class null" for Part 77 rows, whose runway_class is now NULL).
+  // print "Class null" for Part 77 / ICAO rows, whose runway_class is NULL).
   // Legacy rows with NULL surface_set are treated as UFC for backward
   // compatibility, matching resolveStandardLabel's own UFC default.
   const surfaceStandardLabel = resolveStandardLabel(
-    evaluation.surface_set === 'faa_part77' ? 'faa_part77' : 'ufc_3_260_01',
+    evaluation.surface_set === 'faa_part77'
+      ? 'faa_part77'
+      : evaluation.surface_set === 'icao_annex14'
+        ? 'icao_annex14'
+        : 'ufc_3_260_01',
     evaluation.runway_class,
   )
 
@@ -225,6 +229,25 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       y += 3
     }
     y += 4
+  }
+
+  // ── ICAO Annex 14 phase-2 caveat ──
+  // Phase 1 evaluates and draws five surfaces; the three precision inner
+  // surfaces (inner approach, inner transitional, balked landing) are not yet
+  // evaluated — required for CAT II/III per Annex 14 §4.2.15. Shown for every
+  // ICAO evaluation: the saved row does not persist the per-runway ICAO
+  // classification, so precision can't be re-derived here, and the note is a
+  // true phase-limitation disclosure for any Annex 14 evaluation.
+  if (evaluation.surface_set === 'icao_annex14') {
+    checkPageBreak(10)
+    doc.setFontSize(7)
+    doc.setTextColor(180, 120, 20)
+    const caveat =
+      'ICAO Annex 14 phase-1 evaluation: inner approach, inner transitional, and balked landing surfaces are not evaluated — required for CAT II/III per Annex 14 §4.2.15.'
+    const caveatLines = doc.splitTextToSize(caveat, contentWidth)
+    doc.text(caveatLines, margin, y)
+    y += caveatLines.length * 3.2 + 4
+    doc.setTextColor(0)
   }
 
   // ── Required Actions ──

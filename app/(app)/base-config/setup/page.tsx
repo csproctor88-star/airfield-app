@@ -9,13 +9,49 @@ import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
 import { isCivilian, getSurfaceSet } from '@/lib/airport-mode'
-import { FAA_APPROACH_TYPE_LABELS, type FaaApproachType } from '@/lib/calculations/obstructions'
+import {
+  FAA_APPROACH_TYPE_LABELS,
+  type FaaApproachType,
+  type IcaoApproachClassification,
+  type IcaoCodeNumber,
+} from '@/lib/calculations/obstructions'
+import { icaoStripWidthDefaultM } from '@/lib/calculations/annex14-criteria'
 import {
   SURFACE_STANDARD_IDS,
   SURFACE_STANDARD_OPTIONS,
   resolveStandard,
   type SurfaceStandardId,
 } from '@/lib/calculations/surface-standards'
+
+// ICAO Annex 14 per-runway variant labels (prose, for the wizard selectors and
+// the read-only runway card). Classification labels per the spec's §8 wording.
+const ICAO_CLASSIFICATION_LABELS: Record<IcaoApproachClassification, string> = {
+  non_instrument: 'Non-instrument',
+  non_precision: 'Non-precision approach',
+  precision_cat_i: 'Precision approach CAT I',
+  precision_cat_ii_iii: 'Precision approach CAT II/III',
+}
+
+// Table 1-1 reference field lengths, for the Code Number selector help text.
+const ICAO_CODE_NUMBER_LABELS: Record<IcaoCodeNumber, string> = {
+  1: '1 — field length < 800 m',
+  2: '2 — 800 m to < 1,200 m',
+  3: '3 — 1,200 m to < 1,800 m',
+  4: '4 — 1,800 m and over',
+}
+
+// Read-only runway-card label for a runway's active ICAO variant, e.g.
+// "Non-precision approach, Code 4". Empty when neither field is set.
+function icaoVariantLabel(
+  classification: string | null | undefined,
+  codeNumber: number | null | undefined,
+): string {
+  const classLabel = classification
+    ? ICAO_CLASSIFICATION_LABELS[classification as IcaoApproachClassification] ?? classification
+    : null
+  const codeLabel = codeNumber != null ? `Code ${codeNumber}` : null
+  return [classLabel, codeLabel].filter(Boolean).join(', ')
+}
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import QrcEditorDialog from '@/components/admin/qrc-editor-dialog'
 import { fetchInstallationNavaids } from '@/lib/supabase/installations'
@@ -534,12 +570,16 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   const { currentInstallation } = useInstallation()
   const civilian = isCivilian(currentInstallation)
   const part77 = getSurfaceSet(currentInstallation) === 'faa_part77'
+  const icao = getSurfaceSet(currentInstallation) === 'icao_annex14'
   const [f, setF] = useState({
     runway_id: rwy.runway_id || '', length_ft: String(rwy.length_ft || ''), width_ft: String(rwy.width_ft || ''),
     surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''),
     runway_class: rwy.runway_class || (civilian ? '' : 'B'),
     faa_approach_type: rwy.faa_approach_type || '',
     faa_approach_category: rwy.faa_approach_category || '',
+    icao_code_number: rwy.icao_code_number != null ? String(rwy.icao_code_number) : '',
+    icao_approach_classification: rwy.icao_approach_classification || '',
+    icao_strip_width_m: rwy.icao_strip_width_m != null ? String(rwy.icao_strip_width_m) : '',
     end1_designator: rwy.end1_designator || '', end1_latitude: String(rwy.end1_latitude ?? ''),
     end1_longitude: String(rwy.end1_longitude ?? ''), end1_elevation_msl: String(rwy.end1_elevation_msl ?? ''),
     end1_heading: String(rwy.end1_heading ?? ''), end1_approach_lighting: rwy.end1_approach_lighting || '',
@@ -556,6 +596,9 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
       runway_class: civilian ? null : f.runway_class,
       faa_approach_type: f.faa_approach_type || null,
       faa_approach_category: f.faa_approach_category || null,
+      icao_code_number: f.icao_code_number ? parseInt(f.icao_code_number) : null,
+      icao_approach_classification: f.icao_approach_classification || null,
+      icao_strip_width_m: f.icao_strip_width_m ? parseFloat(f.icao_strip_width_m) : null,
       end1_designator: f.end1_designator, end1_latitude: parseFloat(f.end1_latitude) || null,
       end1_longitude: parseFloat(f.end1_longitude) || null, end1_elevation_msl: parseFloat(f.end1_elevation_msl) || null,
       end1_heading: parseFloat(f.end1_heading) || null, end1_approach_lighting: f.end1_approach_lighting || null,
@@ -623,6 +666,60 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
               These fields only affect FAA Part 77 obstruction analysis (this base&apos;s obstruction surface set) — they do not change Runway Class or any UFC-based evaluation.
             </div>
           )}
+        </div>
+      )}
+      {icao && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <div>
+            <label style={labelStyle}>ICAO Code Number <FieldHint stepKey="runways" fieldId="icao_code_number" /></label>
+            <select
+              value={f.icao_code_number}
+              onChange={e => setF(p => ({ ...p, icao_code_number: e.target.value }))}
+              style={fieldStyle}
+              title="ICAO Annex 14 Vol I Table 1-1 code number (reference field length)"
+            >
+              <option value="">— Not set (uses code 4) —</option>
+              {([1, 2, 3, 4] as IcaoCodeNumber[]).map(n => (
+                <option key={n} value={String(n)}>{ICAO_CODE_NUMBER_LABELS[n]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>ICAO Approach Classification <FieldHint stepKey="runways" fieldId="icao_approach_classification" /></label>
+            <select
+              value={f.icao_approach_classification}
+              onChange={e => setF(p => ({ ...p, icao_approach_classification: e.target.value as IcaoApproachClassification | '' }))}
+              style={fieldStyle}
+              title="ICAO Annex 14 Vol I Table 4-1 approach classification"
+            >
+              <option value="">— Not set (uses non-precision) —</option>
+              {(Object.keys(ICAO_CLASSIFICATION_LABELS) as IcaoApproachClassification[]).map(k => (
+                <option key={k} value={k}>{ICAO_CLASSIFICATION_LABELS[k]}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Strip Width (m) <FieldHint stepKey="runways" fieldId="icao_strip_width_m" /></label>
+            <input
+              type="number"
+              step="1"
+              value={f.icao_strip_width_m}
+              onChange={e => setF(p => ({ ...p, icao_strip_width_m: e.target.value }))}
+              style={fieldStyle}
+              placeholder={
+                f.icao_approach_classification && f.icao_code_number
+                  ? `§3.4: ${icaoStripWidthDefaultM(f.icao_approach_classification as IcaoApproachClassification, parseInt(f.icao_code_number) as IcaoCodeNumber)} m`
+                  : 'blank = approximate'
+              }
+            />
+          </div>
+          <div style={{ gridColumn: '1 / -1', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+            Drives ICAO Annex 14 obstacle limitation surface dimensions (this base&apos;s surface set).
+            {f.icao_approach_classification && f.icao_code_number
+              ? ` Annex 14 §3.4 default strip width for this classification/code is ${icaoStripWidthDefaultM(f.icao_approach_classification as IcaoApproachClassification, parseInt(f.icao_code_number) as IcaoCodeNumber)} m (total).`
+              : ''}
+            {' '}Leave Strip Width blank to draw the transitional surface from the runway edge (approximate).
+          </div>
         </div>
       )}
       <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1 — {f.end1_designator || '?'}</div>
@@ -1069,6 +1166,9 @@ function RunwayTab({
     surface: 'Asphalt',
     true_heading: '',
     runway_class: 'B',
+    icao_code_number: '',
+    icao_approach_classification: '',
+    icao_strip_width_m: '',
     end1_designator: '',
     end1_latitude: '',
     end1_longitude: '',
@@ -1094,6 +1194,9 @@ function RunwayTab({
       true_heading: parseFloat(newRunway.true_heading) || null,
       // Civilian airports leave runway_class null — FAA approach type drives Part 77 dimensions instead.
       runway_class: civilian ? null : newRunway.runway_class,
+      icao_code_number: newRunway.icao_code_number ? parseInt(newRunway.icao_code_number) : null,
+      icao_approach_classification: newRunway.icao_approach_classification || null,
+      icao_strip_width_m: newRunway.icao_strip_width_m ? parseFloat(newRunway.icao_strip_width_m) : null,
       end1_designator: newRunway.end1_designator.trim() || newRunway.runway_id.split('/')[0] || '',
       end1_latitude: parseFloat(newRunway.end1_latitude) || null,
       end1_longitude: parseFloat(newRunway.end1_longitude) || null,
@@ -1122,7 +1225,7 @@ function RunwayTab({
       setRunways(prev => [...prev, data as typeof prev[number]])
       await refreshCurrentInstallation()
       setAdding(false)
-      setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', end1_designator: '', end1_latitude: '', end1_longitude: '', end1_elevation_msl: '', end2_designator: '', end2_latitude: '', end2_longitude: '', end2_elevation_msl: '' })
+      setNewRunway({ runway_id: '', length_ft: '', width_ft: '', surface: 'Asphalt', true_heading: '', runway_class: 'B', icao_code_number: '', icao_approach_classification: '', icao_strip_width_m: '', end1_designator: '', end1_latitude: '', end1_longitude: '', end1_elevation_msl: '', end2_designator: '', end2_latitude: '', end2_longitude: '', end2_elevation_msl: '' })
     }
     setSaving(false)
   }
@@ -1171,7 +1274,9 @@ function RunwayTab({
     const isUfc = opt.set === 'ufc_3_260_01'
     const confirmMsg = isUfc
       ? `Set the surface evaluation standard to ${opt.label}? This also sets the runway class on ${runways.length} runway(s).`
-      : `Set the surface evaluation standard to ${opt.label}? Runway classes are kept; Part 77 uses each runway's FAA approach type.`
+      : opt.set === 'icao_annex14'
+        ? `Set the surface evaluation standard to ${opt.label}? Runway classes are kept; ICAO Annex 14 uses each runway's code number, approach classification, and strip width.`
+        : `Set the surface evaluation standard to ${opt.label}? Runway classes are kept; Part 77 uses each runway's FAA approach type.`
     if (!confirm(confirmMsg)) return
 
     const prevSet = getSurfaceSet(currentInstallation)
@@ -1431,11 +1536,19 @@ function RunwayTab({
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 'var(--fs-lg)', color: 'var(--color-text-1)' }}>
                   {rwy.runway_id}
-                  {rwy.runway_class
-                    ? ` — ${rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}`
-                    : rwy.faa_approach_type
-                      ? ` — ${FAA_APPROACH_TYPE_LABELS[rwy.faa_approach_type as FaaApproachType] ?? rwy.faa_approach_type}`
-                      : ''}
+                  {(() => {
+                    // Under ICAO the active variant is the dimension source, so it
+                    // leads (a stale runway_class from a prior UFC config would
+                    // otherwise mislabel the row). Otherwise: UFC class, then the
+                    // Part 77 approach type.
+                    if (getSurfaceSet(currentInstallation) === 'icao_annex14') {
+                      const lbl = icaoVariantLabel(rwy.icao_approach_classification, rwy.icao_code_number)
+                      return lbl ? ` — ${lbl}` : ''
+                    }
+                    if (rwy.runway_class) return ` — ${rwy.runway_class === 'Army_B' ? 'Army Class B' : `Class ${rwy.runway_class}`}`
+                    if (rwy.faa_approach_type) return ` — ${FAA_APPROACH_TYPE_LABELS[rwy.faa_approach_type as FaaApproachType] ?? rwy.faa_approach_type}`
+                    return ''
+                  })()}
                 </div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginTop: 4 }}>
                   {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
@@ -1536,6 +1649,57 @@ function RunwayTab({
               <option>Asphalt/Concrete</option>
             </select>
           </div>
+
+          {getSurfaceSet(currentInstallation) === 'icao_annex14' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              <div>
+                <label style={labelStyle}>ICAO Code Number <FieldHint stepKey="runways" fieldId="icao_code_number" /></label>
+                <select
+                  value={newRunway.icao_code_number}
+                  onChange={e => setNewRunway(p => ({ ...p, icao_code_number: e.target.value }))}
+                  style={fieldStyle}
+                  title="ICAO Annex 14 Vol I Table 1-1 code number (reference field length)"
+                >
+                  <option value="">— Not set (uses code 4) —</option>
+                  {([1, 2, 3, 4] as IcaoCodeNumber[]).map(n => (
+                    <option key={n} value={String(n)}>{ICAO_CODE_NUMBER_LABELS[n]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>ICAO Approach Classification <FieldHint stepKey="runways" fieldId="icao_approach_classification" /></label>
+                <select
+                  value={newRunway.icao_approach_classification}
+                  onChange={e => setNewRunway(p => ({ ...p, icao_approach_classification: e.target.value }))}
+                  style={fieldStyle}
+                  title="ICAO Annex 14 Vol I Table 4-1 approach classification"
+                >
+                  <option value="">— Not set (uses non-precision) —</option>
+                  {(Object.keys(ICAO_CLASSIFICATION_LABELS) as IcaoApproachClassification[]).map(k => (
+                    <option key={k} value={k}>{ICAO_CLASSIFICATION_LABELS[k]}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Strip Width (m) <FieldHint stepKey="runways" fieldId="icao_strip_width_m" /></label>
+                <input
+                  type="number"
+                  step="1"
+                  value={newRunway.icao_strip_width_m}
+                  onChange={e => setNewRunway(p => ({ ...p, icao_strip_width_m: e.target.value }))}
+                  style={fieldStyle}
+                  placeholder={
+                    newRunway.icao_approach_classification && newRunway.icao_code_number
+                      ? `§3.4: ${icaoStripWidthDefaultM(newRunway.icao_approach_classification as IcaoApproachClassification, parseInt(newRunway.icao_code_number) as IcaoCodeNumber)} m`
+                      : 'blank = approximate'
+                  }
+                />
+              </div>
+              <div style={{ gridColumn: '1 / -1', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+                Drives ICAO Annex 14 obstacle limitation surface dimensions. Leave Strip Width blank to draw the transitional surface from the runway edge (approximate).
+              </div>
+            </div>
+          )}
 
           <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>

@@ -123,12 +123,19 @@ interface ObstructionLike {
 }
 
 // Table specs have no base context to fall back on for a legacy NULL
-// surface_set (unlike the [id] detail page, which has currentInstallation),
-// so any set other than 'faa_part77' — including NULL/icao_annex14 (staged,
-// not yet selectable) — resolves through the UFC branch, matching
-// resolveStandardLabel's own historical-default treatment of legacy rows.
+// surface_set (unlike the [id] detail page, which has currentInstallation), so
+// a NULL set resolves through the UFC branch, matching resolveStandardLabel's
+// own historical-default treatment of legacy rows. Selectable sets
+// (faa_part77 / icao_annex14) pass through to their own label.
 function obstructionStandardLabel(r: ObstructionLike): string {
-  return resolveStandardLabel(r.surface_set === 'faa_part77' ? 'faa_part77' : 'ufc_3_260_01', r.runway_class)
+  return resolveStandardLabel(
+    r.surface_set === 'faa_part77'
+      ? 'faa_part77'
+      : r.surface_set === 'icao_annex14'
+        ? 'icao_annex14'
+        : 'ufc_3_260_01',
+    r.runway_class,
+  )
 }
 
 export const OBSTRUCTIONS_SPEC: TableModuleSpec<ObstructionLike> = {

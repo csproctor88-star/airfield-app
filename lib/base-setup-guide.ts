@@ -57,7 +57,21 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
         'Sets the base-wide standard the Obstruction Evaluation Tool defaults to. Choosing Air Force Class A, Air Force Class B, ' +
         'or Army Class B also sets every runway\'s Class to match (UFC 3-260-01 Table 3-7 dimensions), since the evaluation ' +
         'engine takes one class per run, not per-runway. Choosing FAA Part 77 leaves runway classes untouched — Part 77 dimensions ' +
-        'come from each runway\'s FAA Approach Type instead. Civilian Part 139 bases are pinned to FAA Part 77.',
+        'come from each runway\'s FAA Approach Type instead. Choosing ICAO Annex 14 also leaves runway classes untouched — Annex 14 ' +
+        'dimensions come from each runway\'s Code Number, Approach Classification, and Strip Width. Civilian Part 139 bases are ' +
+        'pinned to FAA Part 77.',
+      icao_code_number:
+        'ICAO Annex 14 Vol I Table 1-1 aerodrome reference code number (1–4), keyed to the aeroplane reference field length: ' +
+        '1 = under 800 m, 2 = 800 m to under 1,200 m, 3 = 1,200 m to under 1,800 m, 4 = 1,800 m and over. Drives the Annex 14 ' +
+        'obstacle limitation surface dimensions. Only shown when the base evaluates under ICAO Annex 14; leave unset to use code 4.',
+      icao_approach_classification:
+        'ICAO Annex 14 Vol I Table 4-1 approach classification (Non-instrument, Non-precision approach, Precision approach CAT I, ' +
+        'Precision approach CAT II/III). Drives the approach- and transitional-surface slopes and dimensions. CAT II/III applies ' +
+        'only to code number 3 or 4. Only shown when the base evaluates under ICAO Annex 14; leave unset to use non-precision.',
+      icao_strip_width_m:
+        'ICAO Annex 14 Vol I §3.4 graded runway strip total width in metres. Optional — when blank, the transitional surface is ' +
+        'drawn from the runway edge and flagged as approximate. The form suggests the §3.4 default for the selected classification ' +
+        'and code number when both are set.',
       length_ft: 'Full landing length in feet, threshold to threshold.',
       width_ft: 'Paved runway width in feet, edge to edge.',
       surface: 'Pavement composition. Drives PCN/ACN and friction-test scheduling.',

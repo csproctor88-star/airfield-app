@@ -271,6 +271,30 @@ describe('SURFACE_SET_REGISTRY', () => {
       'runway',
     ])
   })
+
+  it('ICAO Annex 14 buildPolygons threads the per-runway variant (classification / code) into the geometry', () => {
+    // Non-instrument code 1 (60 m inner edge, 1 600 m first section) vs the
+    // default non-precision code 4 (300 m inner edge, 15 000 m total) produce
+    // materially different approach footprints — proving the registry passes
+    // the variant through rather than always drawing the default.
+    const ni1 = SURFACE_SET_REGISTRY.icao_annex14.buildPolygons([
+      { geometry: RWY, classification: 'non_instrument', codeNumber: 1 },
+    ])
+    const defaultVariant = SURFACE_SET_REGISTRY.icao_annex14.buildPolygons([{ geometry: RWY }])
+    const ni1Approach = ni1.find((f) => f.id === 'a14-approach-end1')!.coords
+    const defApproach = defaultVariant.find((f) => f.id === 'a14-approach-end1')!.coords
+    expect(ni1Approach).not.toEqual(defApproach)
+  })
+
+  it('ICAO Annex 14 buildPolygons: NULL strip width draws the transitional from the runway edge; a value moves the lower edge', () => {
+    const noStrip = SURFACE_SET_REGISTRY.icao_annex14.buildPolygons([{ geometry: RWY }])
+    const withStrip = SURFACE_SET_REGISTRY.icao_annex14.buildPolygons([
+      { geometry: RWY, stripWidthM: 300 },
+    ])
+    const noStripLeft = noStrip.find((f) => f.id === 'a14-transitional-left')!.coords
+    const withStripLeft = withStrip.find((f) => f.id === 'a14-transitional-left')!.coords
+    expect(withStripLeft).not.toEqual(noStripLeft)
+  })
 })
 
 // ── 5. buildUfcSurfacePolygons ───────────────────────────────────────────────

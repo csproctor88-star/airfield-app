@@ -283,3 +283,33 @@ export function getAnnex14Criteria(
 
   return { ...column, takeoffClimb }
 }
+
+// ---------------------------------------------------------------------------
+// §3.4 runway-strip default widths (wizard hint only)
+// ---------------------------------------------------------------------------
+
+/**
+ * §3.4 graded runway-strip default FULL width (metres), for the base-config
+ * wizard's Strip Width hint. Source: docs/references/icao-annex14-verified.md
+ * §3.4 table, which lists PER-SIDE (half-width) distances from the centreline:
+ *   • precision (§3.4.3) / non-precision (§3.4.4): 150 m code 3/4, 75 m code 1/2
+ *   • non-instrument (§3.4.5): 75 m code 3/4, 40 m code 2, 30 m code 1
+ * The `icao_strip_width_m` column stores the FULL strip width (both the geometry
+ * builder and the evaluator halve it — `stripWidthM / 2` — mirroring the
+ * runway-edge `widthFt / 2` fallback), so each per-side value is doubled here.
+ * A wizard-only convenience: NULL still falls back to the runway edge with the
+ * visible "approximate" flag — this never changes an evaluation on its own.
+ */
+export function icaoStripWidthDefaultM(
+  classification: IcaoApproachClassification,
+  codeNumber: IcaoCodeNumber,
+): number {
+  if (classification === 'non_instrument') {
+    // §3.4.5 per-side 75 / 40 / 30 m → full 150 / 80 / 60 m.
+    if (codeNumber >= 3) return 150
+    if (codeNumber === 2) return 80
+    return 60
+  }
+  // §3.4.3 / §3.4.4 per-side 150 m (code 3/4) or 75 m (code 1/2) → full 300 / 150 m.
+  return codeNumber >= 3 ? 300 : 150
+}

@@ -11,12 +11,17 @@ import {
   getRunwayGeometry,
   offsetPoint,
 } from '@/lib/calculations/geometry'
-import { type FaaApproachType, type SurfaceSet } from '@/lib/calculations/obstructions'
-import { type Part77RunwayInput } from '@/lib/calculations/part77-geometry'
+import {
+  type FaaApproachType,
+  type SurfaceSet,
+  type IcaoApproachClassification,
+  type IcaoCodeNumber,
+} from '@/lib/calculations/obstructions'
 import {
   SURFACE_SET_REGISTRY,
   type LegendItem,
   type UfcRunwayClass,
+  type SurfaceRunwayInput,
 } from '@/lib/calculations/surface-standards'
 import {
   getClearanceHalfWidth,
@@ -85,7 +90,16 @@ type Part77ToggleKey =
   | 'p77-approach'
   | 'p77-primary'
 
-type AnyToggleKey = ToggleKey | Part77ToggleKey
+// ICAO Annex 14 toggle keys — one per phase-1 legend row. The legend/layer
+// constants + colors live in lib/calculations/surface-standards.ts.
+type Annex14ToggleKey =
+  | 'a14-conical'
+  | 'a14-inner-horizontal'
+  | 'a14-transitional'
+  | 'a14-approach'
+  | 'a14-takeoff-climb'
+
+type AnyToggleKey = ToggleKey | Part77ToggleKey | Annex14ToggleKey
 
 // Map a Part 77 layer id to its toggle key. The transitional/approach/segment-
 // break variants fold onto their base toggle; segment-break toggles with approach.
@@ -96,6 +110,19 @@ function getPart77ToggleKeyForLayer(layerId: string): Part77ToggleKey | null {
   if (layerId.startsWith('p77-approach')) return 'p77-approach'
   if (layerId.startsWith('p77-segment-break')) return 'p77-approach'
   if (layerId === 'p77-primary') return 'p77-primary'
+  return null
+}
+
+// Map an ICAO Annex 14 layer id to its toggle key. The left/right transitional
+// and end1/end2 approach + take-off-climb variants fold onto their base toggle,
+// mirroring the Part 77 mapper — without this the a14-* layers resolve to a null
+// toggle key and the ICAO legend rows are inert.
+function getAnnex14ToggleKeyForLayer(layerId: string): Annex14ToggleKey | null {
+  if (layerId === 'a14-conical') return 'a14-conical'
+  if (layerId === 'a14-inner-horizontal') return 'a14-inner-horizontal'
+  if (layerId.startsWith('a14-transitional')) return 'a14-transitional'
+  if (layerId.startsWith('a14-approach')) return 'a14-approach'
+  if (layerId.startsWith('a14-takeoff-climb')) return 'a14-takeoff-climb'
   return null
 }
 
@@ -183,10 +210,17 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     ? installationRunways.filter(rwy => !rwy.faa_approach_type).length
     : 0
 
-  // Pair each runway's geometry with its faa_approach_type so the Part 77
-  // builder can size per-runway surfaces; the UFC builder consumes only the
-  // geometries (`.map(r => r.geometry)`).
-  const getAllRunways = useCallback((): Part77RunwayInput[] => {
+  // ICAO only: runways with no icao_strip_width_m draw their transitional surface
+  // from the runway edge (an approximation) rather than the graded strip edge —
+  // surfaced as a legend footer note (never a silent wrong answer).
+  const stripApproxRunwayCount = surfaceSet === 'icao_annex14'
+    ? installationRunways.filter(rwy => rwy.icao_strip_width_m == null).length
+    : 0
+
+  // Pair each runway's geometry with its faa_approach_type (Part 77) and its
+  // icao_* variant (Annex 14) so the active set's builder can size per-runway
+  // surfaces; the UFC builder consumes only the geometries (`.map(r => r.geometry)`).
+  const getAllRunways = useCallback((): SurfaceRunwayInput[] => {
     if (installationRunways.length === 0) return []
     return installationRunways.map(rwy => ({
       geometry: getRunwayGeometry({
@@ -199,6 +233,9 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
         end2_elevation_msl: rwy.end2_elevation_msl,
       }),
       approachType: (rwy.faa_approach_type as FaaApproachType | null) ?? null,
+      classification: (rwy.icao_approach_classification as IcaoApproachClassification | null) ?? null,
+      codeNumber: (rwy.icao_code_number as IcaoCodeNumber | null) ?? null,
+      stripWidthM: rwy.icao_strip_width_m ?? null,
     }))
   }, [installationRunways])
 
@@ -263,7 +300,11 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       const activeLayers = registryEntry.surfaceLayers
       const activeLegend: LegendItem[] = registryEntry.legendItems
       const toggleKeyForLayer: (layerId: string) => AnyToggleKey | null =
-        surfaceSet === 'faa_part77' ? getPart77ToggleKeyForLayer : getToggleKeyForLayer
+        surfaceSet === 'faa_part77'
+          ? getPart77ToggleKeyForLayer
+          : surfaceSet === 'icao_annex14'
+            ? getAnnex14ToggleKeyForLayer
+            : getToggleKeyForLayer
 
       for (const layer of activeLayers) {
         const matching = surfaces.filter(s => s.id === layer.id)
@@ -656,6 +697,16 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
                 color: '#F59E0B', fontSize: 'var(--fs-2xs)', lineHeight: 1.4,
               }}>
                 {unconfiguredRunwayCount} runway(s) not configured — using non-utility non-precision (&lt;¾ mi) defaults
+              </div>
+            )}
+            {surfaceSet === 'icao_annex14' && stripApproxRunwayCount > 0 && (
+              <div style={{
+                marginTop: 6, padding: '5px 7px', borderRadius: 6,
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                color: '#F59E0B', fontSize: 'var(--fs-2xs)', lineHeight: 1.4,
+              }}>
+                {stripApproxRunwayCount} runway(s): strip width not configured — transitional surface approximate (drawn from the runway edge)
               </div>
             )}
           </div>

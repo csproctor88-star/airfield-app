@@ -53,6 +53,13 @@ describe('OBSTRUCTIONS_SPEC', () => {
     const cells = OBSTRUCTIONS_SPEC.toRow(row)
     expect(cells).toContain('FAA Part 77 (14 CFR §77.19)')
   })
+
+  it('renders the ICAO Annex 14 label for an ICAO row with NULL runway_class', () => {
+    const row = { display_id: 'OBST-4', description: 'Antenna', object_height_agl: 60, runway_class: null, surface_set: 'icao_annex14' as const, has_violation: false, controlling_surface: 'Conical Surface', created_at: '2026-01-09T00:00:00Z' }
+    const cells = OBSTRUCTIONS_SPEC.toRow(row)
+    expect(cells).toContain('ICAO Annex 14 (Vol I, 7th Ed.)')
+    expect(cells.some((c) => /class null/i.test(c))).toBe(false)
+  })
 })
 
 describe('PERSONNEL_SPEC', () => {

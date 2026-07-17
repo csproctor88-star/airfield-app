@@ -15,6 +15,7 @@ import {
   evaluateObstruction,
   evaluateObstructionAllRunways,
   evaluateObstructionPart77,
+  evaluateObstructionAnnex14,
   evaluateObstructionTaxiways,
   identifySurface,
   FAA_APPROACH_TYPE_LABELS,
@@ -23,6 +24,8 @@ import {
   type TaxiwayGeometry,
   type TaxiwaySurfaceEvaluation,
   type FaaApproachType,
+  type IcaoApproachClassification,
+  type IcaoCodeNumber,
   type SurfaceSet,
 } from '@/lib/calculations/obstructions'
 import { getSurfaceSet, isCivilian } from '@/lib/airport-mode'
@@ -102,12 +105,17 @@ function ObstructionsContent() {
   const editId = searchParams.get('edit')
 
   // Build runway geometries from ALL base runways. Each entry carries the
-  // per-runway faa_approach_type so multi-runway Part 77 evaluations can
-  // mix visual / non-precision / precision dimensions per runway.
+  // per-runway faa_approach_type (Part 77) and the icao_* variant (Annex 14)
+  // so multi-runway evaluations can mix per-runway surface dimensions. The
+  // icao_* fields flow exactly like faa_approach_type — the engine's
+  // evaluateObstructionAllRunways / identifySurface read them off each entry.
   const getAllRunways = useCallback((): {
     label: string
     geometry: RunwayGeometry
     approachType?: FaaApproachType | null
+    icaoClassification?: IcaoApproachClassification | null
+    icaoCodeNumber?: IcaoCodeNumber | null
+    icaoStripWidthM?: number | null
   }[] => {
     if (runways.length > 0) {
       return runways.map((rwy) => ({
@@ -124,6 +132,9 @@ function ObstructionsContent() {
           end2_designator: rwy.end2_designator,
         }),
         approachType: (rwy as { faa_approach_type?: FaaApproachType | null }).faa_approach_type ?? null,
+        icaoClassification: (rwy.icao_approach_classification as IcaoApproachClassification | null) ?? null,
+        icaoCodeNumber: (rwy.icao_code_number as IcaoCodeNumber | null) ?? null,
+        icaoStripWidthM: rwy.icao_strip_width_m ?? null,
       }))
     }
     return [{
@@ -135,6 +146,9 @@ function ObstructionsContent() {
         width_ft: 150,
       }),
       approachType: null,
+      icaoClassification: null,
+      icaoCodeNumber: null,
+      icaoStripWidthM: null,
     }]
   }, [runways])
 
@@ -319,11 +333,15 @@ function ObstructionsContent() {
         const relation = pointToRunwayRelation(point, closest.geometry)
         const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
         const distToThreshold = distanceFt(point, nearerThreshold)
-        const approachDepartureKey = rowSurfaceSet === 'faa_part77' ? 'approach' : 'approach_departure'
-        const withinAD = allRwys.some(({ geometry, approachType }) => {
+        // UFC emits 'approach_departure'; Part 77 and ICAO Annex 14 both emit
+        // 'approach' (read from the evaluator's result rows).
+        const approachDepartureKey = rowSurfaceSet === 'ufc_3_260_01' ? 'approach_departure' : 'approach'
+        const withinAD = allRwys.some(({ geometry, approachType, icaoClassification, icaoCodeNumber, icaoStripWidthM }) => {
           const a = rowSurfaceSet === 'faa_part77'
             ? evaluateObstructionPart77(point, 0, null, geometry, airfieldElevMSL, approachType ?? undefined)
-            : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, rowRunwayClass)
+            : rowSurfaceSet === 'icao_annex14'
+              ? evaluateObstructionAnnex14(point, 0, null, geometry, airfieldElevMSL, { classification: icaoClassification, codeNumber: icaoCodeNumber, stripWidthM: icaoStripWidthM })
+              : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, rowRunwayClass)
           return a.surfaces.some((s) => s.surfaceKey === approachDepartureKey && s.isWithinBounds)
         })
         setPointInfo({
@@ -360,11 +378,15 @@ function ObstructionsContent() {
     const relation = pointToRunwayRelation(point, closest.geometry)
     const nearerThreshold = relation.nearerEnd === 'end1' ? closest.geometry.end1 : closest.geometry.end2
     const distToThreshold = distanceFt(point, nearerThreshold)
-    const approachDepartureKey = surfaceSet === 'faa_part77' ? 'approach' : 'approach_departure'
-    const withinAD = allRwys.some(({ geometry, approachType }) => {
+    // UFC emits 'approach_departure'; Part 77 and ICAO Annex 14 both emit
+    // 'approach' (read from the evaluator's result rows).
+    const approachDepartureKey = surfaceSet === 'ufc_3_260_01' ? 'approach_departure' : 'approach'
+    const withinAD = allRwys.some(({ geometry, approachType, icaoClassification, icaoCodeNumber, icaoStripWidthM }) => {
       const a = surfaceSet === 'faa_part77'
         ? evaluateObstructionPart77(point, 0, null, geometry, airfieldElevMSL, approachType ?? undefined)
-        : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
+        : surfaceSet === 'icao_annex14'
+          ? evaluateObstructionAnnex14(point, 0, null, geometry, airfieldElevMSL, { classification: icaoClassification, codeNumber: icaoCodeNumber, stripWidthM: icaoStripWidthM })
+          : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
       return a.surfaces.some((s) => s.surfaceKey === approachDepartureKey && s.isWithinBounds)
     })
     setPointInfo({
@@ -680,7 +702,9 @@ function ObstructionsContent() {
       <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 8, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
         {surfaceSet === 'faa_part77'
           ? 'FAA Part 77 (14 CFR §77.19) — Imaginary Surface Analysis'
-          : 'UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis'}
+          : surfaceSet === 'icao_annex14'
+            ? 'ICAO Annex 14 Vol I (7th Ed.) — Obstacle Limitation Surface Analysis'
+            : 'UFC 3-260-01, Chapter 3 — Imaginary Surface Analysis'}
       </div>
       <div style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-3)', marginBottom: 10, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--color-bg-inset)', border: '1px solid var(--color-border)', lineHeight: 1.4 }}>
         Surface overlays use FAA survey coordinates. Satellite imagery may not perfectly align with survey data due to basemap georegistration variance. All distance and surface calculations are based on published coordinates.
@@ -983,6 +1007,30 @@ function ObstructionsContent() {
           {!isCivilian(currentInstallation) && surfaceSet === 'faa_part77' && (
             <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-warning)' }}>
               Evaluating under Part 77 on a non-civilian base — what-if scenario only.
+            </div>
+          )}
+          {surfaceSet === 'icao_annex14' && runways.length > 0 && (
+            <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              Per-runway ICAO code number, approach classification, and strip width drive Annex 14
+              surface dimensions. Configure each runway in{' '}
+              <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Setup → Runways</a>.
+              {runways.some(r => !r.icao_approach_classification || r.icao_code_number == null) && (
+                <span style={{ color: 'var(--color-warning)', marginLeft: 4 }}>
+                  {runways.filter(r => !r.icao_approach_classification || r.icao_code_number == null).length} runway(s) not configured — defaulting to non-precision approach, code 4.
+                </span>
+              )}
+            </div>
+          )}
+          {surfaceSet === 'icao_annex14' && runways.some(r =>
+            r.icao_approach_classification === 'precision_cat_i' || r.icao_approach_classification === 'precision_cat_ii_iii'
+          ) && (
+            <div style={{
+              marginTop: 6, padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+              background: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)',
+              color: 'var(--color-warning)', fontSize: 'var(--fs-xs)', lineHeight: 1.4,
+            }}>
+              Inner approach / inner transitional / balked landing surfaces not yet evaluated — required for CAT II/III per Annex 14 §4.2.15.
             </div>
           )}
         </div>

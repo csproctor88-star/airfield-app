@@ -3,6 +3,7 @@ import {
   getAnnex14Criteria,
   ANNEX14_DEFAULT_VARIANT,
   M_TO_FT,
+  icaoStripWidthDefaultM,
   type IcaoApproachClassification,
   type IcaoCodeNumber,
 } from '@/lib/calculations/annex14-criteria'
@@ -246,5 +247,31 @@ describe('metre storage & M_TO_FT', () => {
   })
   it('ANNEX14_DEFAULT_VARIANT is non-precision code 4', () => {
     expect(ANNEX14_DEFAULT_VARIANT).toEqual({ classification: 'non_precision', codeNumber: 4 })
+  })
+})
+
+// ── §3.4 strip-width wizard-hint defaults ────────────────────────────────────
+// Source: docs/references/icao-annex14-verified.md §3.4 table (per-side
+// half-widths); the column stores the FULL strip width, so each is doubled.
+
+describe('icaoStripWidthDefaultM (§3.4 wizard-hint defaults, FULL width)', () => {
+  it('precision approach: 300 m code 3/4, 150 m code 1/2 (2 × 150 / 75 m per side)', () => {
+    expect(icaoStripWidthDefaultM('precision_cat_i', 4)).toBe(300)
+    expect(icaoStripWidthDefaultM('precision_cat_i', 3)).toBe(300)
+    expect(icaoStripWidthDefaultM('precision_cat_ii_iii', 4)).toBe(300)
+    expect(icaoStripWidthDefaultM('precision_cat_i', 2)).toBe(150)
+    expect(icaoStripWidthDefaultM('precision_cat_i', 1)).toBe(150)
+  })
+  it('non-precision approach: 300 m code 3/4, 150 m code 1/2', () => {
+    expect(icaoStripWidthDefaultM('non_precision', 4)).toBe(300)
+    expect(icaoStripWidthDefaultM('non_precision', 3)).toBe(300)
+    expect(icaoStripWidthDefaultM('non_precision', 2)).toBe(150)
+    expect(icaoStripWidthDefaultM('non_precision', 1)).toBe(150)
+  })
+  it('non-instrument: 150 m code 3/4, 80 m code 2, 60 m code 1 (2 × 75 / 40 / 30 m per side)', () => {
+    expect(icaoStripWidthDefaultM('non_instrument', 4)).toBe(150)
+    expect(icaoStripWidthDefaultM('non_instrument', 3)).toBe(150)
+    expect(icaoStripWidthDefaultM('non_instrument', 2)).toBe(80)
+    expect(icaoStripWidthDefaultM('non_instrument', 1)).toBe(60)
   })
 })

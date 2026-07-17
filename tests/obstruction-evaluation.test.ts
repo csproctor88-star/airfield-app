@@ -668,6 +668,16 @@ describe('evaluateObstructionAnnex14', () => {
       }),
     ).toThrow()
   })
+
+  it('a point in the approach reports surfaceKey "approach" isWithinBounds (locks the page approach-key seam)', () => {
+    // The /obstructions page's approach/departure detection reads
+    // surfaceKey === 'approach' for ICAO (not 'approach_departure', which is
+    // UFC-only). Lock that the Annex 14 evaluator emits that key in-bounds.
+    const p = pointBeyondEastThreshold(3500, 0)
+    const result = evaluateObstructionAnnex14(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, ICAO_VARIANT)
+    const approach = result.surfaces.find(s => s.surfaceKey === 'approach')!
+    expect(approach.isWithinBounds).toBe(true)
+  })
 })
 
 describe('ICAO dispatch — evaluateObstructionAllRunways / identifySurface', () => {

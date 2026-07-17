@@ -32,6 +32,11 @@ import {
   type IcaoCodeNumber,
 } from './annex14-criteria'
 
+// Re-export the ICAO variant types so display/config seams (the /obstructions
+// page, the map, the base-config wizard) can import them from the same module
+// as FaaApproachType / SurfaceSet, mirroring the Part 77 precedent.
+export type { IcaoApproachClassification, IcaoCodeNumber } from './annex14-criteria'
+
 // ---------------------------------------------------------------------------
 // Surface display metadata — UFC references, names, colors, descriptions
 //
@@ -618,6 +623,37 @@ export const ANNEX14_SURFACE_META: Record<Annex14SurfaceKey, { name: string; col
   conical:          { name: 'Conical Surface',          color: '#3B82F6', icaoRef: 'ICAO Annex 14 Vol I §4.1.1–4.1.3; Table 4-1' },
   transitional:     { name: 'Transitional Surface',     color: '#EAB308', icaoRef: 'ICAO Annex 14 Vol I §4.1.13–4.1.16; Table 4-1' },
   takeoff_climb:    { name: 'Take-Off Climb Surface',   color: '#8B5CF6', icaoRef: 'ICAO Annex 14 Vol I §4.1.25–4.1.27; Table 4-2' },
+}
+
+// Plain-language descriptions of the five phase-1 Annex 14 surfaces' geometry
+// (§4.1 construction, paraphrased — NOT quoted regulatory text). Class-invariant
+// on purpose: the exact metre dimensions vary per runway (classification / code
+// number) and are documented in Base Setup, so the reference legend states each
+// surface's nature rather than a single set of numbers. Shape matches the
+// getUfcSurfaceInfo / getPart77Surfaces rows the detail-page legend consumes
+// ({ name, description, ufcRef, color }), in top-down draw order.
+const ANNEX14_SURFACE_DESCRIPTIONS: Record<Annex14SurfaceKey, string> = {
+  approach:         'Inclined plane rising up and outward from before each threshold; dimensions and slopes set by the runway’s approach classification and code number.',
+  inner_horizontal: 'Horizontal plane 45 m above the established aerodrome elevation, within the code-number radius.',
+  conical:          'Slopes up and outward at 5% from the periphery of the inner horizontal surface.',
+  transitional:     'Slopes up from the strip edge (or runway edge when the strip width isn’t configured) to the inner horizontal surface.',
+  takeoff_climb:    'Inclined plane rising up and outward from beyond the runway end for departures (Table 4-2 by code number).',
+}
+
+/**
+ * Reference-legend rows for the five phase-1 ICAO Annex 14 surfaces, in top-down
+ * draw order (approach, inner horizontal, conical, transitional, take-off climb).
+ * Parallels getPart77Surfaces() / getUfcSurfaceInfo() so the detail-page
+ * SurfaceSetLegend's set-dispatch gains an ICAO branch with the same row shape.
+ */
+export function getAnnex14SurfaceInfo(): { name: string; description: string; ufcRef: string; color: string }[] {
+  const order: Annex14SurfaceKey[] = ['approach', 'inner_horizontal', 'conical', 'transitional', 'takeoff_climb']
+  return order.map((key) => ({
+    name: ANNEX14_SURFACE_META[key].name,
+    description: ANNEX14_SURFACE_DESCRIPTIONS[key],
+    ufcRef: ANNEX14_SURFACE_META[key].icaoRef,
+    color: ANNEX14_SURFACE_META[key].color,
+  }))
 }
 
 // ---------------------------------------------------------------------------

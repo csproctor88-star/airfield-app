@@ -29,6 +29,21 @@ import {
   type SurfacePolygonFeature,
 } from './part77-geometry'
 import { buildAnnex14SurfacePolygons } from './annex14-geometry'
+import type { IcaoApproachClassification, IcaoCodeNumber } from './annex14-criteria'
+
+/**
+ * Per-runway input the map passes to the active set's builder. Superset of
+ * Part77RunwayInput (adds the ICAO Annex 14 variant fields), so every builder
+ * reads only the fields it needs: UFC uses `geometry`, Part 77 adds
+ * `approachType`, ICAO adds `classification` / `codeNumber` / `stripWidthM`.
+ * Absent fields fall back to each set's engine-matching default. Mirrors how
+ * `faa_approach_type` flows into Part77RunwayInput today.
+ */
+export type SurfaceRunwayInput = Part77RunwayInput & {
+  classification?: IcaoApproachClassification | null
+  codeNumber?: IcaoCodeNumber | null
+  stripWidthM?: number | null
+}
 
 // ---------------------------------------------------------------------------
 // Selectable standards
@@ -332,10 +347,11 @@ export interface SurfaceSetRenderConfig {
   surfaceLayers: SurfaceLayerDef[]
   /** Build the polygon feature set for all runways. The UFC builder consumes
    *  `runwayClass`; the Part 77 builder ignores it (its per-runway dimensions
-   *  come from each runway's approachType). Both emit the shared 'runway'
-   *  outline feature. */
+   *  come from each runway's approachType); the ICAO builder ignores it too
+   *  (its dimensions come from each runway's classification / code number /
+   *  strip width). All emit the shared 'runway' outline feature. */
   buildPolygons: (
-    runways: Part77RunwayInput[],
+    runways: SurfaceRunwayInput[],
     runwayClass?: UfcRunwayClass | null,
   ) => SurfacePolygonFeature[]
 }
@@ -364,14 +380,21 @@ export const SURFACE_SET_REGISTRY: Record<SurfaceSet, SurfaceSetRenderConfig> = 
   },
   icao_annex14: {
     // Like Part 77, the Annex 14 builder is pure OLS geometry; the shared runway
-    // outline is appended here. This registry entry passes only each runway's
-    // geometry, so every runway draws at ANNEX14_DEFAULT_VARIANT — wiring the
-    // per-runway icao_* columns (classification / code / strip width) into the
-    // builder is Task 2's map/page work.
+    // outline is appended here. Each runway's icao_* variant (classification /
+    // code number / strip width) is threaded through so it draws at its own
+    // dimensions; absent fields fall back to ANNEX14_DEFAULT_VARIANT inside the
+    // builder (the same NULL-fallback idiom Part 77's approachType uses).
     legendItems: ANNEX14_LEGEND_ITEMS,
     surfaceLayers: ANNEX14_SURFACE_LAYERS,
     buildPolygons: (runways) => [
-      ...buildAnnex14SurfacePolygons(runways.map((r) => ({ geometry: r.geometry }))),
+      ...buildAnnex14SurfacePolygons(
+        runways.map((r) => ({
+          geometry: r.geometry,
+          classification: r.classification,
+          codeNumber: r.codeNumber,
+          stripWidthM: r.stripWidthM,
+        })),
+      ),
       ...runways.map((r, ri) => ({
         id: 'runway',
         coords: generateRunwayPolygon(r.geometry),
