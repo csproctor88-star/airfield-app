@@ -3,6 +3,7 @@ import {
   evaluateObstruction,
   evaluateObstructionPart77,
   evaluateObstructionAllRunways,
+  identifySurface,
 } from '@/lib/calculations/obstructions'
 import { getRunwayGeometry, type LatLon } from '@/lib/calculations/geometry'
 
@@ -221,5 +222,89 @@ describe('evaluateObstructionAllRunways with surfaceSet', () => {
     // Both runways flag a violation
     expect(result.perRunway[0].analysis.hasViolation).toBe(true)
     expect(result.perRunway[1].analysis.hasViolation).toBe(true)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// identifySurface — surface-set awareness (P77 task 2)
+// ─────────────────────────────────────────────────────────────
+
+describe('identifySurface with surfaceSet', () => {
+  // 3,500 ft beyond the east threshold, on centerline: past the UFC clear
+  // zone/graded-area's 3,000-ft length (which are 0-ft-AGL — more restrictive
+  // than approach-departure and would otherwise win the reduction) but still
+  // inside both evaluators' approach surface, so the approach surface is the
+  // sole applicable (non-land-use) surface and unambiguously controls.
+  it('faa_part77: a point off the runway end returns a Part 77 surface name, not the UFC one', () => {
+    const p = pointBeyondEastThreshold(3500, 0)
+    const name = identifySurface(
+      p,
+      [{ label: '09/27', geometry: RUNWAY }],
+      AIRFIELD_ELEV,
+      'B',
+      'faa_part77',
+    )
+    expect(name).toBe('Approach Surface')
+  })
+
+  it('defaults to UFC when surfaceSet is omitted (back-compat regression)', () => {
+    const p = pointBeyondEastThreshold(3500, 0)
+    const name = identifySurface(
+      p,
+      [{ label: '09/27', geometry: RUNWAY }],
+      AIRFIELD_ELEV,
+      'B',
+      // surfaceSet omitted
+    )
+    expect(name).toBe('Approach-Departure Clearance Surface')
+  })
+
+  it('existing plain-RunwayGeometry[] callers are unaffected (real caller shape, default surfaceSet)', () => {
+    const p = pointBeyondEastThreshold(3500, 0)
+    const name = identifySurface(p, [RUNWAY], AIRFIELD_ELEV, 'B')
+    expect(name).toBe('Approach-Departure Clearance Surface')
+  })
+
+  it('faa_part77: a per-runway approachType picks the type-dependent governing surface', () => {
+    // 7,000 ft north of midpoint — inside the 10,000-ft horizontal radius
+    // (non_utility_non_precision_low) but outside the 5,000-ft one (utility_visual).
+    // At that distance utility_visual falls into its conical ring instead.
+    const p = { lat: latOffset(7000), lon: 0 }
+
+    const wideRadius = identifySurface(
+      p,
+      [{ label: '09/27', geometry: RUNWAY, approachType: 'non_utility_non_precision_low' }],
+      AIRFIELD_ELEV,
+      'B',
+      'faa_part77',
+    )
+    expect(wideRadius).toBe('Horizontal Surface')
+
+    const narrowRadius = identifySurface(
+      p,
+      [{ label: '09/27', geometry: RUNWAY, approachType: 'utility_visual' }],
+      AIRFIELD_ELEV,
+      'B',
+      'faa_part77',
+    )
+    expect(narrowRadius).toBe('Conical Surface')
+  })
+
+  it('a point outside all surfaces returns "Outside all surfaces" in both sets', () => {
+    // 100,000 ft due north of the midpoint — well beyond every UFC (outer
+    // horizontal radius 42,250 ft) and Part 77 (conical outer radius ≤ 14,000 ft) surface.
+    const p = { lat: latOffset(100000), lon: 0 }
+
+    const ufcName = identifySurface(p, [RUNWAY], AIRFIELD_ELEV, 'B')
+    expect(ufcName).toBe('Outside all surfaces')
+
+    const part77Name = identifySurface(
+      p,
+      [{ label: '09/27', geometry: RUNWAY }],
+      AIRFIELD_ELEV,
+      'B',
+      'faa_part77',
+    )
+    expect(part77Name).toBe('Outside all surfaces')
   })
 })

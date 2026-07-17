@@ -1479,21 +1479,34 @@ export function evaluateObstructionAllRunways(
 /**
  * Quick surface identification — which surface zone does this point fall in?
  * Returns the name of the controlling (most restrictive) surface.
- * Supports single or multiple runways.
+ * Supports single or multiple runways. Dispatches to the UFC or Part 77
+ * evaluator based on `surfaceSet`; per-runway `approachType` (only carried by
+ * the `RunwayEvalInput[]` form) drives Part 77 surface selection, defaulting
+ * to `non_utility_non_precision_low` when absent — same default as
+ * `evaluateObstructionAllRunways`.
  */
 export function identifySurface(
   point: LatLon,
-  rwy: RunwayGeometry | RunwayGeometry[],
+  rwy: RunwayGeometry | RunwayGeometry[] | RunwayEvalInput[],
   airfieldElevMSL = 580,
   runwayClass = 'B',
+  surfaceSet: SurfaceSet = 'ufc_3_260_01',
 ): string {
-  const runways = Array.isArray(rwy) ? rwy : [rwy]
+  const rwyArray = Array.isArray(rwy) ? rwy : [rwy]
+  const runways: RunwayEvalInput[] = rwyArray.map((r) =>
+    'geometry' in r ? r : { label: '', geometry: r },
+  )
   // Evaluate against each runway, find the most restrictive surface
   let bestSurface: SurfaceEvaluation | null = null
   let bestLandUse: SurfaceEvaluation | null = null
 
-  for (const runway of runways) {
-    const analysis = evaluateObstruction(point, 0, null, runway, airfieldElevMSL, runwayClass)
+  for (const { geometry, approachType } of runways) {
+    const analysis = surfaceSet === 'faa_part77'
+      ? evaluateObstructionPart77(
+          point, 0, null, geometry, airfieldElevMSL,
+          approachType ?? 'non_utility_non_precision_low',
+        )
+      : evaluateObstruction(point, 0, null, geometry, airfieldElevMSL, runwayClass)
     if (analysis.controllingSurface) {
       if (!bestSurface || analysis.controllingSurface.maxAllowableHeightMSL < bestSurface.maxAllowableHeightMSL) {
         bestSurface = analysis.controllingSurface
