@@ -8,21 +8,16 @@ import { useInstallation } from '@/lib/installation-context'
 import UseMyLocationButton from '@/components/ui/use-my-location-button'
 import {
   type LatLon,
-  type RunwayGeometry,
   getRunwayGeometry,
-  generateRunwayPolygon,
-  generatePrimarySurfacePolygon,
-  generateClearZonePolygons,
-  generateGradedAreaPolygons,
-  generateApproachDeparturePolygons,
-  generateStadiumPolygon,
-  generateTransitionalPolygons,
-  generateAPZPolygons,
   offsetPoint,
 } from '@/lib/calculations/geometry'
-import { IMAGINARY_SURFACES, getPart77Surfaces, type FaaApproachType } from '@/lib/calculations/obstructions'
-import { buildPart77SurfacePolygons, type Part77RunwayInput } from '@/lib/calculations/part77-geometry'
-import type { SurfaceSet } from '@/lib/airport-mode'
+import { type FaaApproachType, type SurfaceSet } from '@/lib/calculations/obstructions'
+import { type Part77RunwayInput } from '@/lib/calculations/part77-geometry'
+import {
+  SURFACE_SET_REGISTRY,
+  type LegendItem,
+  type UfcRunwayClass,
+} from '@/lib/calculations/surface-standards'
 import {
   getClearanceHalfWidth,
   getSafetyHalfWidth,
@@ -50,6 +45,7 @@ type Props = {
   flyToPoint?: LatLon | null
   taxiways?: TaxiwayLine[]
   surfaceSet: SurfaceSet
+  runwayClass?: UfcRunwayClass | null
 }
 
 type ToggleKey =
@@ -63,44 +59,6 @@ type ToggleKey =
   | 'graded-area'
   | 'apz-i'
   | 'apz-ii'
-
-const LEGEND_ITEMS: { label: string; color: string; toggleKey: ToggleKey; defaultOn: boolean }[] = [
-  { label: 'Outer Horizontal', color: IMAGINARY_SURFACES.outer_horizontal.color, toggleKey: 'outer-horizontal', defaultOn: true },
-  { label: 'Conical', color: IMAGINARY_SURFACES.conical.color, toggleKey: 'conical', defaultOn: true },
-  { label: 'Inner Horizontal', color: IMAGINARY_SURFACES.inner_horizontal.color, toggleKey: 'inner-horizontal', defaultOn: true },
-  { label: 'Transitional', color: IMAGINARY_SURFACES.transitional.color, toggleKey: 'transitional', defaultOn: true },
-  { label: 'Approach/Departure', color: IMAGINARY_SURFACES.approach_departure.color, toggleKey: 'approach-departure', defaultOn: true },
-  { label: 'Primary', color: IMAGINARY_SURFACES.primary.color, toggleKey: 'primary-surface', defaultOn: true },
-  { label: 'Clear Zone', color: IMAGINARY_SURFACES.clear_zone.color, toggleKey: 'clear-zone', defaultOn: false },
-  { label: 'Graded Portion of CZ', color: IMAGINARY_SURFACES.graded_area.color, toggleKey: 'graded-area', defaultOn: false },
-  { label: 'APZ I', color: IMAGINARY_SURFACES.apz_i.color, toggleKey: 'apz-i', defaultOn: false },
-  { label: 'APZ II', color: IMAGINARY_SURFACES.apz_ii.color, toggleKey: 'apz-ii', defaultOn: false },
-]
-
-// Shared between the UFC and Part 77 layer lists — the runway outline itself
-// isn't a §77.19/UFC "surface," so it has no set-specific color; both branches
-// draw it identically.
-const RUNWAY_LAYER = { id: 'runway', color: '#FFFFFF', opacity: 0.5 }
-
-const SURFACE_LAYERS = [
-  { id: 'outer-horizontal', color: IMAGINARY_SURFACES.outer_horizontal.color, opacity: 0.08 },
-  { id: 'conical', color: IMAGINARY_SURFACES.conical.color, opacity: 0.1 },
-  { id: 'inner-horizontal', color: IMAGINARY_SURFACES.inner_horizontal.color, opacity: 0.12 },
-  { id: 'transitional-left', color: IMAGINARY_SURFACES.transitional.color, opacity: 0.15 },
-  { id: 'transitional-right', color: IMAGINARY_SURFACES.transitional.color, opacity: 0.15 },
-  { id: 'approach-end1', color: IMAGINARY_SURFACES.approach_departure.color, opacity: 0.14 },
-  { id: 'approach-end2', color: IMAGINARY_SURFACES.approach_departure.color, opacity: 0.14 },
-  { id: 'apz-ii-end1', color: IMAGINARY_SURFACES.apz_ii.color, opacity: 0.12 },
-  { id: 'apz-ii-end2', color: IMAGINARY_SURFACES.apz_ii.color, opacity: 0.12 },
-  { id: 'apz-i-end1', color: IMAGINARY_SURFACES.apz_i.color, opacity: 0.14 },
-  { id: 'apz-i-end2', color: IMAGINARY_SURFACES.apz_i.color, opacity: 0.14 },
-  { id: 'clear-zone-end1', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
-  { id: 'clear-zone-end2', color: IMAGINARY_SURFACES.clear_zone.color, opacity: 0.16 },
-  { id: 'primary-surface', color: IMAGINARY_SURFACES.primary.color, opacity: 0.18 },
-  { id: 'graded-area-end1', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
-  { id: 'graded-area-end2', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
-  RUNWAY_LAYER,
-]
 
 // Map surface layer IDs to their toggle key
 function getToggleKeyForLayer(layerId: string): ToggleKey | null {
@@ -117,10 +75,9 @@ function getToggleKeyForLayer(layerId: string): ToggleKey | null {
   return null
 }
 
-// ── FAA Part 77 (§77.19) parallel legend / layers / toggles ────────────────
-// The UFC constants above are kept verbatim; the Part 77 set is selected by the
-// surfaceSet prop. Part 77 surface colors are constant across approach types by
-// design, so they read from the default getPart77Surfaces() set.
+// FAA Part 77 (§77.19) toggle keys. The legend/layer constants + colors now
+// live in lib/calculations/surface-standards.ts; the map selects them per
+// surface set via SURFACE_SET_REGISTRY.
 type Part77ToggleKey =
   | 'p77-horizontal'
   | 'p77-conical'
@@ -129,32 +86,6 @@ type Part77ToggleKey =
   | 'p77-primary'
 
 type AnyToggleKey = ToggleKey | Part77ToggleKey
-
-type LegendItem = { label: string; color: string; toggleKey: AnyToggleKey; defaultOn: boolean }
-
-const PART77_SURFACE_META = getPart77Surfaces()
-
-const PART77_LEGEND_ITEMS: LegendItem[] = [
-  { label: 'Conical', color: PART77_SURFACE_META.conical.color, toggleKey: 'p77-conical', defaultOn: true },
-  { label: 'Horizontal', color: PART77_SURFACE_META.horizontal.color, toggleKey: 'p77-horizontal', defaultOn: true },
-  { label: 'Transitional', color: PART77_SURFACE_META.transitional.color, toggleKey: 'p77-transitional', defaultOn: true },
-  { label: 'Approach', color: PART77_SURFACE_META.approach.color, toggleKey: 'p77-approach', defaultOn: true },
-  { label: 'Primary', color: PART77_SURFACE_META.primary.color, toggleKey: 'p77-primary', defaultOn: true },
-]
-
-// Drawn bottom-to-top: conical (widest) first, primary on top.
-const PART77_SURFACE_LAYERS = [
-  { id: 'p77-conical', color: PART77_SURFACE_META.conical.color, opacity: 0.08 },
-  { id: 'p77-horizontal', color: PART77_SURFACE_META.horizontal.color, opacity: 0.1 },
-  { id: 'p77-transitional-left', color: PART77_SURFACE_META.transitional.color, opacity: 0.15 },
-  { id: 'p77-transitional-right', color: PART77_SURFACE_META.transitional.color, opacity: 0.15 },
-  { id: 'p77-approach-end1', color: PART77_SURFACE_META.approach.color, opacity: 0.14 },
-  { id: 'p77-approach-end2', color: PART77_SURFACE_META.approach.color, opacity: 0.14 },
-  { id: 'p77-segment-break-end1', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
-  { id: 'p77-segment-break-end2', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
-  { id: 'p77-primary', color: PART77_SURFACE_META.primary.color, opacity: 0.18 },
-  RUNWAY_LAYER,
-]
 
 // Map a Part 77 layer id to its toggle key. The transitional/approach/segment-
 // break variants fold onto their base toggle; segment-break toggles with approach.
@@ -169,55 +100,9 @@ function getPart77ToggleKeyForLayer(layerId: string): Part77ToggleKey | null {
 }
 
 function getDefaultVisibilityFor(set: SurfaceSet): Record<string, boolean> {
-  const items = set === 'faa_part77' ? PART77_LEGEND_ITEMS : LEGEND_ITEMS
   const v: Record<string, boolean> = {}
-  for (const item of items) v[item.toggleKey] = item.defaultOn
+  for (const item of SURFACE_SET_REGISTRY[set].legendItems) v[item.toggleKey] = item.defaultOn
   return v
-}
-
-/** Reuse the same buildSurfaceGeoJSON logic from the Mapbox version */
-function buildSurfacePolygons(runways: RunwayGeometry[]) {
-  const features: { id: string; coords: [number, number][]; rwyIndex: number }[] = []
-  const primaryRwy = runways[0]
-
-  const innerHRadius = IMAGINARY_SURFACES.inner_horizontal.criteria.radius
-  const conicalExtent = IMAGINARY_SURFACES.conical.criteria.horizontalExtent
-  const outerHRadius = IMAGINARY_SURFACES.outer_horizontal.criteria.radius
-
-  features.push({ id: 'outer-horizontal', coords: generateStadiumPolygon(primaryRwy, outerHRadius, 64), rwyIndex: -1 })
-  features.push({ id: 'conical', coords: generateStadiumPolygon(primaryRwy, innerHRadius + conicalExtent, 64), rwyIndex: -1 })
-  features.push({ id: 'inner-horizontal', coords: generateStadiumPolygon(primaryRwy, innerHRadius, 64), rwyIndex: -1 })
-
-  for (let ri = 0; ri < runways.length; ri++) {
-    const rwy = runways[ri]
-    const trans = generateTransitionalPolygons(rwy)
-    features.push({ id: 'transitional-left', coords: trans.left, rwyIndex: ri })
-    features.push({ id: 'transitional-right', coords: trans.right, rwyIndex: ri })
-
-    const appDep = generateApproachDeparturePolygons(rwy)
-    features.push({ id: 'approach-end1', coords: appDep.end1, rwyIndex: ri })
-    features.push({ id: 'approach-end2', coords: appDep.end2, rwyIndex: ri })
-
-    const apz = generateAPZPolygons(rwy)
-    features.push({ id: 'apz-i-end1', coords: apz.apz_i_end1, rwyIndex: ri })
-    features.push({ id: 'apz-i-end2', coords: apz.apz_i_end2, rwyIndex: ri })
-    features.push({ id: 'apz-ii-end1', coords: apz.apz_ii_end1, rwyIndex: ri })
-    features.push({ id: 'apz-ii-end2', coords: apz.apz_ii_end2, rwyIndex: ri })
-
-    const cz = generateClearZonePolygons(rwy)
-    features.push({ id: 'clear-zone-end1', coords: cz.end1, rwyIndex: ri })
-    features.push({ id: 'clear-zone-end2', coords: cz.end2, rwyIndex: ri })
-
-    features.push({ id: 'primary-surface', coords: generatePrimarySurfacePolygon(rwy), rwyIndex: ri })
-
-    const graded = generateGradedAreaPolygons(rwy)
-    features.push({ id: 'graded-area-end1', coords: graded.end1, rwyIndex: ri })
-    features.push({ id: 'graded-area-end2', coords: graded.end2, rwyIndex: ri })
-
-    features.push({ id: 'runway', coords: generateRunwayPolygon(rwy), rwyIndex: ri })
-  }
-
-  return features
 }
 
 /** Helper: bearing between two LatLon points */
@@ -258,7 +143,7 @@ function generateCenterlineBuffer(centerline: LatLon[], halfWidthFt: number): [n
   return coords
 }
 
-export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [], surfaceSet }: Props) {
+export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [], surfaceSet, runwayClass }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const [rulerActive, setRulerActive] = useState(false)
@@ -290,7 +175,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
   const isMultiRunway = runwayLabels.length > 1
 
   // Active-set legend (UFC vs Part 77) drives the legend UI + show/hide-all.
-  const legendItems: LegendItem[] = surfaceSet === 'faa_part77' ? PART77_LEGEND_ITEMS : LEGEND_ITEMS
+  const legendItems: LegendItem[] = SURFACE_SET_REGISTRY[surfaceSet].legendItems
 
   // Part 77 only: runways with no faa_approach_type fall back to the
   // non-utility non-precision (<¾ mi) default — surfaced as a legend footer note.
@@ -368,25 +253,17 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       onPointSelectedRef.current({ lat: e.latLng.lat(), lon: e.latLng.lng() })
     })
 
-    // Build surface polygons — branch on the active surface set. The UFC branch
-    // is unchanged; the Part 77 branch draws only §77.19 features (no clear
-    // zone / APZ / graded area / outer horizontal), with per-runway stadiums.
+    // Build surface polygons through the surface-standards registry. Each set's
+    // builder emits the shared 'runway' outline; the UFC builder draws at the
+    // evaluated runway class (defaults to 'B' when the prop is absent — today's
+    // pixel-identical behavior). The Part 77 builder ignores the class arg.
     if (allRwys.length > 0) {
-      const isPart77 = surfaceSet === 'faa_part77'
-      // Part 77's builder stays pure §77.19 geometry (no runway pavement
-      // outline, per lib/calculations/part77-geometry.ts); the outline is
-      // shared chrome, not a surface, so it's appended here — same as the
-      // UFC branch's per-runway 'runway' feature in buildSurfacePolygons.
-      const surfaces = isPart77
-        ? [
-            ...buildPart77SurfacePolygons(runwaysWithTypes),
-            ...runwaysWithTypes.map((r, ri) => ({ id: 'runway', coords: generateRunwayPolygon(r.geometry), rwyIndex: ri })),
-          ]
-        : buildSurfacePolygons(allRwys)
-      const activeLayers = isPart77 ? PART77_SURFACE_LAYERS : SURFACE_LAYERS
-      const activeLegend: LegendItem[] = isPart77 ? PART77_LEGEND_ITEMS : LEGEND_ITEMS
+      const registryEntry = SURFACE_SET_REGISTRY[surfaceSet]
+      const surfaces = registryEntry.buildPolygons(runwaysWithTypes, runwayClass ?? 'B')
+      const activeLayers = registryEntry.surfaceLayers
+      const activeLegend: LegendItem[] = registryEntry.legendItems
       const toggleKeyForLayer: (layerId: string) => AnyToggleKey | null =
-        isPart77 ? getPart77ToggleKeyForLayer : getToggleKeyForLayer
+        surfaceSet === 'faa_part77' ? getPart77ToggleKeyForLayer : getToggleKeyForLayer
 
       for (const layer of activeLayers) {
         const matching = surfaces.filter(s => s.id === layer.id)
@@ -454,7 +331,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId, mapProvider, surfaceSet])
+  }, [apiReady, installationId, mapProvider, surfaceSet, runwayClass])
 
   // Reset layer visibility to the active set's defaults whenever the surface
   // set flips (UFC ↔ Part 77); the two sets have disjoint toggle keys, so
@@ -646,7 +523,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     if ((map.getZoom() ?? 0) < 15) map.setZoom(16)
   }, [userLocation, mapLoaded])
 
-  const toggleLayer = (key: AnyToggleKey) => {
+  const toggleLayer = (key: string) => {
     setVisibility(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
