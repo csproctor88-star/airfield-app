@@ -96,6 +96,13 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       ? formatDD({ lat: evaluation.latitude, lon: evaluation.longitude })
       : '—'
   const rwClass = evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`
+  // Runway Class is a UFC concept; Part 77 rows show the surface set instead
+  // (civilian rows may carry a placeholder runway_class — never print it).
+  // Legacy rows with NULL surface_set are treated as UFC for backward compatibility.
+  const surfaceSetRows: [string, string][] =
+    evaluation.surface_set === 'faa_part77'
+      ? [['Surface Set', 'FAA Part 77 (14 CFR §77.19)']]
+      : [['Surface Set', 'UFC 3-260-01'], ['Runway Class', rwClass]]
 
   autoTable(doc, {
     startY: y,
@@ -107,7 +114,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       ['Ground Elevation MSL', `${evaluation.object_elevation_msl?.toFixed(0) ?? '—'} ft`],
       ['Distance from Centerline', `${evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft`],
       ['Coordinates', coordsText],
-      ['Runway Class', rwClass],
+      ...surfaceSetRows,
     ],
     theme: 'grid',
     headStyles: { fillColor: [30, 41, 59], fontSize: 8, fontStyle: 'bold' },

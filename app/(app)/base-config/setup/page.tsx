@@ -8,7 +8,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
-import { isCivilian } from '@/lib/airport-mode'
+import { isCivilian, getSurfaceSet } from '@/lib/airport-mode'
 import { FAA_APPROACH_TYPE_LABELS, type FaaApproachType } from '@/lib/calculations/obstructions'
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import QrcEditorDialog from '@/components/admin/qrc-editor-dialog'
@@ -521,6 +521,7 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
 }) {
   const { currentInstallation } = useInstallation()
   const civilian = isCivilian(currentInstallation)
+  const part77 = getSurfaceSet(currentInstallation) === 'faa_part77'
   const [f, setF] = useState({
     runway_id: rwy.runway_id || '', length_ft: String(rwy.length_ft || ''), width_ft: String(rwy.width_ft || ''),
     surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''),
@@ -573,7 +574,7 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
         </div>
         <div><label style={labelStyle}>True Heading (°) <FieldHint stepKey="runways" fieldId="true_heading" /></label><input type="number" value={f.true_heading} onChange={e => setF(p => ({ ...p, true_heading: e.target.value }))} style={fieldStyle} /></div>
       </div>
-      {civilian && (
+      {(civilian || part77) && (
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
           <div>
             <label style={labelStyle}>FAA Approach Type</label>
@@ -605,6 +606,11 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
               <option value="E">E — &gt; 165 kts</option>
             </select>
           </div>
+          {!civilian && (
+            <div style={{ gridColumn: '1 / -1', fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              These fields only affect FAA Part 77 obstruction analysis (this base&apos;s obstruction surface set) — they do not change Runway Class or any UFC-based evaluation.
+            </div>
+          )}
         </div>
       )}
       <div style={{ fontSize: 'var(--fs-base)', fontWeight: 600, color: 'var(--color-text-2)', marginTop: 4 }}>End 1 — {f.end1_designator || '?'}</div>

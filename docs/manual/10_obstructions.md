@@ -14,6 +14,12 @@ Glidepath evaluates the object against every runway at the installation using ge
 
 ---
 
+## Set-aware surface overlays
+
+The obstruction map, its legend, and the evaluation header all follow the active surface standard rather than assuming UFC 3-260-01 everywhere. USAF airfields evaluate against UFC 3-260-01 by default; civilian Part 139 airports evaluate against FAA Part 77 (14 CFR §77.19). Either can be overridden for a single evaluation with the Surface Set picker on the New Evaluation form, which is useful for a what-if comparison before committing to a change. Part 77 overlays are dimensioned per runway by that runway's FAA approach type, configured in Base Setup → Runways.
+
+---
+
 ## Key Concepts
 
 | Concept | Meaning |

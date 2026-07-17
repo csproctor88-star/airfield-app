@@ -9,12 +9,12 @@ import { generateModuleReferencePdf, generateBaseSetupPdf } from '@/lib/training
 // `{ doc, filename }` (see CLAUDE.md).
 //
 // NOTE (no silent cap): the row-heavy generators — qrc, parking,
-// obstruction, waiver, amtr (roster/member), amtr-inspection, qrc-monthly-review,
+// waiver, amtr (roster/member), amtr-inspection, qrc-monthly-review,
 // sms, check, email — still lack smoke tests because they require full domain-row
 // fixtures; covering them is a tracked low-priority follow-up. Already covered
 // elsewhere: feedback, ppr, personnel (pdf-utils.test.ts), discrepancy
 // (discrepancy-pdf.test.ts), aep ×3 (aep.test.ts), training-part139,
-// acsi civilian + USAF (acsi-pdf.test.ts).
+// acsi civilian + USAF (acsi-pdf.test.ts), obstruction (obstruction-pdf.test.ts).
 
 describe('PDF generator smoke tests', () => {
   it('events-log generator returns a {doc, filename} for an empty range', async () => {
