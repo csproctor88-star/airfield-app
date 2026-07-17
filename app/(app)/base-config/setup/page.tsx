@@ -78,6 +78,7 @@ import { SETUP_WIZARD_TOUR_STEPS } from '@/lib/tours/setup-wizard-tour'
 import { isTourCompleted, markTourCompleted } from '@/lib/tours/state'
 import { QuickSetupModal, QuickSetupBanner } from '@/components/base-setup/QuickSetupModal'
 import { FieldHint } from '@/components/base-setup/FieldHint'
+import { FprChecklistTab } from '@/components/base-setup/fpr-checklist-tab'
 import { loadQuickSetupDraft, type QuickSetupDraft, type QuickSetupStepKey, QUICK_SETUP_STEPS } from '@/lib/base-setup-quick-setup'
 import { MAP_PROVIDER_LABELS, MAP_PROVIDER_DESCRIPTIONS, applyMapProvider, type MapProvider } from '@/lib/map-providers'
 import { Zap } from 'lucide-react'
@@ -105,6 +106,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'qrc', number: 10, label: 'QRCs', description: 'Configure Quick Reaction Checklists for emergency response. Import the 25 default templates or build your own from scratch.', required: true },
   { key: 'scnagencies', number: 11, label: 'SCN Agencies', description: 'List the agencies checked on the Secondary Crash Net. Each appears as a toggleable badge on the daily SCN check page (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital).', required: true },
   { key: 'aepagencies', number: 11, label: 'AEP Agencies', description: 'Civilian Part 139 only. List the response agencies the Airport Emergency Plan coordinates with (ARFF, mutual-aid fire, EMS, police, hospital, ATC, FAA, NTSB). Each appears in the monthly comms-check picker and the drill-participant multi-select.', required: true },
+  { key: 'fprchecklist', number: 11, label: 'FPR Checklist', description: 'Off by default — enable Flight Planning Room Check at Modules first. Define the per-shift checklist (FLIP currency, charts, forms, NOTAM display). Load the suggested starting point or build your own.', required: false },
   { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
   { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
   { key: 'statusboards', number: 14, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
@@ -413,6 +415,7 @@ export default function BaseSetupPage() {
             {step.key === 'qrc' && <QrcTemplatesTab installationId={installationId} currentInstallation={currentInstallation} markSaved={markSaved} />}
             {step.key === 'scnagencies' && <ScnAgenciesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'aepagencies' && <AepAgenciesTab installationId={installationId} markSaved={markSaved} />}
+            {step.key === 'fprchecklist' && <FprChecklistTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'lighting' && <LightingSystemsTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'wildlife' && <WildlifeSpeciesTab installationId={installationId} markSaved={markSaved} />}
             {step.key === 'statusboards' && <StatusBoardsTab installationId={installationId} markSaved={markSaved} />}

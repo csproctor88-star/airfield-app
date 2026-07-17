@@ -33,6 +33,8 @@ This manual covers every module, tool, and workflow in Glidepath. Each file is s
 | 20 | Personnel on Airfield & Contractors | [20_personnel.md](20_personnel.md) |
 | 21 | Base Setup | [21_base_setup.md](21_base_setup.md) |
 | 22 | User Management | [22_user_management.md](22_user_management.md) |
+| 23 | Read File | [23_read_file.md](23_read_file.md) |
+| 24 | Flight Planning Room Check | [24_flight_planning_room.md](24_flight_planning_room.md) |
 
 ---
 
