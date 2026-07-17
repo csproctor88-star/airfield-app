@@ -13,7 +13,7 @@ import {
   BookOpen, BookMarked, Users, Award, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
-  Search, X, BookOpenCheck,
+  Search, X, BookOpenCheck, Car,
   type LucideIcon,
 } from 'lucide-react'
 import { NAV_ITEM_MAP } from '@/lib/sidebar-config'
@@ -51,6 +51,9 @@ const opsItems: ModuleItem[] = [
   { name: 'Wildlife / WHMP', icon: ClipboardCheck, color: 'var(--color-success)', href: '/wildlife/whmp' },
   { name: 'PPR Log', icon: FileSignature, color: 'var(--color-accent)', href: '/ppr' },
   { name: 'Personnel on Airfield', icon: HardHat, color: 'var(--color-amber)', href: '/contractors' },
+  // Driving Spot Checks — USAF-only, opt-in (defaultEnabled: false);
+  // isModuleEnabled hides it until a base enables the driving_checks module.
+  { name: 'Driving Spot Checks', icon: Car, color: 'var(--color-cyan)', href: '/driving-checks' },
   // Civilian-only.
   { name: 'Field Conditions / TALPA', icon: CloudSnow, color: 'var(--color-cyan)', href: '/field-conditions' },
   { name: 'NOTAMs', icon: RadioTower, color: 'var(--color-cyan)', href: '/notams' },
@@ -373,6 +376,7 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
   '/read-file':      PERM.READ_FILE_VIEW,
   '/ces':            PERM.CES_VIEW,
   '/fpr':            PERM.FPR_VIEW,
+  '/driving-checks': PERM.DRIVING_CHECKS_VIEW,
 }
 
 export default function MorePage() {

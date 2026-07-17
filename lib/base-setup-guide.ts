@@ -553,6 +553,35 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     },
   },
 
+  drivingcheckitems: {
+    what:
+      'Defines the per-base Airfield Driving Spot Check item list — the pass/discrepancy items AM Ops personnel verify during a random ' +
+      'driving-program enforcement check (FOD tire check, radio procedures, escort compliance, vehicle serviceability, and similar). Each ' +
+      'active item becomes a row on the Start Check form with a Pass / Discrepancy / N/A toggle; optional guidance text renders as a ' +
+      'subline under the item. AF Form 483 verification itself is a dedicated field on the check, not an item in this list.',
+    how:
+      'Click "Load default items" to seed a proposed starting list, then rename, reorder, deactivate, or add items to match local wing-' +
+      'supplement procedures — the item set is locally determined, not a fixed national list. Deactivating (rather than deleting) an item ' +
+      'keeps it out of new checks while leaving its history intact.',
+    why:
+      'A spot check with no configured items still works — driver identity, AF Form 483 status, and location are the regulatory core — ' +
+      'but a maintained item list is what turns the check into a structured, itemized record with a reviewable history and an Airfield ' +
+      'Operations Board-ready pass-rate and common-discrepancy report.',
+    required: 'conditional',
+    examples: [
+      'Two-way radio contact operational',
+      'FOD tire check performed',
+      'Vehicle beacon/lighting operational',
+      'Seat belts in use',
+      'Vehicle serviceability',
+    ],
+    cite: null,
+    fields: {
+      item_label: 'Checklist item as it should appear on the Start Check form (e.g. "FOD tire check performed").',
+      item_guidance: 'Optional subline shown under the item on the check form — clarifies what "Pass" means for this item.',
+    },
+  },
+
   feedback: {
     what:
       'Configures the public feedback form and generates a QR code for posting at base ops or transient parking. Anyone who scans ' +

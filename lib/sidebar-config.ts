@@ -38,6 +38,9 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'PPR Log', href: '/ppr', iconName: 'ClipboardPen', keywords: ['prior permission', 'transient', 'PPR'] },
   { name: 'Customer Feedback', href: '/feedback', iconName: 'MessageSquare', keywords: ['survey', 'comments'] },
   { name: 'Personnel on Airfield', href: '/contractors', iconName: 'HardHat', keywords: ['contractor', 'escort', 'AF Form 483'] },
+  // Driving Spot Checks — USAF-only, opt-in (defaultEnabled: false);
+  // isModuleEnabled hides it until a base enables the driving_checks module.
+  { name: 'Driving Spot Checks', href: '/driving-checks', iconName: 'Car', keywords: ['43 check', 'spot check', 'airfield driving', 'AF Form 483'] },
   // Field Conditions / TALPA — civilian Part 139 only (modules-config
   // `appliesTo: ['faa_part139']` filters this from USAF sidebars). Lives
   // under Operations since ops staff use it daily during winter / wet ops.
@@ -118,7 +121,7 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       // on civilian bases, which surface the Airport Emergency Plan group instead.
       // /fpr (Flight Planning Room Check) is also USAF-only and opt-in
       // (defaultEnabled: false) — invisible until a base enables the module.
-      items: ['/qrc', '/scn', '/fpr', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions', '/notams'],
+      items: ['/qrc', '/scn', '/fpr', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/driving-checks', '/field-conditions', '/notams'],
     },
     {
       label: 'Airfield Management',

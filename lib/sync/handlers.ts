@@ -41,6 +41,11 @@ import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createSighting } from '@/lib/supabase/wildlife'
 import { saveFprCheck, FPR_SAVED_REFETCH_FAILED } from '@/lib/supabase/fpr'
 import {
+  createDrivingCheck,
+  updateDrivingCheck,
+  DRIVING_CHECK_SAVED_REFETCH_FAILED,
+} from '@/lib/supabase/driving-checks'
+import {
   ConflictError,
   NonRetriableError,
   type WriteHandler,
@@ -445,6 +450,94 @@ const fprSaveHandler: WriteHandler<FprSavePayload, FprSaveResult> = async (
 }
 
 // ---------------------------------------------------------------------------
+// driving_check_save
+// ---------------------------------------------------------------------------
+
+export type DrivingCheckSavePayload = Parameters<typeof createDrivingCheck>[0] & {
+  /**
+   * Pre-built Events Log summary line — `summarizeDrivingCheck` output
+   * (prefixed with the "Airfield Driving Spot Check" framing by the page,
+   * a later task) computed where the full check-with-results shape is
+   * available. Carried on the payload so this handler can write the
+   * completion entry AFTER the save commits without re-fetching. Optional:
+   * replay/legacy payloads that lack it simply skip the log.
+   */
+  summary?: string
+}
+export type DrivingCheckSaveResult = Awaited<ReturnType<typeof createDrivingCheck>>['data']
+
+/**
+ * NOT idempotent: `driving_checks` has no natural key (spot checks are
+ * random and unbounded per day — plain inserts, like an event log; see
+ * the design spec's Architecture decision). If the INSERT commits but the
+ * queue crashes/reloads before the drain loop's `storage.delete(item.id)`
+ * runs, replaying this item on a later drain inserts a second row for the
+ * same check. This mirrors the `check_file` handler above — `createCheck`
+ * on `airfield_checks` is likewise a plain insert with no dedup key —
+ * so this is an accepted risk carried forward from existing precedent,
+ * not a new gap introduced here. Do not add new idempotency
+ * infrastructure to close it; it's an owner call for a future task if the
+ * duplicate-row rate in practice warrants it.
+ *
+ * Events Log write happens HERE (after a successful createDrivingCheck),
+ * same placement as fpr_save above: a queued/offline check documents its
+ * completion when it truly commits (at drain), not when it was merely
+ * enqueued. lib/supabase/driving-checks.ts never touches activity_log.
+ * The log is best-effort: a failure must not fail the handler (that would
+ * retry the already-committed save and double-log).
+ */
+const drivingCheckSaveHandler: WriteHandler<DrivingCheckSavePayload, DrivingCheckSaveResult> = async (
+  payload,
+) => {
+  const { data, error } = await createDrivingCheck(payload)
+  if (error) {
+    if (error === DRIVING_CHECK_SAVED_REFETCH_FAILED) throw new Error(error)
+    throwForStructuredError(error)
+  }
+  if (data?.id && payload.summary) {
+    try {
+      await logActivity(
+        'completed',
+        'driving_check',
+        data.id,
+        undefined,
+        { details: payload.summary.toUpperCase() },
+        payload.baseId,
+      )
+    } catch {
+      /* best-effort — the check is already saved; don't retry & double-log */
+    }
+  }
+  return data
+}
+
+// ---------------------------------------------------------------------------
+// driving_check_update
+// ---------------------------------------------------------------------------
+
+export type DrivingCheckUpdatePayload = { id: string } & Parameters<typeof updateDrivingCheck>[1]
+export type DrivingCheckUpdateResult = Awaited<ReturnType<typeof updateDrivingCheck>>['data']
+
+/**
+ * Edits (typo fixes) never re-log to the Events Log — SCN/FPR precedent:
+ * completion logs once, on create; edits don't re-log. Replay-safe: this
+ * is a real UPDATE by id (not an insert), so replaying an already-applied
+ * update just re-applies the same fields and re-rewrites the same child
+ * results — no double-insert risk like the create path above.
+ */
+const drivingCheckUpdateHandler: WriteHandler<DrivingCheckUpdatePayload, DrivingCheckUpdateResult> = async (
+  payload,
+) => {
+  const { id, ...input } = payload
+  const { data, error } = await updateDrivingCheck(id, input)
+  if (error) {
+    if (error === DRIVING_CHECK_SAVED_REFETCH_FAILED) throw new Error(error)
+    throwForStructuredError(error)
+  }
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -475,6 +568,8 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('dashboard_board_update', dashboardBoardUpdateHandler)
   queue.registerHandler('wildlife_sighting_create', wildlifeSightingCreateHandler)
   queue.registerHandler('fpr_save', fprSaveHandler)
+  queue.registerHandler('driving_check_save', drivingCheckSaveHandler)
+  queue.registerHandler('driving_check_update', drivingCheckUpdateHandler)
 }
 
 /**
@@ -497,4 +592,6 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   dashboard_board_update: dashboardBoardUpdateHandler,
   wildlife_sighting_create: wildlifeSightingCreateHandler,
   fpr_save: fprSaveHandler,
+  driving_check_save: drivingCheckSaveHandler,
+  driving_check_update: drivingCheckUpdateHandler,
 }

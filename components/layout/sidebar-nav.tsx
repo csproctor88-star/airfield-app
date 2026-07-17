@@ -74,6 +74,7 @@ import {
   GitBranch,
   CloudSnow,
   BookOpenCheck,
+  Car,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -90,6 +91,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   CloudSnow,
   // FPR (Flight Planning Room Check)
   BookOpenCheck,
+  // Driving Spot Checks
+  Car,
 }
 
 // Group icons
@@ -115,6 +118,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/qrc':               'qrc:view',
   '/scn':               'scn:view',
   '/fpr':               'fpr:view',
+  '/driving-checks':    'driving_checks:view',
   '/shift-checklist':   'shift_checklist:view',
   '/daily-reviews':     'daily_reviews:view',
   '/checks':            'checks:view',

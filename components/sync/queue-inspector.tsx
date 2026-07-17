@@ -42,6 +42,8 @@ const TYPE_LABELS: Record<WriteType, string> = {
   dashboard_board_update: 'Dashboard layout save',
   wildlife_sighting_create: 'Wildlife sighting',
   fpr_save: 'FPR check save',
+  driving_check_save: 'Driving spot check save',
+  driving_check_update: 'Driving spot check update',
 }
 
 const STATUS_COLORS: Record<QueueStatus, { bg: string; fg: string; label: string }> = {

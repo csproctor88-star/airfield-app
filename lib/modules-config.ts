@@ -28,6 +28,7 @@ export type ModuleKey =
   | 'whmp'
   | 'read_file'
   | 'fpr'
+  | 'driving_checks'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -50,6 +51,7 @@ export type WizardStepKey =
   | 'pprcolumns'
   | 'feedback'
   | 'fprchecklist'
+  | 'drivingcheckitems'
 
 export type ModuleDef = {
   key: ModuleKey
@@ -339,6 +341,17 @@ export const MODULES: ModuleDef[] = [
     useCase: 'Bases that want a per-shift, per-item record of the Flight Planning Room check instead of a free-text Events Log entry, with a reviewable 30-day history and monthly PDF export.',
     hrefs: ['/fpr'],
     setupSteps: ['fprchecklist'],
+    defaultEnabled: false,
+    appliesTo: ['usaf'],
+  },
+  {
+    key: 'driving_checks',
+    label: 'Airfield Driving Spot Check',
+    category: 'core-ops',
+    description: 'Log airfield driving enforcement spot checks — driver identification, AF Form 483 verification, vehicle details, and a locally configured item list — with a filterable history and an Airfield Operations Board-ready PDF export.',
+    useCase: 'Bases conducting random airfield driving enforcement checks under DAFI 13-213, Airfield Driving, that want a structured record instead of free-text Events Log entries, with pass-rate trending and a by-checker report.',
+    hrefs: ['/driving-checks'],
+    setupSteps: ['drivingcheckitems'],
     defaultEnabled: false,
     appliesTo: ['usaf'],
   },

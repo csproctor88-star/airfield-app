@@ -60,6 +60,16 @@ const { state } = vi.hoisted(() => ({
       throw: null as Error | null,
       calls: [] as unknown[],
     },
+    drivingCheckSave: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
+    drivingCheckUpdate: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
   },
 }))
 
@@ -173,6 +183,24 @@ vi.mock('@/lib/supabase/fpr', () => ({
   FPR_SAVED_REFETCH_FAILED: 'Saved but could not re-fetch check',
 }))
 
+vi.mock('@/lib/supabase/driving-checks', () => ({
+  createDrivingCheck: vi.fn(async (payload: unknown) => {
+    state.drivingCheckSave.calls.push(payload)
+    if (state.drivingCheckSave.throw) throw state.drivingCheckSave.throw
+    return state.drivingCheckSave.next
+  }),
+  updateDrivingCheck: vi.fn(async (id: unknown, input: unknown) => {
+    state.drivingCheckUpdate.calls.push({ id, ...(input as object) })
+    if (state.drivingCheckUpdate.throw) throw state.drivingCheckUpdate.throw
+    return state.drivingCheckUpdate.next
+  }),
+  // Real value from lib/supabase/driving-checks.ts — the driving_check_save/
+  // driving_check_update handlers import it to classify the "committed but
+  // re-fetch failed" case as transient. The mock must provide it or the
+  // handler's identity check would compare against undefined.
+  DRIVING_CHECK_SAVED_REFETCH_FAILED: 'Saved but could not re-fetch check',
+}))
+
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
 import { ConflictError, NonRetriableError } from '@/lib/sync/types'
 import { WriteQueue } from '@/lib/sync/write-queue'
@@ -195,6 +223,8 @@ beforeEach(() => {
   state.discrepancy = { next: { data: null, error: null }, throw: null, calls: [] }
   state.inspectionDraft = { next: { data: null, error: null }, throw: null, calls: [] }
   state.fprSave = { next: { data: null, error: null }, throw: null, calls: [] }
+  state.drivingCheckSave = { next: { data: null, error: null }, throw: null, calls: [] }
+  state.drivingCheckUpdate = { next: { data: null, error: null }, throw: null, calls: [] }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -265,6 +295,48 @@ const FPR_SAVE_PAYLOAD = {
       item_id: 'item-1',
       item_label: 'FLIP products current',
       status: 'satisfactory' as const,
+      notes: null,
+      sort_order: 10,
+    },
+  ],
+}
+
+const DRIVING_CHECK_SAVE_PAYLOAD = {
+  baseId: 'base-a',
+  driverName: 'Snuffy',
+  driverRank: 'SSgt',
+  driverUnit: '100 ARW/SE',
+  form483Status: 'valid' as const,
+  location: 'Taxiway A',
+  overallResult: 'pass' as const,
+  operatingInitials: 'AB',
+  completedByName: 'SSgt Checker',
+  items: [
+    {
+      item_id: 'item-1',
+      item_label: 'FOD tire check performed',
+      status: 'pass' as const,
+      notes: null,
+      sort_order: 10,
+    },
+  ],
+}
+
+const DRIVING_CHECK_UPDATE_PAYLOAD = {
+  id: 'dc-1',
+  driverName: 'Snuffy',
+  driverRank: 'SSgt',
+  driverUnit: '100 ARW/SE',
+  form483Status: 'valid' as const,
+  location: 'Taxiway A',
+  overallResult: 'pass' as const,
+  operatingInitials: 'AB',
+  completedByName: 'SSgt Checker',
+  items: [
+    {
+      item_id: 'item-1',
+      item_label: 'FOD tire check performed',
+      status: 'pass' as const,
       notes: null,
       sort_order: 10,
     },
@@ -776,6 +848,125 @@ describe('fpr_save handler', () => {
   })
 })
 
+describe('driving_check_save handler', () => {
+  it('returns the saved check on success', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: { id: 'dc-1', location: 'Taxiway A' }, error: null }
+    const result = await handler(DRIVING_CHECK_SAVE_PAYLOAD)
+    expect(result).toMatchObject({ id: 'dc-1' })
+    expect(state.drivingCheckSave.calls).toHaveLength(1)
+    expect(state.drivingCheckSave.calls[0]).toMatchObject({ baseId: 'base-a', driverName: 'Snuffy' })
+  })
+
+  it('throws NonRetriableError when createDrivingCheck returns a structured error', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(handler(DRIVING_CHECK_SAVE_PAYLOAD)).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats a "Failed to fetch" structured error as transient', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: null, error: 'Failed to fetch' }
+    await expect(handler(DRIVING_CHECK_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats "Saved but could not re-fetch check" as transient (insert committed; only re-fetch failed)', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: null, error: 'Saved but could not re-fetch check' }
+    await expect(handler(DRIVING_CHECK_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+    // No data returned this attempt → no Events Log write yet.
+    expect(state.activity.calls).toHaveLength(0)
+  })
+
+  it('lets thrown fetch errors propagate so the queue treats them as transient', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.throw = new TypeError('Failed to fetch')
+    await expect(handler(DRIVING_CHECK_SAVE_PAYLOAD)).rejects.toThrow(/fetch/i)
+    try {
+      await handler(DRIVING_CHECK_SAVE_PAYLOAD)
+    } catch (err) {
+      expect(err).not.toBeInstanceOf(NonRetriableError)
+    }
+  })
+
+  // Mirrors fpr_save: the Events Log write is hoisted from the CRUD module
+  // into this queue handler, run AFTER a successful createDrivingCheck, so
+  // a queued/offline check documents its completion at drain, not enqueue.
+  it('writes the Events Log completion entry after a successful save', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: { id: 'dc-1', location: 'Taxiway A' }, error: null }
+    await handler({
+      ...DRIVING_CHECK_SAVE_PAYLOAD,
+      summary: 'AIRFIELD DRIVING SPOT CHECK — SSGT SNUFFY, 100 ARW/SE — AF FORM 483 VALID — PASS (TAXIWAY A)',
+    })
+    expect(state.activity.calls).toHaveLength(1)
+    expect(state.activity.calls[0]).toMatchObject({
+      action: 'completed',
+      entity_type: 'driving_check',
+      entity_id: 'dc-1',
+      metadata: { details: 'AIRFIELD DRIVING SPOT CHECK — SSGT SNUFFY, 100 ARW/SE — AF FORM 483 VALID — PASS (TAXIWAY A)' },
+      baseId: 'base-a',
+    })
+  })
+
+  it('does not write an Events Log entry when the save fails', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(
+      handler({ ...DRIVING_CHECK_SAVE_PAYLOAD, summary: 'x' }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
+    expect(state.activity.calls).toHaveLength(0)
+  })
+
+  it('does not log when the payload carries no summary (replay/legacy)', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: { id: 'dc-1' }, error: null }
+    await handler(DRIVING_CHECK_SAVE_PAYLOAD)
+    expect(state.activity.calls).toHaveLength(0)
+  })
+
+  it('a failing Events Log write does not fail the handler (best-effort)', async () => {
+    const handler = HANDLERS.driving_check_save!
+    state.drivingCheckSave.next = { data: { id: 'dc-2' }, error: null }
+    state.activity.throw = new Error('activity insert boom')
+    const result = await handler({ ...DRIVING_CHECK_SAVE_PAYLOAD, summary: 'x' })
+    expect(result).toMatchObject({ id: 'dc-2' })
+  })
+})
+
+describe('driving_check_update handler', () => {
+  it('returns the updated check on success and passes the id through', async () => {
+    const handler = HANDLERS.driving_check_update!
+    state.drivingCheckUpdate.next = { data: { id: 'dc-1', location: 'Taxiway B' }, error: null }
+    const result = await handler(DRIVING_CHECK_UPDATE_PAYLOAD)
+    expect(result).toMatchObject({ id: 'dc-1' })
+    expect(state.drivingCheckUpdate.calls[0]).toMatchObject({ id: 'dc-1', driverName: 'Snuffy' })
+  })
+
+  it('throws NonRetriableError when updateDrivingCheck returns a structured error', async () => {
+    const handler = HANDLERS.driving_check_update!
+    state.drivingCheckUpdate.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(handler(DRIVING_CHECK_UPDATE_PAYLOAD)).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats a "Failed to fetch" structured error as transient', async () => {
+    const handler = HANDLERS.driving_check_update!
+    state.drivingCheckUpdate.next = { data: null, error: 'Failed to fetch' }
+    await expect(handler(DRIVING_CHECK_UPDATE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+
+  // Edits never re-log — SCN/FPR precedent: completion logs once, on
+  // create; edits don't re-log the Events Log entry. The update handler
+  // (unlike driving_check_save) has no summary field at all and never
+  // calls logActivity.
+  it('never writes an Events Log entry, even on success', async () => {
+    const handler = HANDLERS.driving_check_update!
+    state.drivingCheckUpdate.next = { data: { id: 'dc-1' }, error: null }
+    await handler(DRIVING_CHECK_UPDATE_PAYLOAD)
+    expect(state.activity.calls).toHaveLength(0)
+  })
+})
+
 describe('registerAllHandlers + queue end-to-end', () => {
   it('inspection: queues a transient failure and drains it once the next attempt succeeds', async () => {
     const storage = new MemoryStorage()
@@ -855,6 +1046,33 @@ describe('registerAllHandlers + queue end-to-end', () => {
 
     state.fprSave.throw = null
     state.fprSave.next = { data: { id: 'fpr-1', shift: 'day' }, error: null }
+    now = new Date('2026-07-17T12:00:30Z')
+
+    const summary = await queue.drain()
+    expect(summary.committed).toBe(1)
+    expect(await storage.list()).toHaveLength(0)
+  })
+
+  it('driving_check_save is registered: queues a transient failure and drains it once reconnected', async () => {
+    const storage = new MemoryStorage()
+    let now = new Date('2026-07-17T12:00:00Z')
+    const queue = new WriteQueue({
+      storage,
+      isOnline: () => true,
+      now: () => now,
+      uuid: () => 'test-uuid-dsc',
+    })
+    registerAllHandlers(queue)
+
+    state.drivingCheckSave.throw = new TypeError('Failed to fetch')
+    const r1 = await queue.enqueueOrExecute('driving_check_save', DRIVING_CHECK_SAVE_PAYLOAD, {
+      baseId: 'base-a',
+      userId: 'user-a',
+    })
+    expect(r1.status).toBe('queued')
+
+    state.drivingCheckSave.throw = null
+    state.drivingCheckSave.next = { data: { id: 'dc-1' }, error: null }
     now = new Date('2026-07-17T12:00:30Z')
 
     const summary = await queue.drain()
