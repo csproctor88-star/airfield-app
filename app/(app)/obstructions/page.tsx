@@ -580,6 +580,7 @@ function ObstructionsContent() {
           onPointSelected={handlePointSelected}
           selectedPoint={pointInfo?.point ?? null}
           surfaceAtPoint={surfaceAtPoint}
+          surfaceSet={surfaceSet}
           flyToPoint={flyToPoint}
           taxiways={taxiwayGeometries.map(tw => ({
             id: tw.id,

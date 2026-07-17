@@ -20,7 +20,9 @@ import {
   generateAPZPolygons,
   offsetPoint,
 } from '@/lib/calculations/geometry'
-import { IMAGINARY_SURFACES } from '@/lib/calculations/obstructions'
+import { IMAGINARY_SURFACES, getPart77Surfaces, type FaaApproachType } from '@/lib/calculations/obstructions'
+import { buildPart77SurfacePolygons, type Part77RunwayInput } from '@/lib/calculations/part77-geometry'
+import type { SurfaceSet } from '@/lib/airport-mode'
 import {
   getClearanceHalfWidth,
   getSafetyHalfWidth,
@@ -47,6 +49,7 @@ type Props = {
   surfaceAtPoint: string | null
   flyToPoint?: LatLon | null
   taxiways?: TaxiwayLine[]
+  surfaceSet: SurfaceSet
 }
 
 type ToggleKey =
@@ -109,10 +112,61 @@ function getToggleKeyForLayer(layerId: string): ToggleKey | null {
   return null
 }
 
-function getDefaultVisibility(): Record<ToggleKey, boolean> {
+// ── FAA Part 77 (§77.19) parallel legend / layers / toggles ────────────────
+// The UFC constants above are kept verbatim; the Part 77 set is selected by the
+// surfaceSet prop. Part 77 surface colors are constant across approach types by
+// design, so they read from the default getPart77Surfaces() set.
+type Part77ToggleKey =
+  | 'p77-horizontal'
+  | 'p77-conical'
+  | 'p77-transitional'
+  | 'p77-approach'
+  | 'p77-primary'
+
+type AnyToggleKey = ToggleKey | Part77ToggleKey
+
+type LegendItem = { label: string; color: string; toggleKey: AnyToggleKey; defaultOn: boolean }
+
+const PART77_SURFACE_META = getPart77Surfaces()
+
+const PART77_LEGEND_ITEMS: LegendItem[] = [
+  { label: 'Conical', color: PART77_SURFACE_META.conical.color, toggleKey: 'p77-conical', defaultOn: true },
+  { label: 'Horizontal', color: PART77_SURFACE_META.horizontal.color, toggleKey: 'p77-horizontal', defaultOn: true },
+  { label: 'Transitional', color: PART77_SURFACE_META.transitional.color, toggleKey: 'p77-transitional', defaultOn: true },
+  { label: 'Approach', color: PART77_SURFACE_META.approach.color, toggleKey: 'p77-approach', defaultOn: true },
+  { label: 'Primary', color: PART77_SURFACE_META.primary.color, toggleKey: 'p77-primary', defaultOn: true },
+]
+
+// Drawn bottom-to-top: conical (widest) first, primary on top.
+const PART77_SURFACE_LAYERS = [
+  { id: 'p77-conical', color: PART77_SURFACE_META.conical.color, opacity: 0.08 },
+  { id: 'p77-horizontal', color: PART77_SURFACE_META.horizontal.color, opacity: 0.1 },
+  { id: 'p77-transitional-left', color: PART77_SURFACE_META.transitional.color, opacity: 0.15 },
+  { id: 'p77-transitional-right', color: PART77_SURFACE_META.transitional.color, opacity: 0.15 },
+  { id: 'p77-approach-end1', color: PART77_SURFACE_META.approach.color, opacity: 0.14 },
+  { id: 'p77-approach-end2', color: PART77_SURFACE_META.approach.color, opacity: 0.14 },
+  { id: 'p77-segment-break-end1', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
+  { id: 'p77-segment-break-end2', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
+  { id: 'p77-primary', color: PART77_SURFACE_META.primary.color, opacity: 0.18 },
+]
+
+// Map a Part 77 layer id to its toggle key. The transitional/approach/segment-
+// break variants fold onto their base toggle; segment-break toggles with approach.
+function getPart77ToggleKeyForLayer(layerId: string): Part77ToggleKey | null {
+  if (layerId === 'p77-horizontal') return 'p77-horizontal'
+  if (layerId === 'p77-conical') return 'p77-conical'
+  if (layerId.startsWith('p77-transitional')) return 'p77-transitional'
+  if (layerId.startsWith('p77-approach')) return 'p77-approach'
+  if (layerId.startsWith('p77-segment-break')) return 'p77-approach'
+  if (layerId === 'p77-primary') return 'p77-primary'
+  return null
+}
+
+function getDefaultVisibilityFor(set: SurfaceSet): Record<string, boolean> {
+  const items = set === 'faa_part77' ? PART77_LEGEND_ITEMS : LEGEND_ITEMS
   const v: Record<string, boolean> = {}
-  for (const item of LEGEND_ITEMS) v[item.toggleKey] = item.defaultOn
-  return v as Record<ToggleKey, boolean>
+  for (const item of items) v[item.toggleKey] = item.defaultOn
+  return v
 }
 
 /** Reuse the same buildSurfaceGeoJSON logic from the Mapbox version */
@@ -198,7 +252,7 @@ function generateCenterlineBuffer(centerline: LatLon[], halfWidthFt: number): [n
   return coords
 }
 
-export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [] }: Props) {
+export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surfaceAtPoint, flyToPoint, taxiways = [], surfaceSet }: Props) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
   const [rulerActive, setRulerActive] = useState(false)
@@ -212,7 +266,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
 
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; accuracy: number } | null>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [visibility, setVisibility] = useState<Record<ToggleKey, boolean>>(getDefaultVisibility)
+  const [visibility, setVisibility] = useState<Record<string, boolean>>(() => getDefaultVisibilityFor(surfaceSet))
   const [runwayVisibility, setRunwayVisibility] = useState<Record<number, boolean>>({})
   const [legendOpen, setLegendOpen] = useState(false)
   const [showTaxiways, setShowTaxiways] = useState(false)
@@ -229,10 +283,22 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     : []
   const isMultiRunway = runwayLabels.length > 1
 
-  const getAllRunways = useCallback((): RunwayGeometry[] => {
+  // Active-set legend (UFC vs Part 77) drives the legend UI + show/hide-all.
+  const legendItems: LegendItem[] = surfaceSet === 'faa_part77' ? PART77_LEGEND_ITEMS : LEGEND_ITEMS
+
+  // Part 77 only: runways with no faa_approach_type fall back to the
+  // non-utility non-precision (<¾ mi) default — surfaced as a legend footer note.
+  const unconfiguredRunwayCount = surfaceSet === 'faa_part77'
+    ? installationRunways.filter(rwy => !rwy.faa_approach_type).length
+    : 0
+
+  // Pair each runway's geometry with its faa_approach_type so the Part 77
+  // builder can size per-runway surfaces; the UFC builder consumes only the
+  // geometries (`.map(r => r.geometry)`).
+  const getAllRunways = useCallback((): Part77RunwayInput[] => {
     if (installationRunways.length === 0) return []
-    return installationRunways.map(rwy =>
-      getRunwayGeometry({
+    return installationRunways.map(rwy => ({
+      geometry: getRunwayGeometry({
         end1: { latitude: rwy.end1_latitude ?? 0, longitude: rwy.end1_longitude ?? 0 },
         end2: { latitude: rwy.end2_latitude ?? 0, longitude: rwy.end2_longitude ?? 0 },
         length_ft: rwy.length_ft ?? 9000,
@@ -241,7 +307,8 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
         end1_elevation_msl: rwy.end1_elevation_msl,
         end2_elevation_msl: rwy.end2_elevation_msl,
       }),
-    )
+      approachType: (rwy.faa_approach_type as FaaApproachType | null) ?? null,
+    }))
   }, [installationRunways])
 
   // Load Google Maps API
@@ -264,7 +331,8 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       taxiwayPolygonsRef.current = []
     }
 
-    const allRwys = getAllRunways()
+    const runwaysWithTypes = getAllRunways()
+    const allRwys = runwaysWithTypes.map(r => r.geometry)
     const primaryRwy = allRwys[0]
 
     const center = primaryRwy
@@ -294,15 +362,24 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       onPointSelectedRef.current({ lat: e.latLng.lat(), lon: e.latLng.lng() })
     })
 
-    // Build surface polygons
+    // Build surface polygons — branch on the active surface set. The UFC branch
+    // is unchanged; the Part 77 branch draws only §77.19 features (no clear
+    // zone / APZ / graded area / outer horizontal), with per-runway stadiums.
     if (allRwys.length > 0) {
-      const surfaces = buildSurfacePolygons(allRwys)
+      const isPart77 = surfaceSet === 'faa_part77'
+      const surfaces = isPart77
+        ? buildPart77SurfacePolygons(runwaysWithTypes)
+        : buildSurfacePolygons(allRwys)
+      const activeLayers = isPart77 ? PART77_SURFACE_LAYERS : SURFACE_LAYERS
+      const activeLegend: LegendItem[] = isPart77 ? PART77_LEGEND_ITEMS : LEGEND_ITEMS
+      const toggleKeyForLayer: (layerId: string) => AnyToggleKey | null =
+        isPart77 ? getPart77ToggleKeyForLayer : getToggleKeyForLayer
 
-      for (const layer of SURFACE_LAYERS) {
+      for (const layer of activeLayers) {
         const matching = surfaces.filter(s => s.id === layer.id)
         for (const surface of matching) {
-          const toggleKey = getToggleKeyForLayer(surface.id)
-          const initiallyVisible = toggleKey ? (LEGEND_ITEMS.find(l => l.toggleKey === toggleKey)?.defaultOn ?? true) : true
+          const toggleKey = toggleKeyForLayer(surface.id)
+          const initiallyVisible = toggleKey ? (activeLegend.find(l => l.toggleKey === toggleKey)?.defaultOn ?? true) : true
 
           const poly = new google.maps.Polygon({
             paths: surface.coords.map(([lng, lat]) => ({ lat, lng })),
@@ -364,12 +441,25 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
       setMapLoaded(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiReady, installationId, mapProvider])
+  }, [apiReady, installationId, mapProvider, surfaceSet])
+
+  // Reset layer visibility to the active set's defaults whenever the surface
+  // set flips (UFC ↔ Part 77); the two sets have disjoint toggle keys, so
+  // stale keys would otherwise hide every polygon. Skip the mount run — the
+  // useState initializer already seeds the correct defaults.
+  const surfaceSetMountedRef = useRef(false)
+  useEffect(() => {
+    if (!surfaceSetMountedRef.current) {
+      surfaceSetMountedRef.current = true
+      return
+    }
+    setVisibility(getDefaultVisibilityFor(surfaceSet))
+  }, [surfaceSet])
 
   // Sync surface visibility
   useEffect(() => {
     for (const poly of polygonsRef.current) {
-      const toggleKey = (poly as any)._toggleKey as ToggleKey | null
+      const toggleKey = (poly as any)._toggleKey as AnyToggleKey | null
       const rwyIdx = (poly as any)._rwyIndex as number
       if (!toggleKey) continue
       const surfaceVisible = visibility[toggleKey]
@@ -543,7 +633,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     if ((map.getZoom() ?? 0) < 15) map.setZoom(16)
   }, [userLocation, mapLoaded])
 
-  const toggleLayer = (key: ToggleKey) => {
+  const toggleLayer = (key: AnyToggleKey) => {
     setVisibility(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
@@ -551,12 +641,12 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     setRunwayVisibility(prev => ({ ...prev, [index]: prev[index] !== false ? false : true }))
   }
 
-  const allVisible = LEGEND_ITEMS.every(item => visibility[item.toggleKey])
+  const allVisible = legendItems.every(item => visibility[item.toggleKey])
   const toggleAll = () => {
     const nextVal = !allVisible
     setVisibility(prev => {
       const next = { ...prev }
-      for (const item of LEGEND_ITEMS) next[item.toggleKey] = nextVal
+      for (const item of legendItems) next[item.toggleKey] = nextVal
       return next
     })
   }
@@ -654,7 +744,7 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
             {isMultiRunway && (
               <div style={{ fontSize: 'var(--fs-2xs)', color: '#64748B', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Surfaces</div>
             )}
-            {LEGEND_ITEMS.map(item => (
+            {legendItems.map(item => (
               <div key={item.toggleKey} onClick={() => toggleLayer(item.toggleKey)} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '1px 0', opacity: visibility[item.toggleKey] ? 1 : 0.4 }}>
                 <span style={{ width: 10, height: 10, borderRadius: 2, background: visibility[item.toggleKey] ? item.color : 'transparent', border: `1.5px solid ${item.color}`, flexShrink: 0 }} />
                 <span style={{ color: '#CBD5E1' }}>{item.label}</span>
@@ -666,6 +756,16 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
                   <span style={{ width: 10, height: 10, borderRadius: 2, background: showTaxiways ? TAXIWAY_SURFACES.taxiway_ofa.color : 'transparent', border: `1.5px solid ${TAXIWAY_SURFACES.taxiway_ofa.color}`, flexShrink: 0 }} />
                   <span style={{ color: '#CBD5E1' }}>Taxiway Clearance ({taxiways.length})</span>
                 </div>
+              </div>
+            )}
+            {surfaceSet === 'faa_part77' && unconfiguredRunwayCount > 0 && (
+              <div style={{
+                marginTop: 6, padding: '5px 7px', borderRadius: 6,
+                background: 'rgba(245, 158, 11, 0.12)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                color: '#F59E0B', fontSize: 'var(--fs-2xs)', lineHeight: 1.4,
+              }}>
+                {unconfiguredRunwayCount} runway(s) not configured — using non-utility non-precision (&lt;¾ mi) defaults
               </div>
             )}
           </div>
