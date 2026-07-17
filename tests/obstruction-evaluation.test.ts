@@ -442,3 +442,69 @@ describe('UFC ADCS corrections (SSE Task 1)', () => {
     expect(approach.calculationBreakdown).not.toContain('ADCS horizontal portion')
   })
 })
+
+// ─────────────────────────────────────────────────────────────
+// SSE Task 3 — class-aware UFC surface display info (IMAGINARY_SURFACES split)
+//
+// The evaluator's result-row ufcCriteria text must cite the evaluated class's
+// numbers. Before the split the approach-departure text hardcoded "50:1", so a
+// Class A evaluation cited Class B's slope. Class B rows must stay byte-for-byte
+// identical to the pre-split output (locked here as a regression guard).
+// ─────────────────────────────────────────────────────────────
+
+describe('UFC surface info is class-aware (SSE Task 3)', () => {
+  const P = pointBeyondEastThreshold(500, 0)
+  const row = (result: ReturnType<typeof evaluateObstruction>, key: string) =>
+    result.surfaces.find(s => s.surfaceKey === key)!
+
+  it('Class A approach-departure row cites 40:1 (not 50:1)', () => {
+    const a = evaluateObstruction(P, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'A')
+    const approach = row(a, 'approach_departure')
+    expect(approach.ufcCriteria).toContain('40:1')
+    expect(approach.ufcCriteria).not.toContain('50:1')
+  })
+
+  it('Class A primary row cites the 500-ft Class A half-width (not the 1,000-ft Class B width)', () => {
+    const a = evaluateObstruction(P, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'A')
+    const primary = row(a, 'primary')
+    expect(primary.ufcCriteria).toContain('500 ft of centerline')
+    expect(primary.ufcCriteria).not.toContain('1000 ft of centerline')
+  })
+
+  it('Class B result rows are byte-identical to the pre-split text (one row per representative surface)', () => {
+    const b = evaluateObstruction(P, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+
+    expect(row(b, 'primary').ufcCriteria).toBe(
+      'No object may protrude above the primary surface elevation (runway elevation) within 1000 ft of centerline and 200 ft beyond each runway end.',
+    )
+    expect(row(b, 'approach_departure').ufcCriteria).toBe(
+      'No object may penetrate the 50:1 approach-departure clearance surface extending 50,000 ft from the primary surface end.',
+    )
+    expect(row(b, 'transitional').ufcCriteria).toBe(
+      'No object may penetrate the 7:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (150 ft).',
+    )
+    expect(row(b, 'inner_horizontal').ufcCriteria).toBe(
+      'No object may protrude above 150 ft above the established airfield elevation within a 7,500 ft radius of the runway ends.',
+    )
+    expect(row(b, 'conical').ufcCriteria).toBe(
+      'No object may penetrate the 20:1 conical surface extending 7,000 ft outward from the inner horizontal surface boundary.',
+    )
+    expect(row(b, 'outer_horizontal').ufcCriteria).toBe(
+      'No object may protrude above 500 ft above the established airfield elevation within a 44,500 ft radius of the runway ends.',
+    )
+    expect(row(b, 'clear_zone').ufcCriteria).toBe(
+      'The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within 3,000 ft x 3,000 ft from each runway end unless meeting B13 permissible deviation criteria.',
+    )
+    expect(row(b, 'graded_area').ufcCriteria).toBe(
+      'The graded portion (1,000 ft from runway end, 3,000 ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.',
+    )
+  })
+
+  it('Class B name / ufcRef / color are unchanged from IMAGINARY_SURFACES (class-invariant meta)', () => {
+    const b = evaluateObstruction(P, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+    const approach = row(b, 'approach_departure')
+    expect(approach.surfaceName).toBe('Approach-Departure Clearance Surface')
+    expect(approach.ufcReference).toBe('UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)')
+    expect(approach.color).toBe('#F97316')
+  })
+})

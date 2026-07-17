@@ -27,99 +27,172 @@ import {
 
 // ---------------------------------------------------------------------------
 // Surface display metadata — UFC references, names, colors, descriptions
-// Numeric criteria are looked up dynamically by runway class.
+//
+// `UFC_SURFACE_META` holds the CLASS-INVARIANT display data (name, color,
+// ufcRef, description) plus a class-AWARE `ufcCriteria(criteria)` templater.
+// All numeric dimensions come from surface-criteria.ts (the single numeric
+// source of truth) via the passed-in `SurfaceCriteria`, so a Class A / Army B
+// evaluation cites its own class's numbers instead of Class B's. The
+// class-invariant metadata (names/colors/refs) and provenance for the numbers
+// live, respectively, here and in surface-criteria.ts — not duplicated.
+//
+// `IMAGINARY_SURFACES` below is a back-compat, Class-B-RESOLVED view derived
+// from this meta + getSurfaceCriteria('B') — NOT a second hardcoded copy. New
+// code that needs class-correct display info should call getUfcSurfaceInfo(class)
+// (or read UFC_SURFACE_META directly), not IMAGINARY_SURFACES.
 // ---------------------------------------------------------------------------
 
-export const IMAGINARY_SURFACES = {
+/** Insert thousands separators into an integer, e.g. 50000 → "50,000". */
+const withCommas = (n: number): string => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+
+export type UfcSurfaceKey =
+  | 'clear_zone'
+  | 'graded_area'
+  | 'primary'
+  | 'approach_departure'
+  | 'inner_horizontal'
+  | 'conical'
+  | 'outer_horizontal'
+  | 'transitional'
+  | 'apz_i'
+  | 'apz_ii'
+
+export type UfcSurfaceMeta = {
+  name: string
+  color: string
+  ufcRef: string
+  description: string
+  /** Class-aware criteria text — pass the evaluated class's SurfaceCriteria. */
+  ufcCriteria: (criteria: SurfaceCriteria) => string
+}
+
+export const UFC_SURFACE_META: Record<UfcSurfaceKey, UfcSurfaceMeta> = {
   clear_zone: {
     name: 'Runway Clear Zone',
-    criteria: { halfWidth: 1500, length: 3000, maxHeight: 0 },
-    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13; DoD Instruction 4165.57, Table 1 (Runway Clear Zone)',
-    ufcCriteria: 'The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within {length} ft x {width} ft from each runway end unless meeting B13 permissible deviation criteria.',
-    description: 'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
     color: '#EC4899',
+    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13; DoD Instruction 4165.57, Table 1 (Runway Clear Zone)',
+    description: 'Obstruction-free zone extending 3,000 ft from each runway threshold, 3,000 ft wide.',
+    ufcCriteria: (c) =>
+      `The clear zone must remain essentially obstruction free. No fixed or non-frangible objects permitted within ${withCommas(c.clear_zone.length)} ft x ${withCommas(c.clear_zone.halfWidth * 2)} ft from each runway end unless meeting B13 permissible deviation criteria.`,
   },
   graded_area: {
     name: 'Graded Portion of Clear Zone',
-    criteria: { halfWidth: 1500, length: 1000, maxHeight: 0 },
-    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Graded Portion of Clear Zone)',
-    ufcCriteria: 'The graded portion ({length} ft from runway end, {width} ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.',
-    description: 'Rough-graded, obstruction-free portion of the clear zone extending 1,000 ft from each threshold, 3,000 ft wide.',
     color: '#F43F5E',
+    ufcRef: 'UFC 3-260-01, Chapter 3 & Appendix B, Section 13 (Graded Portion of Clear Zone)',
+    description: 'Rough-graded, obstruction-free portion of the clear zone extending 1,000 ft from each threshold, 3,000 ft wide.',
+    ufcCriteria: (c) =>
+      `The graded portion (${withCommas(c.graded_area.length)} ft from runway end, ${withCommas(c.graded_area.halfWidth * 2)} ft wide) must be rough graded and obstruction free. No above-ground fixed obstacles, structures, rigid poles, towers, or non-frangible equipment permitted.`,
   },
   primary: {
     name: 'Primary Surface',
-    criteria: { halfWidth: 1000, extension: 200, maxHeight: 0 },
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 1 (Primary Surface)',
-    ufcCriteria: 'No object may protrude above the primary surface elevation (runway elevation) within {halfWidth} ft of centerline and {extension} ft beyond each runway end.',
-    description: 'No objects permitted above runway elevation within the primary surface boundaries.',
     color: '#EF4444',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 1 (Primary Surface)',
+    description: 'No objects permitted above runway elevation within the primary surface boundaries.',
+    ufcCriteria: (c) =>
+      `No object may protrude above the primary surface elevation (runway elevation) within ${c.primary.halfWidth} ft of centerline and ${c.primary.extension} ft beyond each runway end.`,
   },
   approach_departure: {
     name: 'Approach-Departure Clearance Surface',
-    // UFC 3-260-01 (C3) Table 3-7 items 6–11 — display copy of the Class B
-    // ADCS: 50:1, start half-width 1,000 ft, end half-width 8,000 ft over the
-    // 50,000-ft total length. Numeric evaluation reads surface-criteria.ts.
-    criteria: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 8000, length: 50000 },
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)',
-    ufcCriteria: 'No object may penetrate the 50:1 approach-departure clearance surface extending {length} ft from the primary surface end.',
-    description: '50:1 slope extending from each end of the primary surface.',
     color: '#F97316',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)',
+    description: '50:1 slope extending from each end of the primary surface.',
+    // Slope (50:1 Class B / 40:1 Class A) and total length are class-specific —
+    // numeric provenance is in surface-criteria.ts (Table 3-7 items 6–11).
+    ufcCriteria: (c) =>
+      `No object may penetrate the ${c.approach_departure.slope}:1 approach-departure clearance surface extending ${withCommas(c.approach_departure.length)} ft from the primary surface end.`,
   },
   inner_horizontal: {
     name: 'Inner Horizontal Surface',
-    // UFC 3-260-01 (C3) Table 3-7 item 12 — 7,500-ft radius (the old 13,120 ft
-    // was the ICAO Annex 14 4,000 m value, wrong for UFC).
-    criteria: { height: 150, radius: 7500 },
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 4 (Inner Horizontal Surface)',
-    ufcCriteria: 'No object may protrude above 150 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
-    description: '150 ft above established airfield elevation within {radius} ft.',
     color: '#22C55E',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 4 (Inner Horizontal Surface)',
+    description: '150 ft above established airfield elevation within {radius} ft.',
+    ufcCriteria: (c) =>
+      `No object may protrude above ${c.inner_horizontal.height} ft above the established airfield elevation within a ${withCommas(c.inner_horizontal.radius)} ft radius of the runway ends.`,
   },
   conical: {
     name: 'Conical Surface',
-    criteria: { slope: 20, horizontalExtent: 7000, baseHeight: 150 },
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 5 (Conical Surface)',
-    ufcCriteria: 'No object may penetrate the 20:1 conical surface extending 7,000 ft outward from the inner horizontal surface boundary.',
-    description: '20:1 slope outward from inner horizontal to 500 ft AGL.',
     color: '#3B82F6',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 5 (Conical Surface)',
+    description: '20:1 slope outward from inner horizontal to 500 ft AGL.',
+    ufcCriteria: (c) =>
+      `No object may penetrate the ${c.conical.slope}:1 conical surface extending ${withCommas(c.conical.horizontalExtent)} ft outward from the inner horizontal surface boundary.`,
   },
   outer_horizontal: {
     name: 'Outer Horizontal Surface',
-    // UFC 3-260-01 (C3) glossary — 500 ft above EAE, 30,000 ft beyond the
-    // conical periphery (inner horizontal 7,500 + conical 7,000 = 14,500;
-    // + 30,000 = 44,500). The old 42,250 ft matched the stale 13,120 radius.
-    criteria: { height: 500, radius: 44500 },
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 6 (Outer Horizontal Surface)',
-    ufcCriteria: 'No object may protrude above 500 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
-    description: '500 ft above established airfield elevation within {radius} ft.',
     color: '#8B5CF6',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 6 (Outer Horizontal Surface)',
+    description: '500 ft above established airfield elevation within {radius} ft.',
+    ufcCriteria: (c) =>
+      `No object may protrude above ${c.outer_horizontal.height} ft above the established airfield elevation within a ${withCommas(c.outer_horizontal.radius)} ft radius of the runway ends.`,
   },
   transitional: {
     name: 'Transitional Surface',
-    criteria: { slope: 7, primaryHalfWidth: 1000 },
-    ufcRef: 'UFC 3-260-01, Table 3-7, Item 3 (Transitional Surface)',
-    ufcCriteria: 'No object may penetrate the 7:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (150 ft).',
-    description: '7:1 slope from primary/approach edges to inner horizontal height.',
     color: '#EAB308',
+    ufcRef: 'UFC 3-260-01, Table 3-7, Item 3 (Transitional Surface)',
+    description: '7:1 slope from primary/approach edges to inner horizontal height.',
+    ufcCriteria: (c) =>
+      `No object may penetrate the ${c.transitional.slope}:1 transitional surface extending from the primary surface and approach-departure surface edges to the inner horizontal surface height (${c.inner_horizontal.height} ft).`,
   },
   apz_i: {
     name: 'APZ I (Accident Potential Zone I)',
-    criteria: { halfWidth: 1500, length: 5000, startOffset: 3000 },
-    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ I)',
-    ufcCriteria: 'APZ I — High accident risk zone. Only very low-density uses allowed: agriculture, grazing, open space, surface parking (no structures), roads with minimal traffic, and essential utility corridors. No residential, schools, hospitals, assembly uses, or high-occupancy facilities permitted.',
-    description: 'High accident risk zone extending 5,000 ft beyond the clear zone, 3,000 ft wide.',
     color: '#D946EF',
+    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ I)',
+    description: 'High accident risk zone extending 5,000 ft beyond the clear zone, 3,000 ft wide.',
+    ufcCriteria: () =>
+      'APZ I — High accident risk zone. Only very low-density uses allowed: agriculture, grazing, open space, surface parking (no structures), roads with minimal traffic, and essential utility corridors. No residential, schools, hospitals, assembly uses, or high-occupancy facilities permitted.',
   },
   apz_ii: {
     name: 'APZ II (Accident Potential Zone II)',
-    criteria: { halfWidth: 1500, length: 7000, startOffset: 8000 },
-    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ II)',
-    ufcCriteria: 'APZ II — Moderate accident risk zone. Low-density commercial/industrial allowed: warehouses with low personnel density, open storage yards, and some limited community facilities (case-by-case). Residential strongly discouraged. High-density or high-occupancy uses prohibited.',
-    description: 'Moderate accident risk zone extending 7,000 ft beyond APZ I, 3,000 ft wide.',
     color: '#A78BFA',
+    ufcRef: 'DoD Instruction 4165.57, Table 1 (APZ II)',
+    description: 'Moderate accident risk zone extending 7,000 ft beyond APZ I, 3,000 ft wide.',
+    ufcCriteria: () =>
+      'APZ II — Moderate accident risk zone. Low-density commercial/industrial allowed: warehouses with low personnel density, open storage yards, and some limited community facilities (case-by-case). Residential strongly discouraged. High-density or high-occupancy uses prohibited.',
   },
-} as const
+}
+
+/** Resolve one surface's class-invariant meta + a class's numeric criteria into
+ *  the fully-populated display object used by result rows, the legend, and the
+ *  map. The generic key preserves the precise per-surface `criteria` sub-type. */
+function resolveUfcSurface<K extends UfcSurfaceKey>(key: K, criteria: SurfaceCriteria) {
+  const meta = UFC_SURFACE_META[key]
+  return {
+    name: meta.name,
+    criteria: criteria[key],
+    ufcRef: meta.ufcRef,
+    ufcCriteria: meta.ufcCriteria(criteria),
+    description: meta.description,
+    color: meta.color,
+  }
+}
+
+/** Fully-resolved, class-correct per-surface display info. Registry/class-aware
+ *  callers should use this; the evaluator reads UFC_SURFACE_META directly since
+ *  it already holds the class's SurfaceCriteria in scope. */
+export function getUfcSurfaceInfo(runwayClass: string) {
+  const criteria = getSurfaceCriteria(runwayClass)
+  return {
+    clear_zone: resolveUfcSurface('clear_zone', criteria),
+    graded_area: resolveUfcSurface('graded_area', criteria),
+    primary: resolveUfcSurface('primary', criteria),
+    approach_departure: resolveUfcSurface('approach_departure', criteria),
+    inner_horizontal: resolveUfcSurface('inner_horizontal', criteria),
+    conical: resolveUfcSurface('conical', criteria),
+    outer_horizontal: resolveUfcSurface('outer_horizontal', criteria),
+    transitional: resolveUfcSurface('transitional', criteria),
+    apz_i: resolveUfcSurface('apz_i', criteria),
+    apz_ii: resolveUfcSurface('apz_ii', criteria),
+  }
+}
+
+/**
+ * Back-compat, Class-B-RESOLVED view of the UFC surfaces. Derived from
+ * UFC_SURFACE_META + getSurfaceCriteria('B') — not a second hardcoded copy of
+ * the UFC numbers. Kept so the map component, `getSurfaces`, and the surface-set
+ * reference panel keep compiling unchanged. New class-aware code should call
+ * getUfcSurfaceInfo(runwayClass) or read UFC_SURFACE_META directly.
+ */
+export const IMAGINARY_SURFACES = getUfcSurfaceInfo('B')
 
 // ---------------------------------------------------------------------------
 // FAA Part 77 imaginary surfaces (civilian / Part 139 airports)
@@ -672,18 +745,16 @@ export function evaluateObstruction(
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
       surfaceKey: 'primary',
-      surfaceName: IMAGINARY_SURFACES.primary.name,
+      surfaceName: UFC_SURFACE_META.primary.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: maxAGL,
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.primary.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.primary.ufcCriteria
-        .replace('{halfWidth}', String(c.halfWidth))
-        .replace('{extension}', String(c.extension)),
-      color: IMAGINARY_SURFACES.primary.color,
+      ufcReference: UFC_SURFACE_META.primary.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.primary.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.primary.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${maxAGL} ft (max height) = ${fmt(maxMSL)} ft MSL`,
@@ -745,17 +816,16 @@ export function evaluateObstruction(
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
       surfaceKey: 'approach_departure',
-      surfaceName: IMAGINARY_SURFACES.approach_departure.name,
+      surfaceName: UFC_SURFACE_META.approach_departure.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: Math.max(0, maxAGL),
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.approach_departure.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.approach_departure.ufcCriteria
-        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.approach_departure.color,
+      ufcReference: UFC_SURFACE_META.approach_departure.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.approach_departure.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.approach_departure.color,
       baselineElevation: isCapped ? airfieldElev : thresholdElev,
       baselineLabel: isCapped ? airfieldBaselineLabel : thresholdLabel,
       calculationBreakdown: isCapped
@@ -822,16 +892,16 @@ export function evaluateObstruction(
 
     surfaces.push({
       surfaceKey: 'transitional',
-      surfaceName: IMAGINARY_SURFACES.transitional.name,
+      surfaceName: UFC_SURFACE_META.transitional.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: Math.max(0, maxAGL),
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.transitional.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.transitional.ufcCriteria,
-      color: IMAGINARY_SURFACES.transitional.color,
+      ufcReference: UFC_SURFACE_META.transitional.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.transitional.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.transitional.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: isWithin
@@ -854,17 +924,16 @@ export function evaluateObstruction(
 
     surfaces.push({
       surfaceKey: 'inner_horizontal',
-      surfaceName: IMAGINARY_SURFACES.inner_horizontal.name,
+      surfaceName: UFC_SURFACE_META.inner_horizontal.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: maxAGL,
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.inner_horizontal.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.inner_horizontal.ufcCriteria
-        .replace('{radius}', String(c.radius).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.inner_horizontal.color,
+      ufcReference: UFC_SURFACE_META.inner_horizontal.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.inner_horizontal.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.inner_horizontal.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${c.height} ft (fixed height) = ${fmt(maxMSL)} ft MSL`,
@@ -884,16 +953,16 @@ export function evaluateObstruction(
 
     surfaces.push({
       surfaceKey: 'conical',
-      surfaceName: IMAGINARY_SURFACES.conical.name,
+      surfaceName: UFC_SURFACE_META.conical.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: Math.max(0, maxAGL),
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.conical.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.conical.ufcCriteria,
-      color: IMAGINARY_SURFACES.conical.color,
+      ufcReference: UFC_SURFACE_META.conical.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.conical.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.conical.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${c.baseHeight} ft (base) + ${fmt(distFromInnerH)} ft / ${c.slope} (slope) = ${fmt(maxMSL)} ft MSL`,
@@ -913,17 +982,16 @@ export function evaluateObstruction(
 
     surfaces.push({
       surfaceKey: 'outer_horizontal',
-      surfaceName: IMAGINARY_SURFACES.outer_horizontal.name,
+      surfaceName: UFC_SURFACE_META.outer_horizontal.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: maxAGL,
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.outer_horizontal.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.outer_horizontal.ufcCriteria
-        .replace('{radius}', String(c.radius).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.outer_horizontal.color,
+      ufcReference: UFC_SURFACE_META.outer_horizontal.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.outer_horizontal.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.outer_horizontal.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${c.height} ft (fixed height) = ${fmt(maxMSL)} ft MSL`,
@@ -942,18 +1010,16 @@ export function evaluateObstruction(
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
       surfaceKey: 'clear_zone',
-      surfaceName: IMAGINARY_SURFACES.clear_zone.name,
+      surfaceName: UFC_SURFACE_META.clear_zone.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: maxAGL,
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.clear_zone.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.clear_zone.ufcCriteria
-        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
-        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.clear_zone.color,
+      ufcReference: UFC_SURFACE_META.clear_zone.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.clear_zone.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.clear_zone.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${maxAGL} ft (max height) = ${fmt(maxMSL)} ft MSL`,
@@ -971,18 +1037,16 @@ export function evaluateObstruction(
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
       surfaceKey: 'graded_area',
-      surfaceName: IMAGINARY_SURFACES.graded_area.name,
+      surfaceName: UFC_SURFACE_META.graded_area.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: maxAGL,
       maxAllowableHeightMSL: maxMSL,
       obstructionTopMSL,
       violated,
       penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
-      ufcReference: IMAGINARY_SURFACES.graded_area.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.graded_area.ufcCriteria
-        .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ','))
-        .replace('{width}', String(c.halfWidth * 2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
-      color: IMAGINARY_SURFACES.graded_area.color,
+      ufcReference: UFC_SURFACE_META.graded_area.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.graded_area.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.graded_area.color,
       baselineElevation: airfieldElev,
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: `${fmt(airfieldElev)} ft (airfield elev) + ${maxAGL} ft (max height) = ${fmt(maxMSL)} ft MSL`,
@@ -998,16 +1062,16 @@ export function evaluateObstruction(
     const isWithin = withinEnd1 || withinEnd2
     surfaces.push({
       surfaceKey: 'apz_i',
-      surfaceName: IMAGINARY_SURFACES.apz_i.name,
+      surfaceName: UFC_SURFACE_META.apz_i.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: -1,
       maxAllowableHeightMSL: -1,
       obstructionTopMSL,
       violated: false,
       penetrationFt: 0,
-      ufcReference: IMAGINARY_SURFACES.apz_i.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.apz_i.ufcCriteria,
-      color: IMAGINARY_SURFACES.apz_i.color,
+      ufcReference: UFC_SURFACE_META.apz_i.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.apz_i.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.apz_i.color,
     })
   }
 
@@ -1020,16 +1084,16 @@ export function evaluateObstruction(
     const isWithin = withinEnd1 || withinEnd2
     surfaces.push({
       surfaceKey: 'apz_ii',
-      surfaceName: IMAGINARY_SURFACES.apz_ii.name,
+      surfaceName: UFC_SURFACE_META.apz_ii.name,
       isWithinBounds: isWithin,
       maxAllowableHeightAGL: -1,
       maxAllowableHeightMSL: -1,
       obstructionTopMSL,
       violated: false,
       penetrationFt: 0,
-      ufcReference: IMAGINARY_SURFACES.apz_ii.ufcRef,
-      ufcCriteria: IMAGINARY_SURFACES.apz_ii.ufcCriteria,
-      color: IMAGINARY_SURFACES.apz_ii.color,
+      ufcReference: UFC_SURFACE_META.apz_ii.ufcRef,
+      ufcCriteria: UFC_SURFACE_META.apz_ii.ufcCriteria(criteria),
+      color: UFC_SURFACE_META.apz_ii.color,
     })
   }
 

@@ -2,6 +2,8 @@
 // Used to compute distances, bearings, and surface polygon coordinates
 // relative to runway geometry for any configured installation.
 
+import { getSurfaceCriteria, type SurfaceCriteria } from './surface-criteria'
+
 const EARTH_RADIUS_M = 6371000
 const FT_TO_M = 0.3048
 const M_TO_FT = 3.28084
@@ -317,10 +319,15 @@ export function generateRunwayPolygon(rwy: RunwayGeometry): [number, number][] {
   ]
 }
 
-/** Generate the primary surface rectangle (wider than runway, extended 200ft past each end). */
-export function generatePrimarySurfacePolygon(rwy: RunwayGeometry): [number, number][] {
-  const halfWidth = 1000
-  const extension = 200
+/** Generate the primary surface rectangle (wider than runway, extended past each end).
+ *  Dimensions are criteria-driven (defaults to UFC Class B: 1,000-ft half-width,
+ *  200-ft extension). */
+export function generatePrimarySurfacePolygon(
+  rwy: RunwayGeometry,
+  criteria: SurfaceCriteria = getSurfaceCriteria('B'),
+): [number, number][] {
+  const halfWidth = criteria.primary.halfWidth
+  const extension = criteria.primary.extension
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)
   const revBearing = normalizeBearing(rwy.bearingDeg + 180)
@@ -341,13 +348,17 @@ export function generatePrimarySurfacePolygon(rwy: RunwayGeometry): [number, num
   ]
 }
 
-/** Generate clear zone rectangles (3,000 ft x 3,000 ft) at each runway end. */
-export function generateClearZonePolygons(rwy: RunwayGeometry): {
+/** Generate clear zone rectangles at each runway end. Dimensions are
+ *  criteria-driven (defaults to UFC Class B: 3,000 ft long × 3,000 ft wide). */
+export function generateClearZonePolygons(
+  rwy: RunwayGeometry,
+  criteria: SurfaceCriteria = getSurfaceCriteria('B'),
+): {
   end1: [number, number][]
   end2: [number, number][]
 } {
-  const halfWidth = 1500
-  const length = 3000
+  const halfWidth = criteria.clear_zone.halfWidth
+  const length = criteria.clear_zone.length
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)
   const revBearing = normalizeBearing(rwy.bearingDeg + 180)
@@ -401,16 +412,21 @@ export function generateGradedAreaPolygons(rwy: RunwayGeometry): {
   }
 }
 
-/** Generate one approach-departure trapezoid for a given runway end. */
+/** Generate one approach-departure trapezoid for a given runway end.
+ *  The trapezoid flares from `innerHalfWidth` (at the primary-surface end) to
+ *  `outerHalfWidth` over the total ADCS `length`, all criteria-driven (defaults
+ *  to UFC Class B). Only the drawn footprint is class-dependent — the vertical
+ *  slope is not part of the plan-view polygon. */
 function generateApproachTrapezoid(
   rwy: RunwayGeometry,
   end: LatLon,
   outwardBearing: number,
+  criteria: SurfaceCriteria,
 ): [number, number][] {
-  const innerHalfWidth = 1000
-  const outerHalfWidth = 2550
-  const length = 25000
-  const extension = 200
+  const innerHalfWidth = criteria.approach_departure.innerHalfWidth
+  const outerHalfWidth = criteria.approach_departure.outerHalfWidth
+  const length = criteria.approach_departure.length
+  const extension = criteria.primary.extension
   const perpL = normalizeBearing(outwardBearing - 90)
   const perpR = normalizeBearing(outwardBearing + 90)
 
@@ -430,14 +446,16 @@ function generateApproachTrapezoid(
   ]
 }
 
-/** Generate both approach-departure trapezoids. */
+/** Generate both approach-departure trapezoids. Dimensions are criteria-driven
+ *  (defaults to UFC Class B). */
 export function generateApproachDeparturePolygons(
   rwy: RunwayGeometry,
+  criteria: SurfaceCriteria = getSurfaceCriteria('B'),
 ): { end1: [number, number][]; end2: [number, number][] } {
   const revBearing = normalizeBearing(rwy.bearingDeg + 180)
   return {
-    end1: generateApproachTrapezoid(rwy, rwy.end1, revBearing),
-    end2: generateApproachTrapezoid(rwy, rwy.end2, rwy.bearingDeg),
+    end1: generateApproachTrapezoid(rwy, rwy.end1, revBearing, criteria),
+    end2: generateApproachTrapezoid(rwy, rwy.end2, rwy.bearingDeg, criteria),
   }
 }
 
@@ -482,15 +500,22 @@ export function generateStadiumPolygon(
  *  - The edges of the primary surface, AND
  *  - The edges of the approach-departure clearance surface
  *  outward and upward at 7:1 to the inner horizontal surface height (150 ft). */
-export function generateTransitionalPolygons(rwy: RunwayGeometry): {
+export function generateTransitionalPolygons(
+  rwy: RunwayGeometry,
+  criteria: SurfaceCriteria = getSurfaceCriteria('B'),
+): {
   left: [number, number][]
   right: [number, number][]
 } {
-  const primaryHalfWidth = 1000
-  const outerApproachHalfWidth = 2550
-  const approachLength = 25000
-  const transitionalExtent = 150 * 7 // 1,050 ft (7:1 slope to 150 ft height)
-  const extension = 200
+  const primaryHalfWidth = criteria.transitional.primaryHalfWidth
+  // The transitional surface rides the sides of the approach-departure trapezoid,
+  // so its outer edge tracks the ADCS outer half-width / total length.
+  const outerApproachHalfWidth = criteria.approach_departure.outerHalfWidth
+  const approachLength = criteria.approach_departure.length
+  // Horizontal extent = inner-horizontal height ÷ (1 / transitional slope), i.e.
+  // height × slope (7:1 rise to 150 ft → 1,050 ft for Class B).
+  const transitionalExtent = criteria.inner_horizontal.height * criteria.transitional.slope
+  const extension = criteria.primary.extension
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)
   const revBearing = normalizeBearing(rwy.bearingDeg + 180)
@@ -503,12 +528,12 @@ export function generateTransitionalPolygons(rwy: RunwayGeometry): {
   const far1 = offsetPoint(rwy.end1, revBearing, extension + approachLength)
   const far2 = offsetPoint(rwy.end2, rwy.bearingDeg, extension + approachLength)
 
-  // The transitional surface height is capped at 150 ft. Along the approach
-  // trapezoid the edge widens, so at some distance the approach edge itself
-  // is already at 150 ft (distance / 50 = 150 → 7,500 ft along approach).
-  // Beyond that the inner horizontal takes over, so we only need the
-  // transitional along the approach out to that cutoff point.
-  const approachCutoff = 150 * 50 // 7,500 ft along approach where height = 150 ft
+  // The transitional surface height is capped at the inner-horizontal height
+  // (150 ft). Along the approach trapezoid the edge widens, so at some distance
+  // the approach edge itself is already at 150 ft (distance / slope = 150 →
+  // height × slope along approach). Beyond that the inner horizontal takes over,
+  // so we only need the transitional along the approach out to that cutoff.
+  const approachCutoff = criteria.inner_horizontal.height * criteria.approach_departure.slope
 
   // Width of approach trapezoid at the cutoff point
   const widthAtCutoff =
@@ -555,17 +580,20 @@ export function generateTransitionalPolygons(rwy: RunwayGeometry): {
   }
 }
 
-/** Generate APZ I and APZ II rectangles at each runway end.
- *  APZ I: 3,000 ft wide, starts 3,000 ft from threshold (end of clear zone), extends 5,000 ft.
- *  APZ II: 3,000 ft wide, starts 8,000 ft from threshold (end of APZ I), extends 7,000 ft.
- *  Per DoD Instruction 4165.57, Table 1. */
-export function generateAPZPolygons(rwy: RunwayGeometry): {
+/** Generate APZ I and APZ II rectangles at each runway end. Dimensions are
+ *  criteria-driven (defaults to UFC/DoDI Class B: APZ I 3,000 ft wide, starts
+ *  3,000 ft from threshold, extends 5,000 ft; APZ II 3,000 ft wide, starts
+ *  8,000 ft from threshold, extends 7,000 ft). Per DoD Instruction 4165.57,
+ *  Table 1. */
+export function generateAPZPolygons(
+  rwy: RunwayGeometry,
+  criteria: SurfaceCriteria = getSurfaceCriteria('B'),
+): {
   apz_i_end1: [number, number][]
   apz_i_end2: [number, number][]
   apz_ii_end1: [number, number][]
   apz_ii_end2: [number, number][]
 } {
-  const halfWidth = 1500
   const perpL = normalizeBearing(rwy.bearingDeg - 90)
   const perpR = normalizeBearing(rwy.bearingDeg + 90)
   const revBearing = normalizeBearing(rwy.bearingDeg + 180)
@@ -575,6 +603,7 @@ export function generateAPZPolygons(rwy: RunwayGeometry): {
     outwardBearing: number,
     startOffset: number,
     length: number,
+    halfWidth: number,
   ): [number, number][] {
     const start = offsetPoint(end, outwardBearing, startOffset)
     const far = offsetPoint(end, outwardBearing, startOffset + length)
@@ -589,11 +618,13 @@ export function generateAPZPolygons(rwy: RunwayGeometry): {
     ]
   }
 
+  const i = criteria.apz_i
+  const ii = criteria.apz_ii
   return {
-    apz_i_end1: buildRect(rwy.end1, revBearing, 3000, 5000),
-    apz_i_end2: buildRect(rwy.end2, rwy.bearingDeg, 3000, 5000),
-    apz_ii_end1: buildRect(rwy.end1, revBearing, 8000, 7000),
-    apz_ii_end2: buildRect(rwy.end2, rwy.bearingDeg, 8000, 7000),
+    apz_i_end1: buildRect(rwy.end1, revBearing, i.startOffset, i.length, i.halfWidth),
+    apz_i_end2: buildRect(rwy.end2, rwy.bearingDeg, i.startOffset, i.length, i.halfWidth),
+    apz_ii_end1: buildRect(rwy.end1, revBearing, ii.startOffset, ii.length, ii.halfWidth),
+    apz_ii_end2: buildRect(rwy.end2, rwy.bearingDeg, ii.startOffset, ii.length, ii.halfWidth),
   }
 }
 
