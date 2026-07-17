@@ -29,6 +29,7 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Activity Log', href: '/recent-activity', iconName: 'History', keywords: ['audit', 'history'] },
   { name: 'QRC', href: '/qrc', iconName: 'Zap', keywords: ['emergency', 'checklist', 'contingency', 'quick reaction'] },
   { name: 'Secondary Crash Net', href: '/scn', iconName: 'Radio', keywords: ['SCN', 'crash net'] },
+  { name: 'Flight Planning Room', href: '/fpr', iconName: 'BookOpenCheck', keywords: ['FPR', 'flight planning', 'FLIP check'] },
   { name: 'Shift Checklist', href: '/shift-checklist', iconName: 'ListChecks', keywords: ['shift change', 'turnover'] },
   { name: 'Daily Reviews', href: '/daily-reviews', iconName: 'ClipboardPen', keywords: ['sign off', 'shift review'] },
   { name: 'Airfield Checks', href: '/checks', iconName: 'ClipboardCheck', keywords: ['FOD check', 'inspection'] },
@@ -115,7 +116,9 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
       label: 'Daily Operations',
       // /scn (Secondary Crash Net) is USAF-only — the airport_type gate hides it
       // on civilian bases, which surface the Airport Emergency Plan group instead.
-      items: ['/qrc', '/scn', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions', '/notams'],
+      // /fpr (Flight Planning Room Check) is also USAF-only and opt-in
+      // (defaultEnabled: false) — invisible until a base enables the module.
+      items: ['/qrc', '/scn', '/fpr', '/shift-checklist', '/checks', '/inspections/all', '/wildlife', '/wildlife/whmp', '/ppr', '/contractors', '/field-conditions', '/notams'],
     },
     {
       label: 'Airfield Management',

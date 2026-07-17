@@ -185,7 +185,7 @@ describe('TYPICAL_BASE_PRESET', () => {
 // USAF-only modules (hidden on civilian bases) and the Part 139-only
 // modules (hidden on USAF bases). These lists gate the Base Configuration
 // module selector — widening either silently re-clutters the other mode's UI.
-const USAF_ONLY: string[] = ['scn', 'amtr']
+const USAF_ONLY: string[] = ['scn', 'amtr', 'fpr']
 const PART139_ONLY: string[] = ['sms', 'training_part139', 'aep', 'field_conditions', 'whmp']
 const SHARED_SAMPLE: string[] = ['acsi', 'checks', 'discrepancies', 'qrc', 'wildlife']
 

@@ -27,6 +27,7 @@ export type ModuleKey =
   | 'flip'
   | 'whmp'
   | 'read_file'
+  | 'fpr'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -48,6 +49,7 @@ export type WizardStepKey =
   | 'statusboards'
   | 'pprcolumns'
   | 'feedback'
+  | 'fprchecklist'
 
 export type ModuleDef = {
   key: ModuleKey
@@ -328,6 +330,17 @@ export const MODULES: ModuleDef[] = [
     hrefs: ['/read-file'],
     setupSteps: [],
     defaultEnabled: true,
+  },
+  {
+    key: 'fpr',
+    label: 'Flight Planning Room Check',
+    category: 'core-ops',
+    description: 'Per-shift Flight Planning Room check log — verify FLIP currency, charts, forms, and NOTAM display against a locally configured checklist.',
+    useCase: 'Bases that want a per-shift, per-item record of the Flight Planning Room check instead of a free-text Events Log entry, with a reviewable 30-day history and monthly PDF export.',
+    hrefs: ['/fpr'],
+    setupSteps: ['fprchecklist'],
+    defaultEnabled: false,
+    appliesTo: ['usaf'],
   },
 ]
 

@@ -13,7 +13,7 @@ import {
   BookOpen, BookMarked, Users, Award, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
-  Search, X,
+  Search, X, BookOpenCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { NAV_ITEM_MAP } from '@/lib/sidebar-config'
@@ -40,6 +40,9 @@ const opsItems: ModuleItem[] = [
   // Secondary Crash Net — USAF-only; isModuleEnabled hides it on civilian
   // bases, which surface the Airport Emergency Plan group instead.
   { name: 'Secondary Crash Net', icon: Radio, color: 'var(--color-accent)', href: '/scn' },
+  // Flight Planning Room Check — USAF-only, opt-in (defaultEnabled: false);
+  // isModuleEnabled hides it until a base enables the fpr module.
+  { name: 'Flight Planning Room', icon: BookOpenCheck, color: 'var(--color-cyan)', href: '/fpr' },
   { name: 'Shift Checklist', icon: CheckSquare, color: 'var(--color-accent)', href: '/shift-checklist' },
   { name: 'Airfield Checks', icon: ClipboardCheck, color: 'var(--color-cyan)', href: '/checks' },
   { name: 'All Inspections', icon: ClipboardList, color: 'var(--color-cyan)', href: '/inspections/all' },
@@ -369,6 +372,7 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
   '/flip':           PERM.FLIP_VIEW,
   '/read-file':      PERM.READ_FILE_VIEW,
   '/ces':            PERM.CES_VIEW,
+  '/fpr':            PERM.FPR_VIEW,
 }
 
 export default function MorePage() {

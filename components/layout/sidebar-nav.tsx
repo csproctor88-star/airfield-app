@@ -73,6 +73,7 @@ import {
   MessageSquareWarning,
   GitBranch,
   CloudSnow,
+  BookOpenCheck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -87,6 +88,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   ShieldAlert, Siren, TrendingUp, MessageSquareWarning, GitBranch,
   // Phase 3d Field Conditions
   CloudSnow,
+  // FPR (Flight Planning Room Check)
+  BookOpenCheck,
 }
 
 // Group icons
@@ -111,6 +114,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/recent-activity':   'recent_activity:view',
   '/qrc':               'qrc:view',
   '/scn':               'scn:view',
+  '/fpr':               'fpr:view',
   '/shift-checklist':   'shift_checklist:view',
   '/daily-reviews':     'daily_reviews:view',
   '/checks':            'checks:view',
