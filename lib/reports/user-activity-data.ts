@@ -275,6 +275,20 @@ export function injectZeroActivityRows(
 
 // ── Query plans (pure, exported for date-semantics tests) ───
 
+/**
+ * Validates a picked local-day range before a report fetch. Returns a
+ * user-facing error string when the range is unusable (an empty endpoint, or
+ * end before start), else null. Pure so the page can toast the message and
+ * abort BEFORE flipping into its loading state — a cleared date input must
+ * never reach the `new Date('T00:00:00')` boundary conversion (which throws on
+ * Invalid Date) and brick Generate with a stuck spinner.
+ */
+export function validateActivityRange(start: string, end: string): string | null {
+  if (!start || !end) return 'Select both a start and end date'
+  if (end < start) return 'End date must be on or after the start date'
+  return null
+}
+
 export interface DomainQueryPlan {
   table: string
   select: string
@@ -290,9 +304,13 @@ export function buildDomainQueryPlan(
   domain: UserActivityDomain,
   startIso: string,
   endIso: string,
+  startDay: string,
+  endDay: string,
 ): DomainQueryPlan {
-  const startDay = startIso.slice(0, 10)
-  const endDay = endIso.slice(0, 10)
+  // startDay/endDay are the picker's LOCAL calendar days, threaded from the
+  // page — NOT sliced from the UTC ISO boundaries. Slicing drifts one calendar
+  // day off for non-UTC bases (a day late for UTC-negative, early for
+  // UTC-positive), over-/under-counting DATE-column domains at the edges.
   switch (domain) {
     case 'wildlife_sightings':
       return {
@@ -490,9 +508,11 @@ async function fetchDomainRows(
   domain: UserActivityDomain,
   startIso: string,
   endIso: string,
+  startDay: string,
+  endDay: string,
   base?: SlotLabelSource | null,
 ): Promise<RawDomainRow[]> {
-  const plan = buildDomainQueryPlan(domain, startIso, endIso)
+  const plan = buildDomainQueryPlan(domain, startIso, endIso, startDay, endDay)
   let query = supabase
     .from(plan.table)
     .select(plan.select)
@@ -524,13 +544,25 @@ export async function fetchUserActivityData(
     includeZeroActivity?: boolean
     /** Base config for civilian-aware daily-review slot labels; omit/null = USAF default. */
     base?: SlotLabelSource | null
+    /**
+     * Picker's LOCAL calendar-day strings (YYYY-MM-DD) for the DATE-column
+     * domains (strike_date / review_date) and the coverage-note boundary.
+     * Threaded straight from the page so the day filter matches the picked
+     * range exactly; slicing the UTC ISO boundary drifts one calendar day off
+     * for non-UTC bases. Falls back to the ISO slice when absent.
+     */
+    startDay?: string
+    endDay?: string
   },
 ): Promise<UserActivityData> {
   const supabase = createClient()
   if (!supabase || !baseId || domains.length === 0) return emptyData()
 
+  const startDay = opts?.startDay ?? startIso.slice(0, 10)
+  const endDay = opts?.endDay ?? endIso.slice(0, 10)
+
   const rawArrays = await Promise.all(
-    domains.map((d) => fetchDomainRows(supabase, baseId, d, startIso, endIso, opts?.base)),
+    domains.map((d) => fetchDomainRows(supabase, baseId, d, startIso, endIso, startDay, endDay, opts?.base)),
   )
   const raw: RawDomainRow[] = ([] as RawDomainRow[]).concat(...rawArrays)
 
@@ -574,7 +606,9 @@ export async function fetchUserActivityData(
     }
   }
 
-  let result = buildActivityMatrix(raw, profileMap, domains, startIso)
+  // Coverage-note boundary uses the same LOCAL start day as the DATE filters
+  // (buildActivityMatrix slices to 10 chars, so a day string passes through).
+  let result = buildActivityMatrix(raw, profileMap, domains, startDay)
 
   if (opts?.includeZeroActivity && !zeroActivityUnavailable) {
     const memberIdSet = new Set(memberIds)

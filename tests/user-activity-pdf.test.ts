@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateUserActivityPdf } from '@/lib/reports/user-activity-pdf'
+import { generateUserActivityPdf, rowLabel } from '@/lib/reports/user-activity-pdf'
 import { USER_ACTIVITY_DOMAINS, type UserActivityData, type UserActivityRow } from '@/lib/reports/user-activity-data'
 
 // Smoke coverage for the NAMO/NAMT Report Tool PDF generator (Task 3).
@@ -92,5 +92,32 @@ describe('generateUserActivityPdf', () => {
   it('does not throw when zeroActivityUnavailable is set', () => {
     const { doc } = generateUserActivityPdf(emptyData({ zeroActivityUnavailable: true }), baseOpts)
     expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1)
+  })
+})
+
+describe('rowLabel — unlinked (unlinked) suffix honesty', () => {
+  const longUnlinked: UserActivityRow = {
+    kind: 'unlinked', key: 'x',
+    display: 'Bartholomew Fitzgerald-Montgomery the Third',
+    counts: zeroCounts(), total: 0, records: {},
+  }
+
+  it('keeps the (unlinked) suffix even when the name is truncated in many-columns mode', () => {
+    const label = rowLabel(longUnlinked, true)
+    // Suffix survives the 26-char cut (name is truncated first, then suffixed).
+    expect(label.endsWith('(unlinked)')).toBe(true)
+    expect(label).toContain('...') // sanitizePdfText renders the truncation ellipsis as '...'
+  })
+
+  it('keeps the full name plus suffix when not in many-columns mode', () => {
+    expect(rowLabel(longUnlinked, false)).toBe('Bartholomew Fitzgerald-Montgomery the Third (unlinked)')
+  })
+
+  it('does not add a suffix to linked profile rows', () => {
+    const linked: UserActivityRow = {
+      kind: 'profile', key: 'u1', display: 'SSgt Jane Doe (JD)',
+      counts: zeroCounts(), total: 0, records: {},
+    }
+    expect(rowLabel(linked, true)).toBe('SSgt Jane Doe (JD)')
   })
 })

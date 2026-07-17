@@ -94,4 +94,13 @@ describe('buildUserActivityWorkbook', () => {
     expect(values.some((v) => typeof v === 'string' && v.includes('could not be loaded'))).toBe(true)
     expect(values.some((v) => typeof v === 'string' && v.includes('lack per-user attribution'))).toBe(true)
   })
+
+  it('uses the singular verb "lacks" when exactly one record is affected', async () => {
+    const data = emptyData({
+      coverageNotes: [{ domain: 'checks', coverageStart: '2026-03-03', affected: 1 }],
+    })
+    const wb = await buildUserActivityWorkbook(data, { domains: USER_ACTIVITY_DOMAINS })
+    const values = wb.getWorksheet('Summary')!.getColumn(1).values as unknown as string[]
+    expect(values.some((v) => typeof v === 'string' && v.includes('1 record in this range lacks per-user attribution'))).toBe(true)
+  })
 })

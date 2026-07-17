@@ -97,4 +97,14 @@ describe('UserActivityMatrix', () => {
     expect(screen.getByText(/2 records in this range lack per-user attribution/)).toBeTruthy()
     expect(screen.queryByText(/counted under Unlinked\/Unattributed/)).toBeNull()
   })
+
+  it('uses the singular verb "lacks" when exactly one record is affected', () => {
+    render(
+      <UserActivityMatrix
+        data={baseData({ coverageNotes: [{ domain: 'checks', coverageStart: '2026-03-03', affected: 1 }] })}
+        domains={domains}
+      />,
+    )
+    expect(screen.getByText(/1 record in this range lacks per-user attribution/)).toBeTruthy()
+  })
 })

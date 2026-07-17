@@ -135,7 +135,7 @@ export function UserActivityMatrix({ data, domains }: UserActivityMatrixProps) {
                 <AlertTriangle size={13} style={{ flexShrink: 0, marginTop: 1 }} />
                 <span>
                   {def?.label ?? note.domain}: per-user attribution begins {formatZuluDate(note.coverageStart)};{' '}
-                  {note.affected} record{note.affected === 1 ? '' : 's'} in this range lack per-user attribution.
+                  {note.affected} record{note.affected === 1 ? '' : 's'} in this range lack{note.affected === 1 ? 's' : ''} per-user attribution.
                 </span>
               </div>
             )

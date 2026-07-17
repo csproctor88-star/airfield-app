@@ -15,6 +15,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchUserActivityData,
+  validateActivityRange,
   USER_ACTIVITY_DOMAINS,
   type DomainDef,
   type UserActivityData,
@@ -167,17 +168,27 @@ export default function UserActivityReportPage() {
   const handleGenerate = async () => {
     if (domainsForFetch.length === 0 || !installationId) return
     const { start, end } = resolveRange()
-    if (end < start) {
-      toast.error('End date must be on or after the start date')
+    // Validate (non-empty endpoints + end >= start) BEFORE entering the loading
+    // state. A cleared custom From/To leaves an empty string; without this
+    // guard the boundary conversion below throws on Invalid Date and, because
+    // it sat outside the try, left loading stuck true forever.
+    const rangeError = validateActivityRange(start, end)
+    if (rangeError) {
+      toast.error(rangeError)
       return
     }
     setLoading(true)
-    const startUTC = new Date(`${start}T00:00:00`).toISOString()
-    const endUTC = new Date(`${end}T23:59:59.999`).toISOString()
     try {
+      // Boundary conversion lives inside the try so any Invalid Date lands in
+      // the catch+toast instead of escaping unhandled.
+      const startUTC = new Date(`${start}T00:00:00`).toISOString()
+      const endUTC = new Date(`${end}T23:59:59.999`).toISOString()
       const result = await fetchUserActivityData(
         installationId, startUTC, endUTC, domainsForFetch.map((d) => d.key),
-        { includeZeroActivity, base: currentInstallation },
+        // start/end are the picker's LOCAL calendar days — threaded through so
+        // DATE-column domains (strike_date/review_date) filter on the exact
+        // picked range rather than a UTC-sliced day that drifts at the edges.
+        { includeZeroActivity, base: currentInstallation, startDay: start, endDay: end },
       )
       setData(result)
       setResultDomains(domainsForFetch)
@@ -352,7 +363,7 @@ export default function UserActivityReportPage() {
                 role="checkbox"
                 aria-checked={checked}
                 disabled={!allowed}
-                title={allowed ? undefined : `requires ${moduleName} view access`}
+                title={permsLoaded && !allowed ? `requires ${moduleName} view access` : undefined}
                 onClick={() => toggleDomain(d.key)}
                 style={{
                   padding: '5px 10px', borderRadius: 'var(--radius-sm)', border: 'none',
@@ -369,7 +380,16 @@ export default function UserActivityReportPage() {
             )
           })}
         </div>
-        {blockedDomainGroups.length > 0 && (
+        {/* Until permissions resolve, has() returns false for every domain, so
+            the blocked-domain notes below would flash all nine as "requires …
+            view access" — a false claim. Show a neutral loading line instead;
+            the chips stay disabled (fails closed) either way. */}
+        {!permsLoaded ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)' }}>
+            <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+            Checking module access…
+          </div>
+        ) : blockedDomainGroups.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
             {blockedDomainGroups.map((group) => (
               <div key={group.moduleName} style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-4)' }}>
@@ -377,7 +397,7 @@ export default function UserActivityReportPage() {
               </div>
             ))}
           </div>
-        )}
+        ) : null}
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
           <input

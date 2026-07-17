@@ -73,7 +73,7 @@ export async function buildUserActivityWorkbook(
       const def = opts.domains.find((d) => d.key === note.domain)
       summarySheet.addRow({
         user: `${def?.label ?? note.domain}: per-user attribution begins ${formatZuluDate(note.coverageStart)}; `
-          + `${note.affected} record${note.affected === 1 ? '' : 's'} in this range lack per-user attribution.`,
+          + `${note.affected} record${note.affected === 1 ? '' : 's'} in this range lack${note.affected === 1 ? 's' : ''} per-user attribution.`,
       })
     }
   }
