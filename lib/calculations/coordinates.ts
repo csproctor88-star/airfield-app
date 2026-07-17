@@ -53,18 +53,28 @@ export function formatDMS(point: LatLon): string {
 /**
  * Degrees-decimal-minutes with hemisphere prefix, e.g. `N42°36.31' W082°49.23'`.
  *
- * Canonical DDM formatter going forward. Produces the identical output shape to
+ * Canonical DDM formatter going forward. Produces the same output shape as
  * `formatCoordsDMS(lat, lon)` in `lib/utils.ts` — that function is misnamed
  * (despite "DMS" it emits degrees-decimal-minutes) and is kept only for its
  * existing call sites. Prefer this one for new code.
+ *
+ * Intentional divergences from the legacy formatter (whose output in these
+ * cases is invalid or inconsistent): minutes are rounded to two decimals
+ * BEFORE printing and a 60.00 result carries into degrees, so this never
+ * renders a `60.00'` minutes field (legacy does, e.g. lat 42.99995 →
+ * `N42°60.00'`; here → `N43°00.00'`) — the parser rejects such fields, so
+ * the legacy string would not round-trip; and minutes are zero-padded to two
+ * integer digits (`00.00`–`59.99`, matching formatDMS) where legacy prints
+ * a bare `0.00'`.
  */
 export function formatDDM(point: LatLon): string {
   const part = (dec: number, pos: string, neg: string) => {
     const dir = dec >= 0 ? pos : neg
     const abs = Math.abs(dec)
-    const d = Math.floor(abs)
-    const m = ((abs - d) * 60).toFixed(2)
-    return `${dir}${String(d).padStart(pos === 'N' ? 2 : 3, '0')}°${m}'`
+    let d = Math.floor(abs)
+    let m = Math.round((abs - d) * 60 * 100) / 100
+    if (m >= 60) { m = 0; d += 1 }
+    return `${dir}${String(d).padStart(pos === 'N' ? 2 : 3, '0')}°${m.toFixed(2).padStart(5, '0')}'`
   }
   return `${part(point.lat, 'N', 'S')} ${part(point.lon, 'E', 'W')}`
 }

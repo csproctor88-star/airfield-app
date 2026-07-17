@@ -118,6 +118,40 @@ describe(`formatDMS seconds carry (never renders 60.0" or a 60' minutes field)`,
   })
 })
 
+describe(`formatDDM minutes carry (never renders a 60.00' minutes field)`, () => {
+  const carryCases: Array<{ name: string; point: LatLon; expected: string }> = [
+    {
+      name: 'minutes rounding to 60.00 carry into degrees',
+      point: { lat: 42.99995, lon: -82.82047 }, // 42°59.997'
+      expected: `N43°00.00' W082°49.23'`,
+    },
+    {
+      name: 'longitude carry keeps 3-digit degree padding',
+      point: { lat: 42.60522, lon: -82.99996 }, // 082°59.9976'W
+      expected: `N42°36.31' W083°00.00'`,
+    },
+    {
+      name: 'hemisphere boundary: small negative lat stays S with correct carry',
+      point: { lat: -0.99999, lon: 0 }, // 00°59.9994'S
+      expected: `S01°00.00' E000°00.00'`,
+    },
+  ]
+  for (const c of carryCases) {
+    it(c.name, () => {
+      expect(formatDDM(c.point)).toBe(c.expected)
+    })
+  }
+
+  it('parse(formatDDM(p)) round-trips near a degree boundary', () => {
+    const boundary: LatLon = { lat: 42.99995, lon: -82.99996 }
+    for (const p of [boundary, ...carryCases.map((c) => c.point)]) {
+      const res = expectOk(parseCoordinateInput(formatDDM(p)))
+      expect(res.format).toBe('ddm')
+      expect(distMeters(res.point, p)).toBeLessThan(12)
+    }
+  })
+})
+
 describe('decimal degrees (dd)', () => {
   const cases: Array<{ name: string; input: string }> = [
     { name: 'comma separated, signed', input: '42.60522, -82.82047' },
