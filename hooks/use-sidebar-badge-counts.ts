@@ -35,15 +35,26 @@ import { fetchDueLocalRegCount } from '@/lib/supabase/local-regulations'
  *           role sees the dot.
  *   localRegsDue — active local regulations (Base Regs) the current user
  *           has never reviewed / must re-review (version bump or interval
- *           elapsed). Gated on local_regs:view. Drives the /regulations
- *           sidebar dot — the Read File dot's sibling.
+ *           elapsed). Gated on local_regs:view AND the local_regs module
+ *           being enabled (see localRegsEnabled below). Drives the
+ *           /regulations sidebar dot — the Read File dot's sibling.
  *   total — sum across all modules tracked here. Used to drive the
  *           Operations section-header dot.
  */
 export function useSidebarBadgeCounts() {
-  const { installationId } = useInstallation()
+  const { installationId, enabledModules } = useInstallation()
   const { has, loaded: permsLoaded } = usePermissions()
   const pathname = usePathname()
+
+  // Local Regs rides the ALWAYS_ON /regulations nav entry, so the module
+  // toggle must gate the badge here — the same double gate the Base Regs tab
+  // applies to itself (regulations/page.tsx `showBaseRegs`). Every other count
+  // in this hook rides a module-gated nav item whose dot disappears with the
+  // item when its module is disabled; /regulations stays visible, so without
+  // this gate disabling the module would leave a stuck, unclearable red dot.
+  // Derived as a boolean so the refresh callback's dep stays stable even if
+  // the enabledModules array identity churns across renders.
+  const localRegsEnabled = enabledModules.includes('local_regs')
 
   const [pprTriage, setPprTriage] = useState(0)
   const [pprApproval, setPprApproval] = useState(0)
@@ -115,13 +126,13 @@ export function useSidebarBadgeCounts() {
     } else {
       setReadFileOutstanding(0)
     }
-    if (has(PERM.LOCAL_REGS_VIEW)) {
+    if (localRegsEnabled && has(PERM.LOCAL_REGS_VIEW)) {
       tasks.push(fetchDueLocalRegCount(installationId).then(setLocalRegsDue))
     } else {
       setLocalRegsDue(0)
     }
     await Promise.all(tasks)
-  }, [installationId, has, permsLoaded])
+  }, [installationId, has, permsLoaded, localRegsEnabled])
 
   // Initial fetch + on installation/permission change + on
   // in-app navigation. The sidebar persists across route changes,
