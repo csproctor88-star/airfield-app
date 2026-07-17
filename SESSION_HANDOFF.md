@@ -1,5 +1,21 @@
 # Session Handoff
 
+> **2026-07-17 — maintenance follow-up (post session 6).** Machine re-sync,
+> not app development. The home clone was fast-forwarded `a97d9171` → v2.32.0
+> tree, `glidepath-site` was cloned fresh into `~/glidepath-site`, and the
+> redundant `OneDrive/airfield-app` clone was removed (OneDrive + `.git` is a
+> corruption risk). `start-session` / `wrap-session` were updated for
+> multi-machine sync — `start-session` now `git pull --ff-only`s before reading
+> this file; `wrap-session` commits + pushes on exit behind a confirmation.
+> Committed `8caeb733` (skill markdown only, **no app code changed**), pushed.
+> **Current HEAD: `8caeb733`.**
+> Heads-up for next session: (1) `node_modules` predates the fast-forward
+> (2026-02-27) — run `npm install` before any `tsc`/`build`/`vitest`, or checks
+> will fail on dependency mismatch, not on your work. (2) Untracked
+> `public/glidepath_vector.svg` is a stray local asset (backed up to
+> `../airfield-app-local-assets-backup/`) — safe to ignore or delete. The
+> session-6 handoff below remains the authoritative dev state.
+
 **Date:** 2026-07-17 (session 6 — overnight autonomous run, owner asleep)
 **Branch:** `main`. **34 commits** this session (`90360dff`..`b3457a1b`),
 **all PUSHED** (owner-authorized; `82170800..b3457a1b` → origin/main); tree
