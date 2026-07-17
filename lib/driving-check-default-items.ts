@@ -26,35 +26,35 @@ export type DrivingCheckDefaultItem = {
 
 export const DRIVING_CHECK_DEFAULT_ITEMS: DrivingCheckDefaultItem[] = [
   {
-    label: 'Two-way radio contact operational',
+    label: 'Two-Way Radio Contact Operational',
     guidance: 'Radio contact with tower/AM Ops on the correct frequency is functioning, or the vehicle is under a radio-equipped escort while in the Controlled Movement Area.',
   },
   {
-    label: 'FOD tire check performed',
+    label: 'FOD Tire Check Performed',
     guidance: 'Tires and undercarriage inspected for debris before and after departing an unpaved surface, consistent with routine FOD Check procedures.',
   },
   {
-    label: 'Vehicle beacon/lighting operational',
+    label: 'Vehicle Beacon/Lighting Operational',
     guidance: 'Rotating beacon and required vehicle lighting are functioning and in use.',
   },
   {
-    label: 'Seat belts in use',
+    label: 'Seat Belts in Use',
     guidance: 'Driver and any occupants are wearing seat belts.',
   },
   {
-    label: 'Speed limit compliance',
+    label: 'Speed Limit Compliance',
     guidance: 'Vehicle observed operating at or below the posted airfield speed limit.',
   },
   {
-    label: 'Vehicle serviceability',
+    label: 'Vehicle Serviceability',
     guidance: 'Brakes, glass, and fluid lines free of visible leaks or damage that would affect safe airfield operation.',
   },
   {
-    label: 'Driver knowledge of light-gun signals',
+    label: 'Driver Knowledge of Light-Gun Signals',
     guidance: 'Driver correctly identifies tower light-gun signal meanings when asked.',
   },
   {
-    label: 'Escort procedures complied with',
+    label: 'Escort Procedures Complied With',
     guidance: 'Escorted vehicles/personnel remained within escort control and followed briefed escort procedures.',
   },
 ]

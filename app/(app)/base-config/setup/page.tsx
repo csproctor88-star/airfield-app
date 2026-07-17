@@ -143,7 +143,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'qrc', number: 10, label: 'QRCs', description: 'Configure Quick Reaction Checklists for emergency response. Import the 25 default templates or build your own from scratch.', required: true },
   { key: 'scnagencies', number: 11, label: 'SCN Agencies', description: 'List the agencies checked on the Secondary Crash Net. Each appears as a toggleable badge on the daily SCN check page (e.g., Tower, Fire Dept, Ambulance, Security Forces, Hospital).', required: true },
   { key: 'aepagencies', number: 11, label: 'AEP Agencies', description: 'Civilian Part 139 only. List the response agencies the Airport Emergency Plan coordinates with (ARFF, mutual-aid fire, EMS, police, hospital, ATC, FAA, NTSB). Each appears in the monthly comms-check picker and the drill-participant multi-select.', required: true },
-  { key: 'fprchecklist', number: 11, label: 'FPR Checklist', description: 'Off by default — enable Flight Planning Room Check at Modules first. Define the per-shift checklist (FLIP currency, charts, forms, NOTAM display). Load the suggested starting point or build your own.', required: false },
+  { key: 'fprchecklist', number: 11, label: 'Flight Planning Room Checklist', description: 'Off by default — enable Flight Planning Room Check at Modules first. Define the per-shift checklist (FLIP currency, charts, forms, NOTAM display). Load the suggested starting point or build your own.', required: false },
   { key: 'drivingcheckitems', number: 11, label: 'Driving Check Items', description: 'Off by default — enable Airfield Driving Spot Check at Modules first. Define the item list checked during a spot check (FOD tire check, radio procedures, vehicle serviceability). Load the suggested starting point or build your own.', required: false },
   { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
   { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
@@ -670,6 +670,16 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
       )}
       {icao && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          <div style={{
+            gridColumn: '1 / -1', padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+            background: 'color-mix(in srgb, var(--color-cyan) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+            fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', lineHeight: 1.4,
+          }}>
+            <strong>Manual entry required for ICAO Annex 14.</strong> Set this runway&apos;s ICAO code number,
+            approach classification, and strip width below — they are not derived automatically and drive the
+            obstacle limitation surface dimensions on the Obstructions map.
+          </div>
           <div>
             <label style={labelStyle}>ICAO Code Number <FieldHint stepKey="runways" fieldId="icao_code_number" /></label>
             <select

@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { Upload } from 'lucide-react'
 import {
   fetchDrivingCheckItems,
   createDrivingCheckItem,
@@ -9,6 +10,9 @@ import {
   reorderDrivingCheckItems,
   deleteDrivingCheckItem,
   seedDefaultDrivingCheckItems,
+  fetchDriverLicenses,
+  replaceDriverLicenses,
+  clearDriverLicenses,
   type DrivingCheckItemRow,
 } from '@/lib/supabase/driving-checks'
 import { FieldHint } from '@/components/base-setup/FieldHint'
@@ -64,6 +68,56 @@ export function DrivingCheckItemsTab({
   }, [installationId])
 
   useEffect(() => { load() }, [load])
+
+  // ── Airfield Licenses roster (ADDx import) ──
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [licenseCount, setLicenseCount] = useState<number | null>(null)
+  const [importing, setImporting] = useState(false)
+
+  const loadLicenses = useCallback(async () => {
+    if (!installationId) { setLicenseCount(0); return }
+    const rows = await fetchDriverLicenses(installationId)
+    setLicenseCount(rows.length)
+  }, [installationId])
+  useEffect(() => { loadLicenses() }, [loadLicenses])
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file after a failed import
+    if (!file || !installationId) return
+    setImporting(true)
+    try {
+      const buffer = await file.arrayBuffer()
+      const { parseAirfieldLicensesXlsx } = await import('@/lib/driving-license-import')
+      const result = await parseAirfieldLicensesXlsx(buffer)
+      if (result.error) { toast.error(result.error); return }
+      if (result.rows.length === 0) { toast.error('No driver rows found in the file.'); return }
+      const current = licenseCount ?? 0
+      const replaceNote = current > 0 ? ` This replaces the current roster of ${current.toLocaleString()}.` : ''
+      const skipNote = result.skipped > 0
+        ? ` (${result.skipped} row${result.skipped === 1 ? '' : 's'} without a surname skipped.)`
+        : ''
+      if (!confirm(`Import ${result.rows.length.toLocaleString()} driver${result.rows.length === 1 ? '' : 's'}?${replaceNote}${skipNote}`)) return
+      const { count, error } = await replaceDriverLicenses(installationId, result.rows)
+      if (error) { toast.error(error); return }
+      toast.success(`Imported ${count.toLocaleString()} driver${count === 1 ? '' : 's'} into the Airfield Licenses roster.`)
+      markSaved?.('drivingcheckitems')
+      await loadLicenses()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Import failed')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  async function handleClearRoster() {
+    if (!installationId || !licenseCount) return
+    if (!confirm(`Clear all ${licenseCount.toLocaleString()} drivers from the Airfield Licenses roster? Spot-check driver lookup will be empty until you re-import.`)) return
+    const { error } = await clearDriverLicenses(installationId)
+    if (error) { toast.error(error); return }
+    toast.success('Airfield Licenses roster cleared.')
+    await loadLicenses()
+  }
 
   async function handleAdd() {
     const trimmed = newLabel.trim()
@@ -175,6 +229,63 @@ export function DrivingCheckItemsTab({
         a Pass / Discrepancy / N/A row on the Start Spot Check form; optional guidance renders as a
         subline under the item. AF Form 483 verification is its own field on the check, not an item here.
       </p>
+
+      {/* Airfield Licenses roster (ADDx import) — powers driver lookup on the spot check */}
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
+        Airfield Driver Licenses
+      </h3>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 10, lineHeight: 1.6 }}>
+        Import the ADDx <strong>Airfield Licenses Report</strong> (.xlsx) so a spot check can look a driver
+        up by last name, first name, or unit and auto-fill their identity and AF Form 483 number. Re-importing
+        replaces the roster.
+      </p>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        padding: 14, borderRadius: 'var(--radius-base)', marginBottom: 20,
+        background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)',
+      }}>
+        <div style={{ flex: 1, minWidth: 160, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
+          {licenseCount === null
+            ? 'Loading roster…'
+            : licenseCount === 0
+              ? 'No drivers on file yet.'
+              : `${licenseCount.toLocaleString()} driver${licenseCount === 1 ? '' : 's'} on file.`}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          onChange={handleImportFile}
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={importing || !installationId}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
+            background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
+            color: '#fff', cursor: importing || !installationId ? 'default' : 'pointer',
+            fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
+            opacity: importing || !installationId ? 0.6 : 1,
+          }}
+        >
+          <Upload size={14} /> {importing ? 'Importing…' : 'Import .xlsx'}
+        </button>
+        {(licenseCount ?? 0) > 0 && (
+          <button
+            onClick={handleClearRoster}
+            disabled={importing}
+            style={{
+              background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
+              padding: '8px 12px', color: 'var(--color-danger)', cursor: importing ? 'default' : 'pointer',
+              fontFamily: 'inherit', fontSize: 'var(--fs-sm)', fontWeight: 600, opacity: importing ? 0.6 : 1,
+            }}
+          >
+            Clear roster
+          </button>
+        )}
+      </div>
 
       <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
         Driving Check Items <FieldHint stepKey="drivingcheckitems" fieldId="item_label" />

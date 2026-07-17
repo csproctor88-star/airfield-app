@@ -612,16 +612,20 @@ export function getSurfaces(
 
 export type Annex14SurfaceKey =
   | 'approach'
+  | 'inner_approach'
   | 'inner_horizontal'
   | 'conical'
   | 'transitional'
+  | 'balked_landing'
   | 'takeoff_climb'
 
 export const ANNEX14_SURFACE_META: Record<Annex14SurfaceKey, { name: string; color: string; icaoRef: string }> = {
   approach:         { name: 'Approach Surface',         color: '#F97316', icaoRef: 'ICAO Annex 14 Vol I §4.1.7–4.1.10; Table 4-1' },
+  inner_approach:   { name: 'Inner Approach Surface',   color: '#FB7185', icaoRef: 'ICAO Annex 14 Vol I §4.1.11–4.1.12; Table 4-1' },
   inner_horizontal: { name: 'Inner Horizontal Surface', color: '#22C55E', icaoRef: 'ICAO Annex 14 Vol I §4.1.4–4.1.6; Table 4-1' },
   conical:          { name: 'Conical Surface',          color: '#3B82F6', icaoRef: 'ICAO Annex 14 Vol I §4.1.1–4.1.3; Table 4-1' },
   transitional:     { name: 'Transitional Surface',     color: '#EAB308', icaoRef: 'ICAO Annex 14 Vol I §4.1.13–4.1.16; Table 4-1' },
+  balked_landing:   { name: 'Balked Landing Surface',   color: '#2DD4BF', icaoRef: 'ICAO Annex 14 Vol I §4.1.21–4.1.24; Table 4-1' },
   takeoff_climb:    { name: 'Take-Off Climb Surface',   color: '#8B5CF6', icaoRef: 'ICAO Annex 14 Vol I §4.1.25–4.1.27; Table 4-2' },
 }
 
@@ -634,9 +638,11 @@ export const ANNEX14_SURFACE_META: Record<Annex14SurfaceKey, { name: string; col
 // ({ name, description, ufcRef, color }), in top-down draw order.
 const ANNEX14_SURFACE_DESCRIPTIONS: Record<Annex14SurfaceKey, string> = {
   approach:         'Inclined plane rising up and outward from before each threshold; dimensions and slopes set by the runway’s approach classification and code number.',
+  inner_approach:   'Precision-approach only: a rectangular portion of the approach immediately before the threshold (constant width), rising at its own slope over 900 m.',
   inner_horizontal: 'Horizontal plane 45 m above the established aerodrome elevation, within the code-number radius.',
   conical:          'Slopes up and outward at 5% from the periphery of the inner horizontal surface.',
   transitional:     'Slopes up from the strip edge (or runway edge when the strip width isn’t configured) to the inner horizontal surface.',
+  balked_landing:   'Precision-approach only: a go-around surface after the threshold (code 3/4 at 1 800 m), diverging and rising in the departure direction.',
   takeoff_climb:    'Inclined plane rising up and outward from beyond the runway end for departures (Table 4-2 by code number).',
 }
 
@@ -647,7 +653,7 @@ const ANNEX14_SURFACE_DESCRIPTIONS: Record<Annex14SurfaceKey, string> = {
  * SurfaceSetLegend's set-dispatch gains an ICAO branch with the same row shape.
  */
 export function getAnnex14SurfaceInfo(): { name: string; description: string; ufcRef: string; color: string }[] {
-  const order: Annex14SurfaceKey[] = ['approach', 'inner_horizontal', 'conical', 'transitional', 'takeoff_climb']
+  const order: Annex14SurfaceKey[] = ['approach', 'inner_approach', 'inner_horizontal', 'conical', 'transitional', 'balked_landing', 'takeoff_climb']
   return order.map((key) => ({
     name: ANNEX14_SURFACE_META[key].name,
     description: ANNEX14_SURFACE_DESCRIPTIONS[key],
@@ -1667,6 +1673,42 @@ export function evaluateObstructionAnnex14(
     })
   }
 
+  // --- 1b. Inner Approach Surface (precision approach only) ---
+  // A constant-width rectangle from the approach inner edge (coincident with it,
+  // §4.1.12a) extending its own length outward; inner-edge elevation = threshold
+  // elevation (§4.1.9). Overlays the near part of the wider, diverging approach.
+  if (criteria.innerApproach) {
+    const ia = criteria.innerApproach
+    const distFromThresholdFt = ia.distFromThresholdM * M
+    const halfWidthFt = (ia.widthM / 2) * M
+    const lengthFt = ia.lengthM * M
+    const alongFt = beyondNearest - distFromThresholdFt
+    const withinLength = alongFt >= 0 && alongFt <= lengthFt
+    const isWithin = withinLength && relation.distanceFromCenterline <= halfWidthFt
+    const riseFt = Math.max(0, alongFt) * (ia.slopePct / 100)
+    const maxMSL = endElev + riseFt
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'inner_approach',
+      surfaceName: ANNEX14_SURFACE_META.inner_approach.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.inner_approach.icaoRef,
+      ufcCriteria: `Annex 14 inner approach surface — ${ia.widthM} m wide (constant), inner edge ${ia.distFromThresholdM} m from threshold, ${ia.lengthM} m long, ${ia.slopePct}% slope.`,
+      color: ANNEX14_SURFACE_META.inner_approach.color,
+      baselineElevation: endElev,
+      baselineLabel: thresholdLabel,
+      calculationBreakdown: isWithin
+        ? `${fmt(endElev)} ft (${thresholdLabel}) + ${fmt(riseFt)} ft (${ia.slopePct}% over ${fmt(Math.max(0, alongFt) / M)} m) = ${fmt(maxMSL)} ft MSL`
+        : undefined,
+    })
+  }
+
   // --- 2. Transitional Surface ---
   {
     const trans = criteria.transitional
@@ -1807,6 +1849,60 @@ export function evaluateObstructionAnnex14(
       baselineLabel: thresholdLabel,
       calculationBreakdown: `${fmt(endElev)} ft (${thresholdLabel}) + ${fmt(riseFt)} ft (${toc.slopePct}% slope) = ${fmt(maxMSL)} ft MSL`,
     })
+  }
+
+  // --- 6. Balked Landing Surface (precision code 3,4; each approach end) ---
+  // Go-around surface: inner edge a fixed distance AFTER each threshold (down the
+  // runway, capped at the runway end — footnote d), rising in the departure
+  // direction. Both ends are checked; a point is normally downstream of at most
+  // one, but on runways longer than ~2× the distance the two overlap near midfield
+  // — there the MORE restrictive (lower) surface controls. Inner-edge elevation is
+  // the runway centre-line elevation (§4.1.23), approximated as airfield elevation.
+  const bl = criteria.balkedLanding
+  if (bl && bl.distFromThresholdM != null) {
+    const innerHalfFt = (bl.innerEdgeM / 2) * M
+    const divergence = bl.divergencePct / 100
+    const slope = bl.slopePct / 100
+    const planLengthFt = (45 / slope) * M
+    const distFt = Math.min(bl.distFromThresholdM * M, rwy.lengthFt)
+    const alongBls = [
+      relation.alongTrackFromMidpoint - (-halfLength + distFt), // end1 surface, rising toward +alongTrack
+      (halfLength - distFt) - relation.alongTrackFromMidpoint,   // end2 surface, rising toward −alongTrack
+    ]
+    let chosen: { isWithin: boolean; alongBl: number } | null = null
+    for (const alongBl of alongBls) {
+      const withinLength = alongBl >= 0 && alongBl <= planLengthFt
+      const halfWidthAt = innerHalfFt + Math.max(0, alongBl) * divergence
+      const isWithin = withinLength && relation.distanceFromCenterline <= halfWidthAt
+      // Prefer a within-bounds end; among those, the smaller rise (more restrictive).
+      if (!chosen || (isWithin && !chosen.isWithin) || (isWithin && chosen.isWithin && alongBl < chosen.alongBl)) {
+        chosen = { isWithin, alongBl }
+      }
+    }
+    if (chosen) {
+      const riseFt = Math.max(0, chosen.alongBl) * slope
+      const maxMSL = airfieldElev + riseFt
+      const maxAGL = maxMSL - groundElev
+      const violated = chosen.isWithin && obstructionTopMSL > maxMSL
+      surfaces.push({
+        surfaceKey: 'balked_landing',
+        surfaceName: ANNEX14_SURFACE_META.balked_landing.name,
+        isWithinBounds: chosen.isWithin,
+        maxAllowableHeightAGL: Math.max(0, maxAGL),
+        maxAllowableHeightMSL: maxMSL,
+        obstructionTopMSL,
+        violated,
+        penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+        ufcReference: ANNEX14_SURFACE_META.balked_landing.icaoRef,
+        ufcCriteria: `Annex 14 balked landing surface — inner edge ${bl.innerEdgeM} m at ${bl.distFromThresholdM} m after the threshold (or runway end), ${bl.divergencePct}% divergence per side, ${bl.slopePct}% slope.`,
+        color: ANNEX14_SURFACE_META.balked_landing.color,
+        baselineElevation: airfieldElev,
+        baselineLabel: airfieldBaselineLabel,
+        calculationBreakdown: chosen.isWithin
+          ? `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(riseFt)} ft (${bl.slopePct}% over ${fmt(Math.max(0, chosen.alongBl) / M)} m) = ${fmt(maxMSL)} ft MSL`
+          : undefined,
+      })
+    }
   }
 
   // --- Aggregate ---

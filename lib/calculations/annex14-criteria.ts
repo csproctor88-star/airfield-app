@@ -48,6 +48,14 @@ export interface Annex14SurfaceCriteria {
     totalLengthM: number | null
   }
   transitional: { slopePct: number }
+  /** Precision-only (Table 4-1 INNER APPROACH); absent for non-instrument/non-precision. */
+  innerApproach?: { widthM: number; distFromThresholdM: number; lengthM: number; slopePct: number }
+  /** Precision-only (Table 4-1 INNER TRANSITIONAL); absent otherwise. */
+  innerTransitional?: { slopePct: number }
+  /** Precision-only (Table 4-1 BALKED LANDING SURFACE); absent otherwise. `distFromThresholdM`
+   *  is null for CAT I code 1,2 (footnote c "distance to the end of strip" — not a fixed value,
+   *  deferred); 1 800 m for code 3,4 (footnote d "or end of runway whichever is less"). */
+  balkedLanding?: { innerEdgeM: number; distFromThresholdM: number | null; divergencePct: number; slopePct: number }
   takeoffClimb: {
     innerEdgeM: number
     distFromEndM: number
@@ -205,6 +213,9 @@ const CATI_1_2: Annex14ApproachColumn = {
     totalLengthM: 15000,      // Table 4-1 CATI-1,2: total length 15 000 m
   },
   transitional: { slopePct: 14.3 }, // Table 4-1 CATI-1,2: transitional 14.3%
+  innerApproach:     { widthM: 90, distFromThresholdM: 60, lengthM: 900, slopePct: 2.5 }, // Table 4-1 CATI-1,2: inner approach 90 m / 60 m / 900 m / 2.5%
+  innerTransitional: { slopePct: 40 }, // Table 4-1 CATI-1,2: inner transitional 40%
+  balkedLanding:     { innerEdgeM: 90, distFromThresholdM: null, divergencePct: 10, slopePct: 4 }, // Table 4-1 CATI-1,2: balked landing 90 m / end-of-strip (footnote c, deferred) / 10% / 4%
 }
 const CATI_3_4: Annex14ApproachColumn = {
   conical:         { slopePct: 5,  heightM: 100 },  // Table 4-1 CATI-3,4: conical 5% / 100 m
@@ -221,6 +232,9 @@ const CATI_3_4: Annex14ApproachColumn = {
     totalLengthM: 15000,      // Table 4-1 CATI-3,4: total length 15 000 m
   },
   transitional: { slopePct: 14.3 }, // Table 4-1 CATI-3,4: transitional 14.3%
+  innerApproach:     { widthM: 120, distFromThresholdM: 60, lengthM: 900, slopePct: 2 }, // Table 4-1 CATI-3,4: inner approach 120 m / 60 m / 900 m / 2%
+  innerTransitional: { slopePct: 33.3 }, // Table 4-1 CATI-3,4: inner transitional 33.3%
+  balkedLanding:     { innerEdgeM: 120, distFromThresholdM: 1800, divergencePct: 10, slopePct: 3.33 }, // Table 4-1 CATI-3,4: balked landing 120 m / 1 800 m / 10% / 3.33%
 }
 
 // ── Precision approach category II or III (code 3,4 ONLY) ────────────────────
@@ -241,6 +255,9 @@ const CATII_III_3_4: Annex14ApproachColumn = {
     totalLengthM: 15000,      // Table 4-1 CATII/III-3,4: total length 15 000 m
   },
   transitional: { slopePct: 14.3 }, // Table 4-1 CATII/III-3,4: transitional 14.3%
+  innerApproach:     { widthM: 120, distFromThresholdM: 60, lengthM: 900, slopePct: 2 }, // Table 4-1 CATII/III-3,4: inner approach 120 m / 60 m / 900 m / 2%
+  innerTransitional: { slopePct: 33.3 }, // Table 4-1 CATII/III-3,4: inner transitional 33.3%
+  balkedLanding:     { innerEdgeM: 120, distFromThresholdM: 1800, divergencePct: 10, slopePct: 3.33 }, // Table 4-1 CATII/III-3,4: balked landing 120 m / 1 800 m / 10% / 3.33%
 }
 
 /**

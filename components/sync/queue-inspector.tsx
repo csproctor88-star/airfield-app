@@ -41,7 +41,7 @@ const TYPE_LABELS: Record<WriteType, string> = {
   inspection_save_draft: 'Inspection draft',
   dashboard_board_update: 'Dashboard layout save',
   wildlife_sighting_create: 'Wildlife sighting',
-  fpr_save: 'FPR check save',
+  fpr_save: 'Flight Planning Room check save',
   driving_check_save: 'Driving spot check save',
   driving_check_update: 'Driving spot check update',
   local_reg_review: 'Local regulation review',

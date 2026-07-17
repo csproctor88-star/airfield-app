@@ -29,6 +29,7 @@ function makeCheck(overrides: Partial<DrivingCheckWithResults> = {}): DrivingChe
     driver_unit: '100 ARW/SE',
     driver_office_symbol: null,
     driver_phone: null,
+    driver_483_number: null,
     contractor_id: null,
     form_483_status: 'valid',
     form_483_expires: null,

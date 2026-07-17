@@ -17,6 +17,8 @@ import {
   buildDrivingCheckDrafts,
   distinctCheckers,
   filterDrivingChecks,
+  fetchDriverLicenses,
+  driverLicenseDisplayName,
   FORM_483_LABELS,
   DRIVING_RESULT_LABELS,
   DRIVING_RESULT_COLORS,
@@ -30,6 +32,7 @@ import {
   type DrivingCheckDraft,
   type DrivingCheckItemRow,
   type DrivingCheckWithResults,
+  type DriverLicenseRow,
 } from '@/lib/supabase/driving-checks'
 import { fetchActiveContractors, type ContractorRow } from '@/lib/supabase/contractors'
 import { formatZuluTime } from '@/lib/utils'
@@ -92,6 +95,7 @@ type ModalState = {
   driverUnit: string
   driverOfficeSymbol: string
   driverPhone: string
+  driver483Number: string
   contractorId: string | null
   form483Status: Form483Status
   form483Expires: string
@@ -109,6 +113,8 @@ type ModalState = {
   discrepancyDialog: { idx: number; priorStatus: DrivingItemStatus } | null
   contractorPickerOpen: boolean
   contractorQuery: string
+  driverPickerOpen: boolean
+  driverQuery: string
 }
 
 // Build a DrivingCheckWithResults shape from the live modal draft so the
@@ -124,6 +130,7 @@ function draftToCheck(m: ModalState, overallResult: DrivingCheckResult): Driving
     driver_unit: m.driverUnit.trim() || null,
     driver_office_symbol: m.driverOfficeSymbol.trim() || null,
     driver_phone: m.driverPhone.trim() || null,
+    driver_483_number: m.driver483Number.trim() || null,
     contractor_id: m.contractorId,
     form_483_status: m.form483Status,
     form_483_expires: m.form483Expires || null,
@@ -157,6 +164,7 @@ export default function DrivingChecksPage() {
   const [completedByName, setCompletedByName] = useState<string | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
   const [contractors, setContractors] = useState<ContractorRow[]>([])
+  const [driverLicenses, setDriverLicenses] = useState<DriverLicenseRow[]>([])
 
   // History filters
   const [startDate, setStartDate] = useState<string>(() => daysAgoZuluDate(30))
@@ -213,6 +221,12 @@ export default function DrivingChecksPage() {
     fetchActiveContractors(installationId).then(setContractors).catch(() => setContractors([]))
   }, [installationId])
 
+  // Imported Airfield Licenses roster for the driver lookup (empty → lookup hidden).
+  useEffect(() => {
+    if (!installationId) return
+    fetchDriverLicenses(installationId).then(setDriverLicenses).catch(() => setDriverLicenses([]))
+  }, [installationId])
+
   // Re-fetch when a queued driving_check_save / _update drains offline.
   useEffect(() => {
     const onCommit = (e: Event) => {
@@ -239,6 +253,7 @@ export default function DrivingChecksPage() {
   const stats = useMemo(() => computeAobStats(filteredChecks), [filteredChecks])
 
   const hasContractors = contractors.length > 0
+  const hasLicenses = driverLicenses.length > 0
 
   function openModal(edit?: DrivingCheckWithResults) {
     const draft = buildDrivingCheckDrafts(items, edit?.results ?? null)
@@ -249,6 +264,7 @@ export default function DrivingChecksPage() {
       driverUnit: edit?.driver_unit ?? '',
       driverOfficeSymbol: edit?.driver_office_symbol ?? '',
       driverPhone: edit?.driver_phone ?? '',
+      driver483Number: edit?.driver_483_number ?? '',
       contractorId: edit?.contractor_id ?? null,
       form483Status: edit?.form_483_status ?? 'valid',
       form483Expires: edit?.form_483_expires ?? '',
@@ -263,6 +279,8 @@ export default function DrivingChecksPage() {
       discrepancyDialog: null,
       contractorPickerOpen: false,
       contractorQuery: '',
+      driverPickerOpen: false,
+      driverQuery: '',
     })
   }
 
@@ -301,7 +319,6 @@ export default function DrivingChecksPage() {
         ...m,
         driverName: c.contact_name || m.driverName,
         driverUnit: c.company_name || m.driverUnit,
-        driverPhone: c.contact_phone || m.driverPhone,
         contractorId: c.id,
         form483Expires: exp || m.form483Expires,
         form483Status,
@@ -312,10 +329,25 @@ export default function DrivingChecksPage() {
     })
   }
 
+  function applyDriverLicense(l: DriverLicenseRow) {
+    setModal(m => {
+      if (!m) return m
+      return {
+        ...m,
+        driverName: driverLicenseDisplayName(l) || m.driverName,
+        driverRank: l.grade_rank || m.driverRank,
+        driverUnit: l.unit || m.driverUnit,
+        driverOfficeSymbol: l.office || m.driverOfficeSymbol,
+        driver483Number: l.af_483_number || m.driver483Number,
+        driverPickerOpen: false,
+        driverQuery: '',
+      }
+    })
+  }
+
   async function handleSaveModal() {
     if (!modal || !installationId) return
     if (!modal.driverName.trim()) { toast.error('Driver name is required.'); return }
-    if (!modal.location.trim()) { toast.error('Location is required.'); return }
     if (modal.violationFlag && !modal.violationDescription.trim()) {
       toast.error('Describe the airfield driving violation before saving.'); return
     }
@@ -345,6 +377,7 @@ export default function DrivingChecksPage() {
           driverUnit: modal.driverUnit,
           driverOfficeSymbol: modal.driverOfficeSymbol,
           driverPhone: modal.driverPhone,
+          driver483Number: modal.driver483Number,
           contractorId: modal.contractorId,
           form483Status: modal.form483Status,
           form483Expires: modal.form483Expires || null,
@@ -384,6 +417,7 @@ export default function DrivingChecksPage() {
           driverUnit: modal.driverUnit,
           driverOfficeSymbol: modal.driverOfficeSymbol,
           driverPhone: modal.driverPhone,
+          driver483Number: modal.driver483Number,
           contractorId: modal.contractorId,
           form483Status: modal.form483Status,
           form483Expires: modal.form483Expires || null,
@@ -503,12 +537,25 @@ export default function DrivingChecksPage() {
         )}
       </div>
 
-      {/* Stat strip */}
-      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', marginBottom: 18 }}>
-        <StatTile label="Checks" value={String(stats.total)} color="var(--color-cyan)" />
-        <StatTile label="Pass Rate" value={stats.passRate === null ? '—' : `${Math.round(stats.passRate * 100)}%`} color="var(--color-success)" />
-        <StatTile label="Discrepancies" value={String(stats.discrepancyCount)} color="var(--color-warning)" />
-        <StatTile label="Violations" value={String(stats.violationCount)} color="var(--color-danger)" />
+      {/* Summary stats table */}
+      <div style={{ overflowX: 'auto', marginBottom: 18 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--color-border)' }}>
+          <thead>
+            <tr>
+              {['Checks', 'Pass Rate', 'Discrepancies', 'Violations'].map(h => (
+                <th key={h} style={statThStyle}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ ...statTdStyle, color: 'var(--color-cyan)' }}>{stats.total.toLocaleString()}</td>
+              <td style={{ ...statTdStyle, color: 'var(--color-success)' }}>{stats.passRate === null ? '—' : `${Math.round(stats.passRate * 100)}%`}</td>
+              <td style={{ ...statTdStyle, color: 'var(--color-warning)' }}>{stats.discrepancyCount.toLocaleString()}</td>
+              <td style={{ ...statTdStyle, color: 'var(--color-danger)' }}>{stats.violationCount.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Filters */}
@@ -600,24 +647,46 @@ export default function DrivingChecksPage() {
 
           {/* Driver identification */}
           <SectionLabel>Driver</SectionLabel>
-          {hasContractors && (
-            <div style={{ marginBottom: 10 }}>
-              {!modal.contractorPickerOpen ? (
+          {(hasLicenses || hasContractors) && !modal.driverPickerOpen && !modal.contractorPickerOpen && (
+            <div style={{ marginBottom: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {hasLicenses && (
+                <button
+                  onClick={() => setModal(m => m ? { ...m, driverPickerOpen: true } : m)}
+                  style={ghostButtonStyle}
+                >
+                  <Search size={13} /> Look up driver
+                </button>
+              )}
+              {hasContractors && (
                 <button
                   onClick={() => setModal(m => m ? { ...m, contractorPickerOpen: true } : m)}
                   style={ghostButtonStyle}
                 >
                   <Search size={13} /> Look up contractor
                 </button>
-              ) : (
-                <ContractorPicker
-                  contractors={contractors}
-                  query={modal.contractorQuery}
-                  onQuery={q => setModal(m => m ? { ...m, contractorQuery: q } : m)}
-                  onPick={applyContractor}
-                  onClose={() => setModal(m => m ? { ...m, contractorPickerOpen: false, contractorQuery: '' } : m)}
-                />
               )}
+            </div>
+          )}
+          {modal.driverPickerOpen && (
+            <div style={{ marginBottom: 10 }}>
+              <DriverPicker
+                licenses={driverLicenses}
+                query={modal.driverQuery}
+                onQuery={q => setModal(m => m ? { ...m, driverQuery: q } : m)}
+                onPick={applyDriverLicense}
+                onClose={() => setModal(m => m ? { ...m, driverPickerOpen: false, driverQuery: '' } : m)}
+              />
+            </div>
+          )}
+          {modal.contractorPickerOpen && (
+            <div style={{ marginBottom: 10 }}>
+              <ContractorPicker
+                contractors={contractors}
+                query={modal.contractorQuery}
+                onQuery={q => setModal(m => m ? { ...m, contractorQuery: q } : m)}
+                onPick={applyContractor}
+                onClose={() => setModal(m => m ? { ...m, contractorPickerOpen: false, contractorQuery: '' } : m)}
+              />
             </div>
           )}
           <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginBottom: 6 }}>
@@ -625,7 +694,6 @@ export default function DrivingChecksPage() {
             <LabeledInput label="Rank" value={modal.driverRank} onChange={v => setModal(m => m ? { ...m, driverRank: v } : m)} placeholder="e.g. SSgt" />
             <LabeledInput label="Unit / Squadron" value={modal.driverUnit} onChange={v => setModal(m => m ? { ...m, driverUnit: v } : m)} placeholder="e.g. 100 ARW/SE" />
             <LabeledInput label="Office Symbol" value={modal.driverOfficeSymbol} onChange={v => setModal(m => m ? { ...m, driverOfficeSymbol: v } : m)} placeholder="e.g. SE" />
-            <LabeledInput label="Phone" value={modal.driverPhone} onChange={v => setModal(m => m ? { ...m, driverPhone: v } : m)} placeholder="e.g. 555-0100" />
           </div>
 
           {/* AF Form 483 */}
@@ -635,7 +703,8 @@ export default function DrivingChecksPage() {
             value={modal.form483Status}
             onChange={v => setModal(m => m ? { ...m, form483Status: v as Form483Status } : m)}
           />
-          <div style={{ marginTop: 8, marginBottom: 6 }}>
+          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 8, marginBottom: 6 }}>
+            <LabeledInput label="AF Form 483 #" value={modal.driver483Number} onChange={v => setModal(m => m ? { ...m, driver483Number: v } : m)} placeholder="e.g. 0046-1502" />
             <LabeledInput label="Observed card expiration (optional)" type="date" value={modal.form483Expires} onChange={v => setModal(m => m ? { ...m, form483Expires: v } : m)} />
           </div>
 
@@ -646,12 +715,11 @@ export default function DrivingChecksPage() {
             value={modal.vehicleType ?? ''}
             onChange={v => setModal(m => m ? { ...m, vehicleType: v as VehicleType } : m)}
           />
-          <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 8, marginBottom: 6 }}>
-            <LabeledInput label="Vehicle ID (registration / USAF #)" value={modal.vehicleId} onChange={v => setModal(m => m ? { ...m, vehicleId: v } : m)} />
-            {modal.vehicleType === 'pov' && (
+          {modal.vehicleType === 'pov' && (
+            <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 8, marginBottom: 6 }}>
               <LabeledInput label="POV pass number" value={modal.povPassNumber} onChange={v => setModal(m => m ? { ...m, povPassNumber: v } : m)} />
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Check items */}
           <SectionLabel>Check Items</SectionLabel>
@@ -709,7 +777,7 @@ export default function DrivingChecksPage() {
           )}
 
           {/* Location */}
-          <SectionLabel>Location</SectionLabel>
+          <SectionLabel>Location (optional)</SectionLabel>
           <input
             list="driving-check-areas"
             value={modal.location}
@@ -880,21 +948,13 @@ const ghostButtonStyle: React.CSSProperties = {
 
 // ── Sub-components ──
 
-function StatTile({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <div style={{
-      padding: '12px 14px', borderRadius: 'var(--radius-md)',
-      background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)',
-      borderLeft: `3px solid ${color}`,
-    }}>
-      <div style={{ fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 800, color: 'var(--color-text-1)', fontVariantNumeric: 'tabular-nums' }}>
-        {value}
-      </div>
-    </div>
-  )
+const statThStyle: React.CSSProperties = {
+  padding: '8px 12px', textAlign: 'left', fontSize: 'var(--fs-2xs)', fontWeight: 700,
+  color: 'var(--color-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em',
+  background: 'var(--color-bg-surface)', borderBottom: '1px solid var(--color-border)',
+}
+const statTdStyle: React.CSSProperties = {
+  padding: '10px 12px', fontSize: 'var(--fs-xl)', fontWeight: 800, fontVariantNumeric: 'tabular-nums',
 }
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
@@ -1073,6 +1133,66 @@ function ContractorPicker({ contractors, query, onQuery, onPick, onClose }: {
   )
 }
 
+function DriverPicker({ licenses, query, onQuery, onPick, onClose }: {
+  licenses: DriverLicenseRow[]
+  query: string
+  onQuery: (q: string) => void
+  onPick: (l: DriverLicenseRow) => void
+  onClose: () => void
+}) {
+  const q = query.trim().toLowerCase()
+  const filtered = (q
+    ? licenses.filter(l =>
+        (l.last_name || '').toLowerCase().includes(q) ||
+        (l.first_name || '').toLowerCase().includes(q) ||
+        (l.unit || '').toLowerCase().includes(q))
+    : licenses
+  ).slice(0, 50)
+  return (
+    <div style={{ padding: 10, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+        <input
+          autoFocus
+          value={query}
+          onChange={e => onQuery(e.target.value)}
+          placeholder="Search drivers by last name, first name, or unit..."
+          style={{ ...textInputStyle }}
+        />
+        <button onClick={onClose} style={{ ...ghostButtonStyle, padding: '8px 10px' }} aria-label="Close driver lookup">
+          <X size={14} />
+        </button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
+        {licenses.length === 0 ? (
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', padding: '6px 4px' }}>
+            No Airfield Licenses imported yet — add the ADDx report in Base Setup → Driving Check Items.
+          </div>
+        ) : filtered.length === 0 ? (
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', padding: '6px 4px' }}>No matching drivers.</div>
+        ) : filtered.map(l => (
+          <button
+            key={l.id}
+            onClick={() => onPick(l)}
+            style={{
+              textAlign: 'left', padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)', background: 'var(--color-bg-surface)',
+              color: 'var(--color-text-1)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--fs-sm)',
+            }}
+          >
+            <div style={{ fontWeight: 700 }}>
+              {[l.last_name, l.first_name].filter(Boolean).join(', ')}{l.grade_rank ? ` · ${l.grade_rank}` : ''}
+            </div>
+            <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              {[l.unit, l.office].filter(Boolean).join(' · ') || 'No unit on file'}
+              {l.af_483_number ? ` · 483 #${l.af_483_number}` : ''}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function SummaryPreview({ text, result }: { text: string; result: DrivingCheckResult }) {
   const color = DRIVING_RESULT_COLORS[result]
   return (
@@ -1150,8 +1270,7 @@ function HistoryRow({ check, onEdit, onDelete }: {
             <DetailField label="Driver" value={driver} />
             {check.driver_unit && <DetailField label="Unit" value={check.driver_unit} />}
             {check.driver_office_symbol && <DetailField label="Office" value={check.driver_office_symbol} />}
-            {check.driver_phone && <DetailField label="Phone" value={check.driver_phone} />}
-            <DetailField label="AF Form 483" value={FORM_483_LABELS[check.form_483_status] + (check.form_483_expires ? ` (exp ${check.form_483_expires})` : '')} />
+            <DetailField label="AF Form 483" value={(check.driver_483_number ? `#${check.driver_483_number} · ` : '') + FORM_483_LABELS[check.form_483_status] + (check.form_483_expires ? ` (exp ${check.form_483_expires})` : '')} />
             {check.vehicle_type && <DetailField label="Vehicle" value={VEHICLE_TYPE_LABELS[check.vehicle_type] + (check.vehicle_id ? ` · ${check.vehicle_id}` : '')} />}
             {check.pov_pass_number && <DetailField label="POV pass" value={check.pov_pass_number} />}
             <DetailField label="Location" value={check.location} />

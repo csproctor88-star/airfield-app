@@ -40,7 +40,9 @@ export function rowLabel(row: UserActivityRow, manyColumns: boolean): string {
     const name = manyColumns ? truncateLabel(row.display, 26) : row.display
     return sanitizePdfText(`${name} (unlinked)`)
   }
-  return sanitizePdfText(manyColumns ? truncateLabel(row.display, 26) : row.display)
+  // Linked profile names are bounded ("Rank First Last (OI)") — let them wrap
+  // in the User column rather than truncating (matches the other rows).
+  return sanitizePdfText(row.display)
 }
 
 export function generateUserActivityPdf(
@@ -71,11 +73,13 @@ export function generateUserActivityPdf(
 
   const manyColumns = opts.domains.length > MANY_COLUMNS_THRESHOLD
   const bodyFontSize = manyColumns ? 8 : 9
-  const labelMax = manyColumns ? 12 : 22
+  // Header labels wrap (never truncate) — shrink the header font when there are
+  // many columns so full names like "Wildlife Sightings" fit on two lines.
+  const headFontSize = manyColumns ? 7 : 9
 
   const head = [[
     'User',
-    ...opts.domains.map((d) => sanitizePdfText(truncateLabel(d.label, labelMax))),
+    ...opts.domains.map((d) => sanitizePdfText(d.label)),
     'Total',
   ]]
 
@@ -100,7 +104,7 @@ export function generateUserActivityPdf(
     theme: 'grid',
     margin: { left: margin, right: margin },
     styles: { fontSize: bodyFontSize, cellPadding: 1.5, overflow: 'linebreak' },
-    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: bodyFontSize },
+    headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold', fontSize: headFontSize, valign: 'middle' },
     footStyles: { fillColor: [226, 232, 240], textColor: [15, 23, 42], fontStyle: 'bold', fontSize: bodyFontSize },
     alternateRowStyles: { fillColor: [245, 245, 245] },
     columnStyles: { 0: { halign: 'left', cellWidth: manyColumns ? 30 : 42 } },

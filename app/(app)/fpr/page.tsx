@@ -157,7 +157,7 @@ export default function FprPage() {
 
   function openModal(shift: ShiftKey, edit?: FprCheckWithResults) {
     if (items.length === 0) {
-      toast.error('Configure the FPR checklist in Base Setup before starting a check.')
+      toast.error('Configure the Flight Planning Room checklist in Base Setup before starting a check.')
       return
     }
     const draft = buildFprResultDrafts(items, edit?.results ?? null)
@@ -230,7 +230,7 @@ export default function FprPage() {
           toast.error('Failed to save check')
           return
         }
-        toast.success(`${shiftLabel} FPR check logged`)
+        toast.success(`${shiftLabel} Flight Planning Room check logged`)
         setModal(null)
         load()
       } else {
@@ -250,7 +250,7 @@ export default function FprPage() {
 
   async function handleDelete(check: FprCheckWithResults) {
     const shiftLabel = getShiftLabel(currentInstallation, check.shift)
-    if (!confirm(`Delete the ${shiftLabel} FPR check for ${check.check_date}Z?`)) return
+    if (!confirm(`Delete the ${shiftLabel} Flight Planning Room check for ${check.check_date}Z?`)) return
     const { error } = await deleteFprCheck(check.id)
     if (error) { toast.error(error); return }
     toast.success('Check deleted')
@@ -277,7 +277,7 @@ export default function FprPage() {
         baseName: currentInstallation?.name || undefined,
       })
       doc.save(filename)
-      toast.success('Monthly FPR check log downloaded')
+      toast.success('Monthly Flight Planning Room check log downloaded')
     } catch (e) {
       console.error(e)
       toast.error('Failed to generate PDF')
@@ -333,7 +333,7 @@ export default function FprPage() {
           fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)',
         }}>
           <strong style={{ color: 'var(--color-warning)' }}>No checklist configured.</strong>{' '}
-          Admins can build the checklist in <Link href="/settings/base-setup" style={{ color: 'var(--color-cyan)', textDecoration: 'none' }}>Base Setup → FPR Checklist</Link>.
+          Admins can build the checklist in <Link href="/settings/base-setup" style={{ color: 'var(--color-cyan)', textDecoration: 'none' }}>Base Setup → Flight Planning Room Checklist</Link>.
         </div>
       )}
 

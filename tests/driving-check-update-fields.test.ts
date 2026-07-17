@@ -41,6 +41,7 @@ describe('buildDrivingCheckFields (attribution invariant)', () => {
     const fields = buildDrivingCheckFields(BASE_INPUT)
     expect(Object.keys(fields).sort()).toEqual([
       'contractor_id',
+      'driver_483_number',
       'driver_name',
       'driver_office_symbol',
       'driver_phone',

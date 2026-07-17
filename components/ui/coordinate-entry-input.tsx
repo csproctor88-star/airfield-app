@@ -79,7 +79,13 @@ export default function CoordinateEntryInput({ onPoint, disabled = false, style 
     }
   }
 
-  let status: Status | null = null
+  // When the field is empty, spell the accepted notations out (these acronyms are
+  // otherwise opaque); once the user types, the parse status/examples take over.
+  let status: Status | null = {
+    text: 'DD = decimal degrees · DMS = degrees/minutes/seconds · DDM = degrees/decimal minutes · MGRS = military grid reference system',
+    color: 'var(--color-text-3)',
+    muted: true,
+  }
   if (trimmed !== '') {
     if (result.ok) {
       status = { text: `${FORMAT_LABELS[result.format]} → ${formatDD(result.point)}`, color: 'var(--color-green)' }
@@ -115,6 +121,7 @@ export default function CoordinateEntryInput({ onPoint, disabled = false, style 
             enterKeyHint="go"
             placeholder="Enter coordinates (DD, DMS, DDM, or MGRS)"
             aria-label="Coordinate entry"
+            title="Accepted formats — DD: Decimal Degrees · DMS: Degrees/Minutes/Seconds · DDM: Degrees/Decimal Minutes · MGRS: Military Grid Reference System"
             style={{
               width: '100%',
               boxSizing: 'border-box',

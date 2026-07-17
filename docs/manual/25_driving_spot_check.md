@@ -122,7 +122,7 @@ Click **Delete** on a History row. Confirm the prompt. This cannot be undone.
 
 ## Editing the check item list (admin)
 
-The item list is configured per base in Base Setup, alongside the FPR Checklist, Shift Checklist,
+The item list is configured per base in Base Setup, alongside the Flight Planning Room Checklist, Shift Checklist,
 and QRC templates steps.
 
 1. Go to **Settings → Base Setup → Driving Check Items**. (The step only appears once the module

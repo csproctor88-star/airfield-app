@@ -223,6 +223,91 @@ export function generateAnnex14TransitionalPolygons(
 }
 
 // ---------------------------------------------------------------------------
+// §4.1.11–4.1.12 Inner approach surface (precision approach only)
+// ---------------------------------------------------------------------------
+
+/** §4.1.11–4.1.12: a rectangular portion of the approach immediately preceding
+ *  the threshold — inner edge coincident with the approach inner edge
+ *  (distFromThresholdM before the threshold), CONSTANT width (parallel sides,
+ *  §4.1.12b), extending its own length outward. */
+function buildInnerApproachRect(
+  end: LatLon,
+  outwardBearing: number,
+  ia: NonNullable<Annex14SurfaceCriteria['innerApproach']>,
+): [number, number][] {
+  const perpL = normalizeBearing(outwardBearing - 90)
+  const perpR = normalizeBearing(outwardBearing + 90)
+  const halfFt = (ia.widthM / 2) * M_TO_FT
+  const start = offsetPoint(end, outwardBearing, ia.distFromThresholdM * M_TO_FT)
+  const far = offsetPoint(end, outwardBearing, (ia.distFromThresholdM + ia.lengthM) * M_TO_FT)
+  const p1 = offsetPoint(start, perpL, halfFt)
+  const p2 = offsetPoint(start, perpR, halfFt)
+  const p3 = offsetPoint(far, perpR, halfFt)
+  const p4 = offsetPoint(far, perpL, halfFt)
+  return [[p1.lon, p1.lat], [p2.lon, p2.lat], [p3.lon, p3.lat], [p4.lon, p4.lat], [p1.lon, p1.lat]]
+}
+
+/** §4.1.11: inner approach off each threshold, or null when the criteria carries
+ *  no inner approach (non-precision / non-instrument). */
+export function generateAnnex14InnerApproachPolygons(
+  rwy: RunwayGeometry,
+  criteria: Annex14SurfaceCriteria,
+): { end1: [number, number][]; end2: [number, number][] } | null {
+  if (!criteria.innerApproach) return null
+  const revBearing = normalizeBearing(rwy.bearingDeg + 180)
+  return {
+    end1: buildInnerApproachRect(rwy.end1, revBearing, criteria.innerApproach),
+    end2: buildInnerApproachRect(rwy.end2, rwy.bearingDeg, criteria.innerApproach),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// §4.1.21–4.1.24 Balked landing surface (precision approach; code 3,4 encoded)
+// ---------------------------------------------------------------------------
+
+/** §4.1.21–4.1.22: a go-around surface, inner edge a specified distance AFTER the
+ *  threshold (down the runway, in the departure direction), capped at the runway
+ *  end (Table 4-1 footnote d "or end of runway whichever is less"), diverging each
+ *  side, rising to the inner-horizontal plane (45 m) at its slope — so the plan
+ *  length is that rise ÷ slope. */
+function buildBalkedLanding(
+  end: LatLon,
+  departBearing: number,
+  bl: NonNullable<Annex14SurfaceCriteria['balkedLanding']> & { distFromThresholdM: number },
+  runwayLengthFt: number,
+): [number, number][] {
+  const perpL = normalizeBearing(departBearing - 90)
+  const perpR = normalizeBearing(departBearing + 90)
+  const innerDistFt = Math.min(bl.distFromThresholdM * M_TO_FT, runwayLengthFt)
+  const innerHalfFt = (bl.innerEdgeM / 2) * M_TO_FT
+  const planLengthFt = (45 / (bl.slopePct / 100)) * M_TO_FT
+  const outerHalfFt = innerHalfFt + planLengthFt * (bl.divergencePct / 100)
+  const inner = offsetPoint(end, departBearing, innerDistFt)
+  const far = offsetPoint(end, departBearing, innerDistFt + planLengthFt)
+  const p1 = offsetPoint(inner, perpL, innerHalfFt)
+  const p2 = offsetPoint(inner, perpR, innerHalfFt)
+  const p3 = offsetPoint(far, perpR, outerHalfFt)
+  const p4 = offsetPoint(far, perpL, outerHalfFt)
+  return [[p1.lon, p1.lat], [p2.lon, p2.lat], [p3.lon, p3.lat], [p4.lon, p4.lat], [p1.lon, p1.lat]]
+}
+
+/** §4.1.21: balked landing off each threshold (go-around in the departure
+ *  direction), or null when there is no fixed distance — non-precision, or CAT I
+ *  code 1,2 whose distance is "the end of strip" (footnote c, deferred). */
+export function generateAnnex14BalkedLandingPolygons(
+  rwy: RunwayGeometry,
+  criteria: Annex14SurfaceCriteria,
+): { end1: [number, number][]; end2: [number, number][] } | null {
+  const bl = criteria.balkedLanding
+  if (!bl || bl.distFromThresholdM == null) return null
+  const fixed = { ...bl, distFromThresholdM: bl.distFromThresholdM }
+  return {
+    end1: buildBalkedLanding(rwy.end1, rwy.bearingDeg, fixed, rwy.lengthFt),
+    end2: buildBalkedLanding(rwy.end2, normalizeBearing(rwy.bearingDeg + 180), fixed, rwy.lengthFt),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Assembly
 // ---------------------------------------------------------------------------
 
@@ -250,6 +335,19 @@ export function buildAnnex14SurfacePolygons(runways: Annex14RunwayInput[]): Surf
     const approach = generateAnnex14ApproachPolygons(rwy, criteria)
     features.push({ id: 'a14-approach-end1', coords: approach.end1, rwyIndex: ri })
     features.push({ id: 'a14-approach-end2', coords: approach.end2, rwyIndex: ri })
+
+    // Precision-only surfaces (null for non-precision / non-instrument).
+    const innerApproach = generateAnnex14InnerApproachPolygons(rwy, criteria)
+    if (innerApproach) {
+      features.push({ id: 'a14-inner-approach-end1', coords: innerApproach.end1, rwyIndex: ri })
+      features.push({ id: 'a14-inner-approach-end2', coords: innerApproach.end2, rwyIndex: ri })
+    }
+
+    const balked = generateAnnex14BalkedLandingPolygons(rwy, criteria)
+    if (balked) {
+      features.push({ id: 'a14-balked-landing-end1', coords: balked.end1, rwyIndex: ri })
+      features.push({ id: 'a14-balked-landing-end2', coords: balked.end2, rwyIndex: ri })
+    }
 
     const toc = generateAnnex14TakeoffClimbPolygons(rwy, criteria)
     features.push({ id: 'a14-takeoff-climb-end1', coords: toc.end1, rwyIndex: ri })

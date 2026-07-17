@@ -231,19 +231,19 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     y += 4
   }
 
-  // ── ICAO Annex 14 phase-2 caveat ──
-  // Phase 1 evaluates and draws five surfaces; the three precision inner
-  // surfaces (inner approach, inner transitional, balked landing) are not yet
-  // evaluated — required for CAT II/III per Annex 14 §4.2.15. Shown for every
-  // ICAO evaluation: the saved row does not persist the per-runway ICAO
+  // ── ICAO Annex 14 evaluation-scope caveat ──
+  // Inner approach + balked landing (precision code 3/4) are now evaluated and
+  // drawn; the inner transitional surface is not yet evaluated (Phase 2b — its
+  // geometry follows the inner-approach and balked-landing edges). Shown for
+  // every ICAO evaluation: the saved row does not persist the per-runway ICAO
   // classification, so precision can't be re-derived here, and the note is a
-  // true phase-limitation disclosure for any Annex 14 evaluation.
+  // true scope disclosure for any Annex 14 evaluation.
   if (evaluation.surface_set === 'icao_annex14') {
     checkPageBreak(10)
     doc.setFontSize(7)
     doc.setTextColor(180, 120, 20)
     const caveat =
-      'ICAO Annex 14 phase-1 evaluation: inner approach, inner transitional, and balked landing surfaces are not evaluated — required for CAT II/III per Annex 14 §4.2.15.'
+      'ICAO Annex 14: inner approach and balked landing surfaces (precision code 3/4) are evaluated. The inner transitional surface is not yet evaluated (Phase 2b).'
     const caveatLines = doc.splitTextToSize(caveat, contentWidth)
     doc.text(caveatLines, margin, y)
     y += caveatLines.length * 3.2 + 4

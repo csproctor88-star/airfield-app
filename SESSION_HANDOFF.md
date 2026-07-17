@@ -323,6 +323,10 @@ lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`).
 6. **Part 139 cert-audit resume** — from `.superpowers/sdd/progress.md`
    Task 2.5c (owner decision recorded 2026-07-07: additive migration for
    civilian cover fields), then 2.6, then phases 3-6.
+7. **USAFE-AFAFRICA Instruction 32-1007 runway type** — implement USAFE-AFAFRICA
+   Instruction 32-1007 as a selectable runway / airfield surface-evaluation type
+   for USAF airfields in Europe and Africa (owner request 2026-07-17). Source PDF
+   staged at `OneDrive/Claude Code - Reference Documents/usafe-afafricai32-1007.pdf`.
 
 ### Long-running carryover
 Hero + coverage redline pass · SEO / rich-results · deferred audit items ·

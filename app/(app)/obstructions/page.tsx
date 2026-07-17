@@ -160,6 +160,7 @@ function ObstructionsContent() {
 
   // Form state
   const [height, setHeight] = useState('')
+  const [heightUnit, setHeightUnit] = useState<'ft' | 'm'>('ft')
   const [description, setDescription] = useState('')
   const [photos, setPhotos] = useState<{ file?: File; url: string }[]>([])
 
@@ -216,6 +217,26 @@ function ObstructionsContent() {
   const { surfaceSet, runwayClass } = effectiveStandardId
     ? pairForStandard(effectiveStandardId)
     : { surfaceSet: baseSurfaceSet, runwayClass: deriveRunwayClassFromRunways(runways.map((r) => r.runway_class)) }
+
+  // Obstruction-height unit. Defaults to metres under ICAO Annex 14 (metric),
+  // feet otherwise; only re-defaults while the field is empty so an entered
+  // value is never silently reinterpreted, and a manual toggle then sticks.
+  // The engine works in feet, so heightInFt() converts at the evaluation boundary.
+  const FT_PER_M = 3.28084
+  useEffect(() => {
+    if (height.trim() !== '') return
+    setHeightUnit(surfaceSet === 'icao_annex14' ? 'm' : 'ft')
+  }, [surfaceSet, height])
+  const heightInFt = (): number => {
+    const n = parseFloat(height)
+    return isNaN(n) ? NaN : heightUnit === 'm' ? n * FT_PER_M : n
+  }
+  const switchHeightUnit = (u: 'ft' | 'm') => {
+    if (u === heightUnit) return
+    const n = parseFloat(height)
+    if (!isNaN(n)) setHeight(String(Math.round((u === 'm' ? n / FT_PER_M : n * FT_PER_M) * 10) / 10))
+    setHeightUnit(u)
+  }
 
   // Evaluation result — supports multi-runway
   const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
@@ -449,7 +470,7 @@ function ObstructionsContent() {
       toast.error('Select a point on the map first')
       return
     }
-    const h = parseFloat(height)
+    const h = heightInFt()
     if (isNaN(h) || h <= 0) {
       toast.error('Enter a valid obstruction height')
       return
@@ -838,7 +859,7 @@ function ObstructionsContent() {
               const cardinal8 = ['NORTH', 'NORTHEAST', 'EAST', 'SOUTHEAST', 'SOUTH', 'SOUTHWEST', 'WEST', 'NORTHWEST'][Math.round(brg / 45) % 8]
               const icao = (currentInstallation?.icao || '').toUpperCase()
 
-              const heightNum = parseFloat(height)
+              const heightNum = heightInFt()
               const aglFt = Number.isFinite(heightNum) ? heightNum : 0
               const groundMsl = pointInfo.groundElevMSL ?? airfieldElevMSL
               const mslFt = Math.round(groundMsl + aglFt)
@@ -939,48 +960,27 @@ function ObstructionsContent() {
           <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
             Surface Set
           </label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {SURFACE_STANDARD_IDS.map((id) => {
-              const opt = SURFACE_STANDARD_OPTIONS[id]
-              const active = effectiveStandardId === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setStandardOverride(id)}
-                  disabled={!!editId}
-                  title={editId ? 'Cannot change surface standard when editing a saved evaluation' : undefined}
-                  style={{
-                    flex: '1 1 200px',
-                    minWidth: 0,
-                    padding: '8px 12px',
-                    borderRadius: 'var(--radius-md)',
-                    border: `1px solid ${active
-                      ? 'color-mix(in srgb, var(--color-cyan) 55%, transparent)'
-                      : 'var(--color-border)'}`,
-                    background: active
-                      ? 'color-mix(in srgb, var(--color-cyan) 14%, transparent)'
-                      : 'var(--color-bg-inset)',
-                    color: active ? 'var(--color-cyan)' : 'var(--color-text-2)',
-                    fontFamily: 'inherit',
-                    fontSize: 'var(--fs-sm)',
-                    fontWeight: active ? 700 : 500,
-                    cursor: editId ? 'not-allowed' : 'pointer',
-                    opacity: editId && !active ? 0.5 : 1,
-                    textAlign: 'left',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 2,
-                  }}
-                >
-                  <span>{active ? '◉' : '○'}  {opt.label}</span>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', fontWeight: 400 }}>
-                    {opt.citation}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <select
+            value={effectiveStandardId ?? ''}
+            onChange={(e) => setStandardOverride(e.target.value as SurfaceStandardId)}
+            disabled={!!editId}
+            className="input-dark"
+            title={editId
+              ? 'Cannot change surface standard when editing a saved evaluation'
+              : 'Defaults to this airfield’s configured standard; override for a what-if evaluation'}
+          >
+            {effectiveStandardId == null && <option value="" disabled>Select a surface standard…</option>}
+            {SURFACE_STANDARD_IDS.map((id) => (
+              <option key={id} value={id}>
+                {SURFACE_STANDARD_OPTIONS[id].label} — {SURFACE_STANDARD_OPTIONS[id].citation}
+              </option>
+            ))}
+          </select>
+          {!editId && (
+            <div style={{ marginTop: 4, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              Defaults to this airfield’s configured standard; change it for a what-if evaluation.
+            </div>
+          )}
           {surfaceSet === 'faa_part77' && runways.length > 0 && (
             <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
               {(isCivilian(currentInstallation) || getSurfaceSet(currentInstallation) === 'faa_part77') ? (
@@ -1030,24 +1030,48 @@ function ObstructionsContent() {
               border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)',
               color: 'var(--color-warning)', fontSize: 'var(--fs-xs)', lineHeight: 1.4,
             }}>
-              Inner approach / inner transitional / balked landing surfaces not yet evaluated — required for CAT II/III per Annex 14 §4.2.15.
+              Inner approach and balked landing surfaces (code 3/4) are evaluated. The inner transitional surface is not yet evaluated — its geometry follows the inner-approach and balked-landing edges (Phase 2b).
             </div>
           )}
         </div>
 
         <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-            Obstruction Height (ft AGL) *
-          </label>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+            <label style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', fontWeight: 600 }}>
+              Obstruction Height ({heightUnit} AGL) *
+            </label>
+            <div style={{ display: 'inline-flex', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+              {(['ft', 'm'] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => switchHeightUnit(u)}
+                  style={{
+                    padding: '3px 12px', fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'inherit',
+                    border: 'none', cursor: 'pointer',
+                    background: heightUnit === u ? 'color-mix(in srgb, var(--color-cyan) 18%, transparent)' : 'transparent',
+                    color: heightUnit === u ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                  }}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+          </div>
           <input
             type="number"
             className="input-dark"
-            placeholder="e.g. 75"
+            placeholder={heightUnit === 'm' ? 'e.g. 23' : 'e.g. 75'}
             value={height}
             onChange={(e) => setHeight(e.target.value)}
             min="0"
             step="0.1"
           />
+          {heightUnit === 'm' && (
+            <div style={{ marginTop: 2, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
+              Entered in metres; the evaluation results below are shown in feet.
+            </div>
+          )}
         </div>
 
         <div style={{ marginBottom: 10 }}>

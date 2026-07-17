@@ -91,6 +91,7 @@ export type DrivingCheckRow = {
   driver_unit: string | null
   driver_office_symbol: string | null
   driver_phone: string | null
+  driver_483_number: string | null
   contractor_id: string | null
   form_483_status: Form483Status
   form_483_expires: string | null
@@ -560,6 +561,7 @@ export type DrivingCheckFormInput = {
   driverUnit?: string | null
   driverOfficeSymbol?: string | null
   driverPhone?: string | null
+  driver483Number?: string | null
   contractorId?: string | null
   form483Status: Form483Status
   form483Expires?: string | null
@@ -609,6 +611,7 @@ export function buildDrivingCheckFields(input: UpdateDrivingCheckInput): Record<
     driver_unit: input.driverUnit?.trim() || null,
     driver_office_symbol: input.driverOfficeSymbol?.trim() || null,
     driver_phone: input.driverPhone?.trim() || null,
+    driver_483_number: input.driver483Number?.trim() || null,
     contractor_id: input.contractorId || null,
     form_483_status: input.form483Status,
     form_483_expires: input.form483Expires || null,
@@ -764,5 +767,93 @@ export async function deleteDrivingCheck(id: string): Promise<{ error: string | 
   const supabase = db()
   if (!supabase) return { error: 'Supabase not configured' }
   const { error } = await supabase.from('driving_checks').delete().eq('id', id)
+  return { error: error ? friendlyError(error.message) : null }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Airfield Licenses roster (imported from ADDx) — a per-base driver
+// lookup source for the spot-check form. A convenience roster, not a
+// compliance record: a re-import REPLACES it. Table + RLS in staged
+// migration 2026071771; queried through the same untyped db() client.
+// ─────────────────────────────────────────────────────────────
+
+export type DriverLicenseRow = {
+  id: string
+  base_id: string
+  last_name: string
+  first_name: string | null
+  middle_name: string | null
+  grade_rank: string | null
+  unit: string | null
+  office: string | null
+  af_483_number: string | null
+  restrictions: string | null
+  refresher_due: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** The importable columns (everything but the DB-managed id/base_id/timestamps). */
+export type DriverLicenseImportRow = Omit<DriverLicenseRow, 'id' | 'base_id' | 'created_at' | 'updated_at'>
+
+/** Full name for the spot check's Name field: "First [Middle] Last". */
+export function driverLicenseDisplayName(
+  l: Pick<DriverLicenseRow, 'first_name' | 'middle_name' | 'last_name'>,
+): string {
+  return [l.first_name, l.middle_name, l.last_name].map((s) => (s || '').trim()).filter(Boolean).join(' ')
+}
+
+export async function fetchDriverLicenses(baseId: string): Promise<DriverLicenseRow[]> {
+  const supabase = db()
+  if (!supabase || !baseId) return []
+  const { data, error } = await supabase
+    .from('airfield_driver_licenses')
+    .select('*')
+    .eq('base_id', baseId)
+    .order('last_name', { ascending: true })
+    .order('first_name', { ascending: true })
+  if (error) {
+    console.error('fetchDriverLicenses failed:', error.message)
+    return []
+  }
+  return (data || []) as DriverLicenseRow[]
+}
+
+/**
+ * Replace the base's Airfield Licenses roster with a fresh ADDx import
+ * (ADDx is the source of truth). Deletes the existing rows, then bulk-
+ * inserts the new set in chunks. Returns the inserted count.
+ *
+ * Not transactional (client-side): the delete commits before the inserts,
+ * so a mid-import failure can leave a partial roster. Acceptable — this is
+ * a convenience lookup an admin can simply re-import, never a compliance
+ * record; the import UI's confirm dialog states the replace up front.
+ */
+export async function replaceDriverLicenses(
+  baseId: string,
+  rows: DriverLicenseImportRow[],
+): Promise<{ count: number; error: string | null }> {
+  const supabase = db()
+  if (!supabase || !baseId) return { count: 0, error: 'Supabase not configured' }
+
+  const { error: delErr } = await supabase.from('airfield_driver_licenses').delete().eq('base_id', baseId)
+  if (delErr) return { count: 0, error: friendlyError(delErr.message) }
+  if (rows.length === 0) return { count: 0, error: null }
+
+  const CHUNK = 500
+  let inserted = 0
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK).map((r) => ({ base_id: baseId, ...r }))
+    const { error } = await supabase.from('airfield_driver_licenses').insert(chunk)
+    if (error) return { count: inserted, error: friendlyError(error.message) }
+    inserted += chunk.length
+  }
+  return { count: inserted, error: null }
+}
+
+export async function clearDriverLicenses(baseId: string): Promise<{ error: string | null }> {
+  const supabase = db()
+  if (!supabase || !baseId) return { error: 'Supabase not configured' }
+  const { error } = await supabase.from('airfield_driver_licenses').delete().eq('base_id', baseId)
   return { error: error ? friendlyError(error.message) : null }
 }

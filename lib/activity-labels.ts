@@ -26,6 +26,7 @@ export const MODULE_LABELS: Record<string, string> = {
   waiver_review: 'Waiver Review',
   scn: 'SCN',
   scn_backup: 'Monthly Back-up SCN',
+  fpr: 'Flight Planning Room Check',
   field_condition: 'Field Condition',
   custom_status_board: 'Status Board',
   aep_plan: 'AEP Plan',

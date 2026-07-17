@@ -1,0 +1,22 @@
+-- ============================================================
+-- Airfield Driving Spot Check — add the AF Form 483 number column.
+--
+-- The Start Spot Check form now captures the driver's AF Form 483
+-- credential number (replacing the removed free-text "Vehicle ID" field,
+-- per owner ruling 2026-07-17). It is auto-filled from the imported
+-- Airfield Licenses roster (airfield_driver_licenses — see
+-- 2026071771) on driver lookup, and stays hand-editable.
+--
+-- Additive + nullable: legacy rows keep NULL. driving_checks is queried
+-- through an untyped client (lib/supabase/driving-checks.ts db()), so no
+-- lib/supabase/types.ts change is required.
+--
+-- STAGED — NOT applied. Apply with:
+--   npx supabase db query --linked --file supabase/migrations/2026071770_driving_check_483_number.sql
+-- Post-apply verification:
+--   SELECT column_name FROM information_schema.columns
+--     WHERE table_name = 'driving_checks' AND column_name = 'driver_483_number';
+--   -- expect exactly 1 row
+-- ============================================================
+
+ALTER TABLE driving_checks ADD COLUMN IF NOT EXISTS driver_483_number TEXT;

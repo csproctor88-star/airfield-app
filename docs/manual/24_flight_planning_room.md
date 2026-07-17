@@ -36,7 +36,7 @@ example, *"Day Shift Flight Planning Room check complete — all items satisfact
 
 | Concept | Meaning |
 |---|---|
-| **Checklist item** | A locally defined line item (label + optional guidance) configured per base in Base Setup → FPR Checklist. |
+| **Checklist item** | A locally defined line item (label + optional guidance) configured per base in Base Setup → Flight Planning Room Checklist. |
 | **Shift card** | One card per currently active shift. A base running 1 shift sees one card; a 3-shift base sees three. |
 | **Satisfactory / Issue / N/A** | The three states for each item. Issue requires notes describing the problem before the check can be saved. |
 | **Operating Initials (OI)** | Recorded automatically from the signed-in user's profile when a check is completed. |
@@ -91,12 +91,12 @@ result table, including notes on any Issue items.
 
 ---
 
-## Editing the FPR checklist (admin)
+## Editing the Flight Planning Room checklist (admin)
 
 The checklist is configured per base in Base Setup, alongside the Shift Checklist, QRC
 templates, and SCN Agencies steps.
 
-1. Go to **Settings → Base Setup → FPR Checklist**. (The step only appears once the module is
+1. Go to **Settings → Base Setup → Flight Planning Room Checklist**. (The step only appears once the module is
    enabled — see below.)
 2. If the checklist is empty, click **Load Default Checklist** to insert a suggested starting
    point (FLIP currency, charts, forms, NOTAM display, airfield diagram, weather access,
@@ -122,7 +122,7 @@ Management do). To turn it on:
 
 1. Go to **Base Configuration → Modules** (`/base-config/modules`).
 2. Enable **Flight Planning Room Check**.
-3. The sidebar entry, the Menu entry, and the Base Setup → FPR Checklist step all appear
+3. The sidebar entry, the Menu entry, and the Base Setup → Flight Planning Room Checklist step all appear
    automatically once enabled — no separate configuration is needed to reveal them.
 
 ---
@@ -138,8 +138,8 @@ None specific to Flight Planning Room Check.
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Flight Planning Room doesn't appear in the sidebar or Menu | Module not enabled | Base Configuration → Modules → enable Flight Planning Room Check. |
-| Base Setup has no FPR Checklist step | Module not enabled | Same as above — the step appears automatically once the module is on. |
-| "No checklist configured" banner, Start disabled | No active checklist items at this base | Base Setup → FPR Checklist → Load Default Checklist or add items. |
+| Base Setup has no Flight Planning Room Checklist step | Module not enabled | Same as above — the step appears automatically once the module is on. |
+| "No checklist configured" banner, Start disabled | No active checklist items at this base | Base Setup → Flight Planning Room Checklist → Load Default Checklist or add items. |
 | Can't save a check with an Issue row | Issue rows require notes | Add notes describing the issue, then save. |
 | Renamed a checklist item and an old check's history changed unexpectedly | Should not happen — history snapshots the label at completion time | If this occurs, note the check ID and report it; it indicates a data issue, not expected behavior. |
 | A shift's card is missing after reducing shift count | Only currently active shifts get a card | The historical check for the now-inactive shift still appears in History and the monthly PDF. |
@@ -150,5 +150,5 @@ None specific to Flight Planning Room Check.
 
 - [12_shift_checklist.md](12_shift_checklist.md) — the same per-shift, admin-configured
   checklist pattern.
-- [19_events_log.md](19_events_log.md) — completed FPR checks are logged here.
-- [21_base_setup.md](21_base_setup.md) — where the FPR Checklist is configured.
+- [19_events_log.md](19_events_log.md) — completed Flight Planning Room checks are logged here.
+- [21_base_setup.md](21_base_setup.md) — where the Flight Planning Room Checklist is configured.

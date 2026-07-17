@@ -239,6 +239,8 @@ describe('SURFACE_SET_REGISTRY', () => {
       { label: 'Inner Horizontal', color: ANNEX14_SURFACE_META.inner_horizontal.color, toggleKey: 'a14-inner-horizontal', defaultOn: true },
       { label: 'Transitional', color: ANNEX14_SURFACE_META.transitional.color, toggleKey: 'a14-transitional', defaultOn: true },
       { label: 'Approach', color: ANNEX14_SURFACE_META.approach.color, toggleKey: 'a14-approach', defaultOn: true },
+      { label: 'Inner Approach', color: ANNEX14_SURFACE_META.inner_approach.color, toggleKey: 'a14-inner-approach', defaultOn: true },
+      { label: 'Balked Landing', color: ANNEX14_SURFACE_META.balked_landing.color, toggleKey: 'a14-balked-landing', defaultOn: true },
       { label: 'Take-Off Climb', color: ANNEX14_SURFACE_META.takeoff_climb.color, toggleKey: 'a14-takeoff-climb', defaultOn: true },
     ])
   })
@@ -251,6 +253,10 @@ describe('SURFACE_SET_REGISTRY', () => {
       { id: 'a14-transitional-right', color: ANNEX14_SURFACE_META.transitional.color, opacity: 0.15 },
       { id: 'a14-approach-end1', color: ANNEX14_SURFACE_META.approach.color, opacity: 0.14 },
       { id: 'a14-approach-end2', color: ANNEX14_SURFACE_META.approach.color, opacity: 0.14 },
+      { id: 'a14-inner-approach-end1', color: ANNEX14_SURFACE_META.inner_approach.color, opacity: 0.18 },
+      { id: 'a14-inner-approach-end2', color: ANNEX14_SURFACE_META.inner_approach.color, opacity: 0.18 },
+      { id: 'a14-balked-landing-end1', color: ANNEX14_SURFACE_META.balked_landing.color, opacity: 0.16 },
+      { id: 'a14-balked-landing-end2', color: ANNEX14_SURFACE_META.balked_landing.color, opacity: 0.16 },
       { id: 'a14-takeoff-climb-end1', color: ANNEX14_SURFACE_META.takeoff_climb.color, opacity: 0.12 },
       { id: 'a14-takeoff-climb-end2', color: ANNEX14_SURFACE_META.takeoff_climb.color, opacity: 0.12 },
       { id: 'runway', color: '#FFFFFF', opacity: 0.5 },

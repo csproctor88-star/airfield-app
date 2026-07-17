@@ -541,16 +541,16 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
 
   fprchecklist: {
     what:
-      'Defines the per-base Flight Planning Room (FPR) checklist — the items AMOPS personnel verify each shift for accuracy, ' +
-      'currency, and availability (FLIPs, charts, forms, NOTAM display, and similar). Each active item becomes a row on the FPR ' +
+      'Defines the per-base Flight Planning Room checklist — the items AMOPS personnel verify each shift for accuracy, ' +
+      'currency, and availability (FLIPs, charts, forms, NOTAM display, and similar). Each active item becomes a row on the Flight Planning Room ' +
       'check page with a Satisfactory / Issue / N/A toggle; optional guidance text renders as a subline under the item.',
     how:
       'Click "Load default checklist" to seed a proposed starting list, then rename, reorder, deactivate, or add items to match ' +
       'local procedures — the requirement is to develop and follow locally appropriate procedures, not a fixed national item set. ' +
       'Deactivating (rather than deleting) an item keeps it out of new checks while leaving its history intact.',
     why:
-      'Without a configured checklist, the FPR check page shows a warning banner and Start is disabled — there is nothing for a ' +
-      'shift check to verify. A maintained checklist here is what turns the FPR check from a free-text Events Log entry into a ' +
+      'Without a configured checklist, the Flight Planning Room check page shows a warning banner and Start is disabled — there is nothing for a ' +
+      'shift check to verify. A maintained checklist here is what turns the Flight Planning Room check from a free-text Events Log entry into a ' +
       'per-item record with a reviewable 30-day history and a monthly export.',
     required: 'conditional',
     examples: [
@@ -562,7 +562,7 @@ export const BASE_SETUP_GUIDE: Record<WizardStepKey, StepGuide> = {
     ],
     cite: null,
     fields: {
-      item_label: 'Checklist item as it should appear on the FPR check page (e.g. "FLIP products current").',
+      item_label: 'Checklist item as it should appear on the Flight Planning Room check page (e.g. "FLIP products current").',
       item_guidance: 'Optional subline shown under the item on the check page — clarifies what "Satisfactory" means for this item.',
     },
   },

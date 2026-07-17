@@ -12,6 +12,7 @@ import {
   type FprChecklistItemRow,
 } from '@/lib/supabase/fpr'
 import { FieldHint } from '@/components/base-setup/FieldHint'
+import { ShiftCountSelector } from '@/components/base-setup/shift-count-selector'
 import type { WizardStepKey } from '@/lib/modules-config'
 
 // ═══════════════════════════════════════════════════════════════
@@ -173,12 +174,21 @@ export function FprChecklistTab({
       <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 14, lineHeight: 1.6 }}>
         Define the items AMOPS personnel verify each shift for accuracy, currency, and availability
         of Flight Planning Room materials (FLIPs, charts, forms, NOTAM display, and similar). Each
-        active item becomes a Satisfactory / Issue / N/A row on the FPR check page; optional
+        active item becomes a Satisfactory / Issue / N/A row on the Flight Planning Room check page; optional
         guidance renders as a subline under the item.
       </p>
 
       <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>
-        FPR Checklist Items <FieldHint stepKey="fprchecklist" fieldId="item_label" />
+        Shifts
+      </h3>
+      <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', marginBottom: 12, lineHeight: 1.6 }}>
+        The Flight Planning Room check runs once per shift. Set how many shifts this base runs — this is
+        shared with the Shift Checklist and Daily Reviews.
+      </p>
+      <ShiftCountSelector />
+
+      <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8, marginTop: 20 }}>
+        Flight Planning Room Checklist Items <FieldHint stepKey="fprchecklist" fieldId="item_label" />
       </h3>
 
       {items.length === 0 && (
