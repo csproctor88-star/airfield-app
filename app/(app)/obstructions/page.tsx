@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState, useCallback, useEffect } from 'react'
+import { Suspense, useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
@@ -213,6 +213,33 @@ function ObstructionsContent() {
   // Taxiway evaluation
   const [taxiwayGeometries, setTaxiwayGeometries] = useState<TaxiwayGeometry[]>([])
   const [taxiwayResults, setTaxiwayResults] = useState<TaxiwaySurfaceEvaluation[]>([])
+
+  // Invalidate stale evaluation results when the effective standard changes
+  // (create/what-if mode only). multiAnalysis only recomputes on an explicit
+  // "Evaluate Obstruction" click, so without this a user could Run under
+  // Class B, click the Air Force Class A card, and Save without re-running —
+  // writing runway_class='A' over Class-B allowable heights in the results
+  // JSONB (and the detail page would then label Class-B numbers "Air Force
+  // Class A"). Clearing the results makes Save unreachable (the Save button
+  // renders inside the results block) until a re-run under the new standard —
+  // the same invalidation handlePointSelected already performs when the
+  // POINT changes. Keyed on the derived pair rather than the picker onClick
+  // so it also covers pair changes with no click (e.g. base runways resolving
+  // asynchronously after an evaluation flips the derived class). Edit mode is
+  // exempt: the picker is disabled there and the pinned pair only "changes"
+  // once — when the edit-load effect pins it while ALSO setting the auto-run
+  // analysis it just computed under that exact pair, which clearing here
+  // would wipe. The ref still records the pair in edit mode so leaving edit
+  // mode doesn't fire a deferred clear for a change that already happened.
+  const evalPairKey = `${surfaceSet}|${runwayClass}`
+  const lastEvalPairRef = useRef(evalPairKey)
+  useEffect(() => {
+    if (lastEvalPairRef.current === evalPairKey) return
+    lastEvalPairRef.current = evalPairKey
+    if (editId) return
+    setMultiAnalysis(null)
+    setTaxiwayResults([])
+  }, [evalPairKey, editId])
 
   // Load taxiway centerlines on mount
   useEffect(() => {
