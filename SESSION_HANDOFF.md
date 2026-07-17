@@ -174,13 +174,7 @@ engine; www→apex 308.
 
 ## Next session tasks
 
-1. **Owner in-browser QA + promote** — both features are pushed but not
-   deployed. Manual QA scripts live in the two specs' §Testing sections
-   (manual coordinates: typed ≡ tap equivalence, mobile keyboard, edit
-   mode, packed-NOTAM round-trip; Part 77: overlay swap, per-type
-   trapezoids, amber note, edit-mode parity, USAF-flip selectors, both
-   PDFs). Known feel item: picker flip re-centers the map.
-2. **Build the surface-set expansion**
+1. **Build the surface-set expansion**
    (`docs/superpowers/specs/2026-07-16-airfield-surface-set-expansion-design.md`)
    — **fully unblocked**; every dimension verified or owner-ruled (§13
    items resolved in place; full derivations in the untracked
@@ -190,13 +184,17 @@ engine; www→apex 308.
    5-standard picker, §77.19 lettering fix, base-level standard selector
    (also fixes the picker-note copy), migrations `20260716xx` →
    renumber.
-3. **Then per the specs index build order**: NAMO/NAMT attribution
+2. **Then per the specs index build order**: NAMO/NAMT attribution
    migrations early (`2026071641`–`42` equivalents) · FPR Check · 43 Check
    log · local regs review · NAMO/NAMT report UI.
-4. **glidepath-site**: owner CSP preview-check + promote; then next tier-2/3
-   item (DAFMAN 13-204 hub or module H1 pass).
-5. **Civilian capture day** (owner-scheduled): "prep KDRA" → run
+3. **glidepath-site**: next tier-2/3 item (DAFMAN 13-204 hub or module H1
+   pass).
+4. **Civilian capture day** (owner-scheduled): "prep KDRA" → run
    `docs/references/civilian-capture-plan.md`.
+
+(For whenever the owner tests the new features: the manual QA scripts live
+in the two specs' §Testing sections; known feel item — the surface-set
+picker flip re-centers the map.)
 
 ### Long-running carryover
 Hero + coverage redline pass · Part 139 cert-inspection audit build (resume
