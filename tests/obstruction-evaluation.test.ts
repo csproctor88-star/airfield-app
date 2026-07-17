@@ -40,12 +40,37 @@ const RUNWAY = getRunwayGeometry({
 
 const AIRFIELD_ELEV = 1000
 
+// Owner worked-example fixture (UFC Table 3-7 Note 4): thresholds BELOW the
+// Established Airfield Elevation. EAE 380, thresholds 378 → the ADCS slope
+// (from the threshold) and the horizontal-portion level-off (EAE + 500 = 880)
+// cross at 50 × (880 − 378) = 25,100 ft along the ADCS.
+const EAE_WORKED = 380
+const RUNWAY_378 = getRunwayGeometry({
+  end1: { latitude: 0, longitude: -lonOffset(RUNWAY_HALF_LEN_FT) },
+  end2: { latitude: 0, longitude:  lonOffset(RUNWAY_HALF_LEN_FT) },
+  length_ft: RUNWAY_LENGTH_FT,
+  width_ft: 150,
+  true_heading: 90,
+  end1_elevation_msl: 378,
+  end2_elevation_msl: 378,
+  end1_designator: '09',
+  end2_designator: '27',
+})
+
 /** Helper: a point 1,000 ft east of the east threshold (on centerline). */
 function pointBeyondEastThreshold(ftBeyond: number, ftFromCL = 0): LatLon {
   return {
     lat: latOffset(ftFromCL),
     lon: lonOffset(RUNWAY_HALF_LEN_FT + ftBeyond),
   }
+}
+
+/** Exact distance a point sits along the east-end ADCS (past the primary end,
+ *  which is 200 ft beyond the threshold). Reconstructed from the analysis'
+ *  own along-track value so it matches the evaluator's projection exactly,
+ *  independent of the test file's flat-earth per-degree constants. */
+function adcsDistEast(alongTrackFromMidpoint: number): number {
+  return alongTrackFromMidpoint - RUNWAY_HALF_LEN_FT - 200
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -292,7 +317,7 @@ describe('identifySurface with surfaceSet', () => {
 
   it('a point outside all surfaces returns "Outside all surfaces" in both sets', () => {
     // 100,000 ft due north of the midpoint — well beyond every UFC (outer
-    // horizontal radius 42,250 ft) and Part 77 (conical outer radius ≤ 14,000 ft) surface.
+    // horizontal radius 44,500 ft) and Part 77 (conical outer radius ≤ 14,000 ft) surface.
     const p = { lat: latOffset(100000), lon: 0 }
 
     const ufcName = identifySurface(p, [RUNWAY], AIRFIELD_ELEV, 'B')
@@ -306,5 +331,114 @@ describe('identifySurface with surfaceSet', () => {
       'faa_part77',
     )
     expect(part77Name).toBe('Outside all surfaces')
+  })
+})
+
+// ─────────────────────────────────────────────────────────────
+// SSE Task 1 — UFC 3-260-01 (C3) ADCS corrections: 40:1 Class A,
+// Army 500-ft primary, and the horizontal-portion level-off cap.
+// ─────────────────────────────────────────────────────────────
+
+describe('UFC ADCS corrections (SSE Task 1)', () => {
+  it('Class A ADCS rises at 40:1 (not 50:1) from the threshold in the sloped region', () => {
+    // 4,200 ft beyond the east threshold → ~4,000 ft along the ADCS, well below
+    // the EAE + 500 = 1,500 ft level-off. Class A 40:1 → 1,000 + dist/40;
+    // Class B 50:1 → 1,000 + dist/50. The two must differ by the 50/40 ratio.
+    const p = pointBeyondEastThreshold(4200, 0)
+    const a = evaluateObstruction(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'A')
+    const approachA = a.surfaces.find(s => s.surfaceKey === 'approach_departure')!
+    const dist = adcsDistEast(a.alongTrackFromMidpoint)
+
+    expect(approachA.isWithinBounds).toBe(true)
+    expect(dist / 40).toBeLessThan(500) // still on the 40:1 slope, below the cap
+    expect(approachA.maxAllowableHeightMSL).toBeCloseTo(AIRFIELD_ELEV + dist / 40, 4)
+    // Emphatically NOT the old 50:1 value
+    expect(approachA.maxAllowableHeightMSL).not.toBeCloseTo(AIRFIELD_ELEV + dist / 50, 2)
+
+    const b = evaluateObstruction(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+    const approachB = b.surfaces.find(s => s.surfaceKey === 'approach_departure')!
+    const heightA = approachA.maxAllowableHeightMSL - AIRFIELD_ELEV
+    const heightB = approachB.maxAllowableHeightMSL - AIRFIELD_ELEV
+    expect(heightA / heightB).toBeCloseTo(50 / 40, 5)
+  })
+
+  it('Army_B primary is 500-ft half-width: 600 ft off centerline is outside Army but inside AF Class B primary', () => {
+    // Abeam the runway midpoint, 600 ft off centerline. Army primary half-width
+    // 500 → outside; AF Class B primary half-width 1,000 → inside.
+    const p: LatLon = { lat: latOffset(600), lon: 0 }
+    const army = evaluateObstruction(p, 50, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'Army_B')
+    const af = evaluateObstruction(p, 50, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+
+    expect(army.surfaces.find(s => s.surfaceKey === 'primary')!.isWithinBounds).toBe(false)
+    expect(af.surfaces.find(s => s.surfaceKey === 'primary')!.isWithinBounds).toBe(true)
+  })
+
+  it('Class B ADCS levels off at EAE + 500 (horizontal portion) past the slope/cap crossover', () => {
+    // threshold = EAE = 1,000, slope 50 → crossover at 50 × 500 = 25,000 ft.
+    // 30,200 ft beyond → ~30,000 ft along; the 50:1 slope would reach ~1,600 ft
+    // but the surface levels off at 1,500 ft MSL.
+    const p = pointBeyondEastThreshold(30200, 0)
+    const r = evaluateObstruction(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+    const approach = r.surfaces.find(s => s.surfaceKey === 'approach_departure')!
+
+    expect(approach.isWithinBounds).toBe(true)
+    expect(approach.maxAllowableHeightMSL).toBeCloseTo(AIRFIELD_ELEV + 500, 6) // exactly 1,500
+    expect(approach.calculationBreakdown).toContain('ADCS horizontal portion')
+  })
+
+  it('owner worked example (EAE 380, threshold 378): sloped just before the 25,100-ft crossover, capped 880 just after', () => {
+    // Just BEFORE crossover (~23,800 ft along): sloped, 378 + dist/50 < 880.
+    const before = pointBeyondEastThreshold(24000, 0)
+    const rBefore = evaluateObstruction(before, 0, 378, RUNWAY_378, EAE_WORKED, 'B')
+    const aBefore = rBefore.surfaces.find(s => s.surfaceKey === 'approach_departure')!
+    const distBefore = adcsDistEast(rBefore.alongTrackFromMidpoint)
+    expect(aBefore.maxAllowableHeightMSL).toBeCloseTo(378 + distBefore / 50, 4)
+    expect(aBefore.maxAllowableHeightMSL).toBeLessThan(880)
+    expect(aBefore.calculationBreakdown).not.toContain('ADCS horizontal portion')
+
+    // Just AFTER crossover (~26,300 ft along): capped at exactly 880 ft MSL.
+    const after = pointBeyondEastThreshold(26500, 0)
+    const rAfter = evaluateObstruction(after, 0, 378, RUNWAY_378, EAE_WORKED, 'B')
+    const aAfter = rAfter.surfaces.find(s => s.surfaceKey === 'approach_departure')!
+    expect(aAfter.maxAllowableHeightMSL).toBeCloseTo(880, 6) // EAE 380 + 500
+    expect(aAfter.calculationBreakdown).toContain('ADCS horizontal portion')
+  })
+
+  it('ADCS reaches beyond the old 25,000-ft bound — a point ~40,000 ft out is in-bounds and capped', () => {
+    // The 50,000-ft ADCS length now covers this; the old 25,000-ft surface did not.
+    const p = pointBeyondEastThreshold(40200, 0)
+    const r = evaluateObstruction(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+    const approach = r.surfaces.find(s => s.surfaceKey === 'approach_departure')!
+    const dist = adcsDistEast(r.alongTrackFromMidpoint)
+
+    expect(dist).toBeGreaterThan(25000)
+    expect(dist).toBeLessThan(50000)
+    expect(approach.isWithinBounds).toBe(true)
+    expect(approach.maxAllowableHeightMSL).toBeCloseTo(AIRFIELD_ELEV + 500, 6) // capped
+    expect(identifySurface(p, [RUNWAY], AIRFIELD_ELEV, 'B')).not.toBe('Outside all surfaces')
+  })
+
+  it('inner horizontal uses the corrected 7,500-ft radius — a point 10,000 ft abeam falls in conical, not inner horizontal', () => {
+    // 10,000 ft north of midpoint sits between the corrected inner-horizontal
+    // radius (7,500 ft) and the conical outer edge (7,500 + 7,000 = 14,500 ft).
+    // Under the old 13,120-ft radius it would have been inner horizontal.
+    const p: LatLon = { lat: latOffset(10000), lon: 0 }
+    const r = evaluateObstruction(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'B')
+    const innerH = r.surfaces.find(s => s.surfaceKey === 'inner_horizontal')!
+    const conical = r.surfaces.find(s => s.surfaceKey === 'conical')!
+
+    expect(innerH.isWithinBounds).toBe(false)
+    expect(conical.isWithinBounds).toBe(true)
+  })
+
+  it('Part 77 approach is unaffected by the UFC horizontal-portion cap (no level-off; FAA §77.19 slopes to length)', () => {
+    // A precision approach 30,000 ft out: two-segment 50:1 + 40:1 = 700 ft above
+    // threshold = 1,700 ft MSL, with NO EAE+500 cap (Part 77 has no horizontal portion).
+    const p = pointBeyondEastThreshold(30000, 0)
+    const r = evaluateObstructionPart77(p, 0, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'non_utility_precision')
+    const approach = r.surfaces.find(s => s.surfaceKey === 'approach')!
+    expect(approach.isWithinBounds).toBe(true)
+    expect(approach.maxAllowableHeightMSL).toBeGreaterThan(AIRFIELD_ELEV + 500)
+    expect(approach.calculationBreakdown).not.toContain('ADCS horizontal portion')
   })
 })

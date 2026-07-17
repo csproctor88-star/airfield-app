@@ -57,7 +57,10 @@ export const IMAGINARY_SURFACES = {
   },
   approach_departure: {
     name: 'Approach-Departure Clearance Surface',
-    criteria: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 2550, length: 25000 },
+    // UFC 3-260-01 (C3) Table 3-7 items 6–11 — display copy of the Class B
+    // ADCS: 50:1, start half-width 1,000 ft, end half-width 8,000 ft over the
+    // 50,000-ft total length. Numeric evaluation reads surface-criteria.ts.
+    criteria: { slope: 50, innerHalfWidth: 1000, outerHalfWidth: 8000, length: 50000 },
     ufcRef: 'UFC 3-260-01, Table 3-7, Item 2 (Approach-Departure Clearance Surface)',
     ufcCriteria: 'No object may penetrate the 50:1 approach-departure clearance surface extending {length} ft from the primary surface end.',
     description: '50:1 slope extending from each end of the primary surface.',
@@ -65,7 +68,9 @@ export const IMAGINARY_SURFACES = {
   },
   inner_horizontal: {
     name: 'Inner Horizontal Surface',
-    criteria: { height: 150, radius: 13120 },
+    // UFC 3-260-01 (C3) Table 3-7 item 12 — 7,500-ft radius (the old 13,120 ft
+    // was the ICAO Annex 14 4,000 m value, wrong for UFC).
+    criteria: { height: 150, radius: 7500 },
     ufcRef: 'UFC 3-260-01, Table 3-7, Item 4 (Inner Horizontal Surface)',
     ufcCriteria: 'No object may protrude above 150 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
     description: '150 ft above established airfield elevation within {radius} ft.',
@@ -81,7 +86,10 @@ export const IMAGINARY_SURFACES = {
   },
   outer_horizontal: {
     name: 'Outer Horizontal Surface',
-    criteria: { height: 500, radius: 42250 },
+    // UFC 3-260-01 (C3) glossary — 500 ft above EAE, 30,000 ft beyond the
+    // conical periphery (inner horizontal 7,500 + conical 7,000 = 14,500;
+    // + 30,000 = 44,500). The old 42,250 ft matched the stale 13,120 radius.
+    criteria: { height: 500, radius: 44500 },
     ufcRef: 'UFC 3-260-01, Table 3-7, Item 6 (Outer Horizontal Surface)',
     ufcCriteria: 'No object may protrude above 500 ft above the established airfield elevation within a {radius} ft radius of the runway ends.',
     description: '500 ft above established airfield elevation within {radius} ft.',
@@ -635,7 +643,11 @@ export function evaluateObstruction(
   const obstructionTopMSL = groundElev + obstructionHeightAGL
   const heightAboveField = obstructionTopMSL - airfieldElev
 
-  const relation = pointToRunwayRelation(point, runway)
+  // Honor the runway class's primary half-width (Army Class B is 500 ft, not
+  // the 1,000-ft AF default) so `relation.withinPrimary` reflects the class.
+  const relation = pointToRunwayRelation(point, runway, {
+    primaryHalfWidth: criteria.primary.halfWidth,
+  })
   const stadiumDist = distanceFromStadiumCenter(point, runway)
 
   // Helper: format a number with commas
@@ -721,8 +733,14 @@ export function evaluateObstruction(
         ? `Nearest threshold (${primaryEndInfo.end})`
         : 'Airfield elevation (threshold not set)'
 
-    const maxHeightAboveThreshold = distAlongApproach / c.slope
-    const maxMSL = thresholdElev + maxHeightAboveThreshold
+    // The ADCS rises at slope:1 from the threshold, then levels off at the
+    // horizontal portion (EAE + horizontalElevation, Table 3-7 item 11).
+    // Skip the cap when horizontalElevation is null (no horizontal portion).
+    const slopedMSL = thresholdElev + distAlongApproach / c.slope
+    const horizontalElev = c.horizontalElevation
+    const capMSL = horizontalElev != null ? airfieldElev + horizontalElev : null
+    const isCapped = capMSL != null && slopedMSL >= capMSL
+    const maxMSL = capMSL != null ? Math.min(slopedMSL, capMSL) : slopedMSL
     const maxAGL = maxMSL - groundElev
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
@@ -738,9 +756,11 @@ export function evaluateObstruction(
       ufcCriteria: IMAGINARY_SURFACES.approach_departure.ufcCriteria
         .replace('{length}', String(c.length).replace(/\B(?=(\d{3})+(?!\d))/g, ',')),
       color: IMAGINARY_SURFACES.approach_departure.color,
-      baselineElevation: thresholdElev,
-      baselineLabel: thresholdLabel,
-      calculationBreakdown: `${fmt(thresholdElev)} ft (${thresholdLabel}) + ${fmt(distAlongApproach)} ft / ${c.slope} (slope) = ${fmt(maxMSL)} ft MSL`,
+      baselineElevation: isCapped ? airfieldElev : thresholdElev,
+      baselineLabel: isCapped ? airfieldBaselineLabel : thresholdLabel,
+      calculationBreakdown: isCapped
+        ? `${fmt(airfieldElev)} ft (airfield elev) + ${horizontalElev} ft (ADCS horizontal portion) = ${fmt(maxMSL)} ft MSL`
+        : `${fmt(thresholdElev)} ft (${thresholdLabel}) + ${fmt(distAlongApproach)} ft / ${c.slope} (slope) = ${fmt(maxMSL)} ft MSL`,
     })
   }
 
@@ -1186,7 +1206,14 @@ export function evaluateObstructionPart77(
       slopeBreakdown = `${fmt(distAlongApproach)} ft / ${c.slope} (slope) = ${fmt(maxHeightAboveThreshold)} ft`
     }
 
-    const maxMSL = thresholdElev + maxHeightAboveThreshold
+    // Parallel to the UFC ADCS cap: level off at EAE + horizontalElevation when
+    // present. FAA Part 77 §77.19 approach surfaces have NO horizontal portion
+    // (the criteria carry no horizontalElevation), so the guard is a runtime
+    // no-op here — the surface slopes all the way to its length.
+    const slopedMSL = thresholdElev + maxHeightAboveThreshold
+    const horizontalElev = c.horizontalElevation
+    const capMSL = horizontalElev != null ? airfieldElev + horizontalElev : null
+    const maxMSL = capMSL != null ? Math.min(slopedMSL, capMSL) : slopedMSL
     const maxAGL = maxMSL - groundElev
     const violated = isWithin && obstructionTopMSL > maxMSL
     surfaces.push({
