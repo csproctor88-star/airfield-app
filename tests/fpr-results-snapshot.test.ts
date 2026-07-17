@@ -102,4 +102,65 @@ describe('buildFprResultDrafts', () => {
     expect(drafts[0].status).toBe('satisfactory')
     expect(drafts[0].notes).toBe('')
   })
+
+  // Snapshot preservation on EDIT: a saved check is a point-in-time record.
+  // When the template changed after the check was logged, the edit draft
+  // seeds only from ACTIVE items, so a since-deactivated/deleted item's prior
+  // result row would be dropped by the delete-and-rewrite save. Those rows
+  // must be preserved (appended after the active items).
+
+  it('preserves a deactivated item\'s prior result row across an edit round-trip', () => {
+    const items = [
+      makeItem({ id: 'i1', label: 'FLIP', sort_order: 10 }),
+      makeItem({ id: 'i2', label: 'Retired check', sort_order: 20, is_active: false }),
+    ]
+    const existing = [
+      makeResult({ item_id: 'i1', item_label: 'FLIP', status: 'satisfactory', sort_order: 10 }),
+      makeResult({ item_id: 'i2', item_label: 'Retired check', status: 'issue', notes: 'was flagged', sort_order: 20 }),
+    ]
+    const drafts = buildFprResultDrafts(items, existing)
+    // Active item first; the deactivated item's snapshot row survives (appended).
+    expect(drafts.map(d => d.item_label)).toEqual(['FLIP', 'Retired check'])
+    expect(drafts[1]).toEqual({
+      item_id: 'i2',
+      item_label: 'Retired check',
+      status: 'issue',
+      notes: 'was flagged',
+      sort_order: 20,
+    })
+  })
+
+  it('preserves a prior result whose template item was hard-deleted (item_id nulled, label gone)', () => {
+    const items = [makeItem({ id: 'i1', label: 'FLIP', sort_order: 10 })]
+    const existing = [
+      makeResult({ item_id: 'i1', item_label: 'FLIP', status: 'satisfactory', sort_order: 10 }),
+      makeResult({ item_id: null, item_label: 'Deleted item', status: 'na', notes: null, sort_order: 20 }),
+    ]
+    const drafts = buildFprResultDrafts(items, existing)
+    expect(drafts.map(d => d.item_label)).toEqual(['FLIP', 'Deleted item'])
+    expect(drafts[1]).toMatchObject({ item_id: null, item_label: 'Deleted item', status: 'na', notes: '' })
+  })
+
+  it('still surfaces brand-new active items (added after the check) when editing', () => {
+    const items = [
+      makeItem({ id: 'i1', label: 'FLIP', sort_order: 10 }),
+      makeItem({ id: 'i2', label: 'New item added after the check', sort_order: 20 }),
+    ]
+    const existing = [
+      makeResult({ item_id: 'i1', item_label: 'FLIP', status: 'issue', notes: 'cycle expired', sort_order: 10 }),
+    ]
+    const drafts = buildFprResultDrafts(items, existing)
+    expect(drafts.map(d => d.item_label)).toEqual(['FLIP', 'New item added after the check'])
+    expect(drafts[0]).toMatchObject({ status: 'issue', notes: 'cycle expired' })
+    expect(drafts[1]).toMatchObject({ item_id: 'i2', status: 'satisfactory', notes: '' })
+  })
+
+  it('appends no orphan rows for a NEW check (no existing results)', () => {
+    const items = [
+      makeItem({ id: 'i1', label: 'FLIP', sort_order: 10 }),
+      makeItem({ id: 'i2', label: 'Charts', sort_order: 20 }),
+    ]
+    expect(buildFprResultDrafts(items)).toHaveLength(2)
+    expect(buildFprResultDrafts(items, [])).toHaveLength(2)
+  })
 })

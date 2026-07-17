@@ -13,6 +13,8 @@ import {
   fetchFprChecksInRange,
   deleteFprCheck,
   buildFprResultDrafts,
+  buildFprSavePayload,
+  sortFprHistory,
   summarizeFprCheck,
   deriveFprTodayCards,
   todayZuluDate,
@@ -70,9 +72,16 @@ function draftSummary(draft: FprResultDraft[], shiftLabel: string): string {
 
 type ModalState = {
   shift: ShiftKey
+  // The date this check belongs to: today's Zulu date for a new check, or
+  // the edited check's own check_date. Threaded into the save payload so an
+  // edit upserts onto the historical row, not onto today's (base, date, shift).
+  checkDate: string
   draft: FprResultDraft[]
   notes: string
-  issueDialog: { idx: number } | null
+  // priorStatus: the row's status before the Issue dialog opened, so
+  // "Cancel Issue" restores it (e.g. back to N/A) instead of forcing
+  // satisfactory.
+  issueDialog: { idx: number; priorStatus: FprItemStatus } | null
 }
 
 export default function FprPage() {
@@ -105,7 +114,8 @@ export default function FprPage() {
     const end = todayZuluDate()
     const start = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
     const rows = await fetchFprChecksInRange(installationId, start, end)
-    setHistory(rows.filter(r => r.check_date !== end))
+    // Newest-first for display (fetch order is check_date ASC / shift alpha).
+    setHistory(sortFprHistory(rows.filter(r => r.check_date !== end)))
 
     setLoaded(true)
   }, [installationId])
@@ -151,17 +161,25 @@ export default function FprPage() {
       return
     }
     const draft = buildFprResultDrafts(items, edit?.results ?? null)
-    setModal({ shift, draft, notes: edit?.notes || '', issueDialog: null })
+    setModal({
+      shift,
+      checkDate: edit?.check_date ?? todayZuluDate(),
+      draft,
+      notes: edit?.notes || '',
+      issueDialog: null,
+    })
   }
 
   function setItemStatus(idx: number, status: FprItemStatus) {
     setModal(m => {
       if (!m) return m
+      const prior = m.draft[idx].status
       const next = [...m.draft]
       next[idx] = { ...next[idx], status }
-      // Selecting Issue with no notes yet → open the required-notes dialog.
+      // Selecting Issue with no notes yet → open the required-notes dialog,
+      // remembering the pre-issue status so "Cancel Issue" restores it.
       if (status === 'issue' && !next[idx].notes) {
-        return { ...m, draft: next, issueDialog: { idx } }
+        return { ...m, draft: next, issueDialog: { idx, priorStatus: prior === 'issue' ? 'satisfactory' : prior } }
       }
       return { ...m, draft: next }
     })
@@ -187,23 +205,19 @@ export default function FprPage() {
     setSaving(true)
     const shiftLabel = getShiftLabel(currentInstallation, modal.shift)
     const summary = draftSummary(modal.draft, shiftLabel)
-    const payload: FprSavePayload = {
+    const payload: FprSavePayload = buildFprSavePayload({
       baseId: installationId,
-      checkDate: todayZuluDate(),
+      // modal.checkDate — today for a new check, the edited check's own date
+      // for an edit (NOT hardcoded today, which overwrote today's real check).
+      checkDate: modal.checkDate,
       shift: modal.shift,
       operatingInitials,
-      notes: modal.notes.trim() || null,
-      items: modal.draft.map(d => ({
-        item_id: d.item_id,
-        item_label: d.item_label,
-        status: d.status,
-        notes: d.notes.trim() || null,
-        sort_order: d.sort_order,
-      })),
+      notes: modal.notes,
+      draft: modal.draft,
       // Carried so the queue handler can write the Events Log entry after
       // the save commits (not from lib/supabase/fpr.ts, and not on enqueue).
       summary,
-    }
+    })
     try {
       const result = await getWriteQueue().enqueueOrExecute<FprSavePayload, FprSaveResult>(
         'fpr_save',
@@ -401,7 +415,7 @@ export default function FprPage() {
             {modalShiftLabel} Flight Planning Room Check
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
-            {formatZuluDate(todayZuluDate())} · attribution: {operatingInitials || '—'}
+            {formatZuluDate(modal.checkDate)} · attribution: {operatingInitials || '—'}
           </div>
 
           {/* Quick-fill — hidden once every item is already satisfactory. */}
@@ -409,7 +423,13 @@ export default function FprPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
               <button
                 onClick={() => setModal(m => m
-                  ? { ...m, draft: m.draft.map(d => ({ ...d, status: 'satisfactory' as FprItemStatus })) }
+                  ? { ...m, draft: m.draft.map(d => ({
+                      ...d,
+                      status: 'satisfactory' as FprItemStatus,
+                      // Clear a row's issue notes as it leaves 'issue' — stale
+                      // issue text must not persist onto a satisfactory row.
+                      notes: d.status === 'issue' ? '' : d.notes,
+                    })) }
                   : m)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -433,7 +453,13 @@ export default function FprPage() {
                 draft={d}
                 guidance={d.item_id ? (guidanceByItemId.get(d.item_id) ?? null) : null}
                 onChange={(status) => setItemStatus(i, status)}
-                onOpenIssueNotes={() => setModal(m => m ? { ...m, issueDialog: { idx: i } } : m)}
+                onOpenIssueNotes={() => setModal(m => {
+                  if (!m) return m
+                  const prior = m.draft[i].status
+                  // Editing an already-'issue' row: backing out with "Cancel
+                  // Issue" un-flags to satisfactory (no earlier state to keep).
+                  return { ...m, issueDialog: { idx: i, priorStatus: prior === 'issue' ? 'satisfactory' : prior } }
+                })}
               />
             ))}
           </div>
@@ -495,7 +521,7 @@ export default function FprPage() {
 
       {/* Issue notes dialog */}
       {modal?.issueDialog && (() => {
-        const { idx } = modal.issueDialog
+        const { idx, priorStatus } = modal.issueDialog
         const d = modal.draft[idx]
         return (
           <ModalOverlay onClose={() => setModal(m => m ? { ...m, issueDialog: null } : m)} tightZ>
@@ -520,7 +546,7 @@ export default function FprPage() {
             />
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button
-                onClick={() => { setItemStatus(idx, 'satisfactory'); setIssueNotes(idx, ''); setModal(m => m ? { ...m, issueDialog: null } : m) }}
+                onClick={() => { setItemStatus(idx, priorStatus); setIssueNotes(idx, ''); setModal(m => m ? { ...m, issueDialog: null } : m) }}
                 style={{
                   flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',

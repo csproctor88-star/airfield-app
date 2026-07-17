@@ -1,7 +1,7 @@
 import { createClient } from './client'
 import { friendlyError } from '@/lib/utils'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { ShiftDef, ShiftKey } from '@/lib/shifts'
+import { SHIFT_ORDER, type ShiftDef, type ShiftKey } from '@/lib/shifts'
 import { FPR_DEFAULT_ITEMS } from '@/lib/fpr-default-items'
 
 // ─────────────────────────────────────────────────────────────
@@ -107,22 +107,36 @@ export type FprResultDraft = {
  *
  * Prior results are matched by item_id first (survives renames), then
  * by label (covers rows whose item_id was nulled by a template delete).
+ *
+ * Snapshot preservation (EDIT mode): a saved check is a point-in-time
+ * record. If the template changed since it was logged — an item was
+ * deactivated or hard-deleted — that item's prior result row no longer
+ * maps to any active template item. Because the save path delete-and-
+ * rewrites all child rows from this draft, such rows would be silently
+ * dropped. To keep the snapshot intact, any prior result NOT consumed by
+ * an active item is appended after the active items, carrying its own
+ * label / status / notes / sort_order. (New checks pass no `existing`, so
+ * there are no orphans to append.)
  */
 export function buildFprResultDrafts(
   items: FprChecklistItemRow[],
   existing?: FprCheckResultRow[] | null,
 ): FprResultDraft[] {
+  const existingRows = existing ?? []
   const byItemId = new Map<string, FprCheckResultRow>()
   const byLabel = new Map<string, FprCheckResultRow>()
-  for (const r of existing ?? []) {
+  for (const r of existingRows) {
     if (r.item_id) byItemId.set(r.item_id, r)
     if (!byLabel.has(r.item_label)) byLabel.set(r.item_label, r)
   }
-  return items
+
+  const consumed = new Set<FprCheckResultRow>()
+  const activeDrafts: FprResultDraft[] = items
     .filter(i => i.is_active)
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((i, idx) => {
       const prior = byItemId.get(i.id) ?? byLabel.get(i.label)
+      if (prior) consumed.add(prior)
       return {
         item_id: i.id,
         item_label: i.label,
@@ -131,6 +145,65 @@ export function buildFprResultDrafts(
         sort_order: i.sort_order ?? idx,
       }
     })
+
+  // Prior result rows with no matching active item (item deactivated or
+  // deleted since the check was logged) — preserve them so the delete-and-
+  // rewrite save can't drop them from the historical record.
+  const orphanDrafts: FprResultDraft[] = existingRows
+    .filter(r => !consumed.has(r))
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map(r => ({
+      item_id: r.item_id,
+      item_label: r.item_label,
+      status: r.status,
+      notes: r.notes ?? '',
+      sort_order: r.sort_order,
+    }))
+
+  return [...activeDrafts, ...orphanDrafts]
+}
+
+/**
+ * Build the queue payload for a check save from the modal's live draft.
+ * Pure — extracted so the page's save path is unit-testable and so the
+ * check's date is threaded through explicitly. `checkDate` comes from the
+ * caller (a NEW check passes today's Zulu date; EDITING a check passes that
+ * check's own `check_date`) rather than being hardcoded to "today" —
+ * editing a historical check must upsert onto that check's
+ * (base, check_date, shift) natural key, not today's.
+ */
+export function buildFprSavePayload(args: {
+  baseId: string
+  checkDate: string
+  shift: ShiftKey
+  operatingInitials: string | null
+  notes: string
+  draft: FprResultDraft[]
+  summary: string
+}): {
+  baseId: string
+  checkDate: string
+  shift: ShiftKey
+  operatingInitials: string | null
+  notes: string | null
+  items: FprResultInput[]
+  summary: string
+} {
+  return {
+    baseId: args.baseId,
+    checkDate: args.checkDate,
+    shift: args.shift,
+    operatingInitials: args.operatingInitials,
+    notes: args.notes.trim() || null,
+    items: args.draft.map(d => ({
+      item_id: d.item_id,
+      item_label: d.item_label,
+      status: d.status,
+      notes: d.notes.trim() || null,
+      sort_order: d.sort_order,
+    })),
+    summary: args.summary,
+  }
 }
 
 /** Summarize a check for the Events Log. Pure. Returns e.g.
@@ -173,6 +246,20 @@ export function deriveFprTodayCards(
     label: s.label,
     check: todayChecks.find((c) => c.shift === s.key),
   }))
+}
+
+/**
+ * Sort checks for the history list: newest date first, then canonical shift
+ * order (day → swing → mid) within a date. `fetchFprChecksInRange` returns
+ * them check_date ASC / shift alphabetically (day, mid, swing), but the
+ * manual and the history UI promise newest-first — so re-sort page-side.
+ * Pure; does not mutate its input.
+ */
+export function sortFprHistory(checks: FprCheckWithResults[]): FprCheckWithResults[] {
+  return [...checks].sort((a, b) => {
+    if (a.check_date !== b.check_date) return b.check_date.localeCompare(a.check_date)
+    return SHIFT_ORDER.indexOf(a.shift) - SHIFT_ORDER.indexOf(b.shift)
+  })
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -369,6 +456,16 @@ export async function fetchFprChecksInRange(baseId: string, startDate: string, e
 }
 
 /**
+ * `saveFprCheck`'s error string for the narrow case where the natural-key
+ * upsert COMMITTED but the follow-up re-fetch round-trip failed. The write
+ * is durable, so callers must treat this as transient (a retry re-commits
+ * the idempotent upsert harmlessly and can then re-fetch), never as a hard
+ * save failure. Exported so the write-queue handler can classify it exactly,
+ * without string-drift.
+ */
+export const FPR_SAVED_REFETCH_FAILED = 'Saved but could not re-fetch check'
+
+/**
  * Upsert a check by its natural key (base_id, check_date, shift) and
  * rewrite its per-item results (delete-and-rewrite children, per the
  * scn.ts saveCheck idiom). Replay-safe: re-running the same save lands
@@ -450,7 +547,7 @@ export async function saveFprCheck(input: {
   }
 
   const full = await fetchFprCheckById(checkId)
-  if (!full) return { data: null, error: 'Saved but could not re-fetch check' }
+  if (!full) return { data: null, error: FPR_SAVED_REFETCH_FAILED }
   return { data: full, error: null }
 }
 

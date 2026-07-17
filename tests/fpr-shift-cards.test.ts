@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deriveFprTodayCards, type FprCheckWithResults } from '@/lib/supabase/fpr'
+import { deriveFprTodayCards, sortFprHistory, type FprCheckWithResults } from '@/lib/supabase/fpr'
 import { getActiveShifts, type ShiftKey } from '@/lib/shifts'
 
 // deriveFprTodayCards is the today-view ordering source of truth: it maps
@@ -69,5 +69,40 @@ describe('deriveFprTodayCards', () => {
     expect(cards[0].shift).toBe('day')
     expect(cards.some(c => c.shift === 'mid')).toBe(false)
     expect(cards[0].check).toBeUndefined()
+  })
+})
+
+// sortFprHistory re-orders the fetched history (check_date ASC / shift
+// alphabetical) into the newest-first order the manual and UI promise:
+// date DESC, then canonical shift order (day → swing → mid) within a date.
+
+function makeDatedCheck(check_date: string, shift: ShiftKey): FprCheckWithResults {
+  return { ...makeCheck(shift), id: `chk-${check_date}-${shift}`, check_date }
+}
+
+describe('sortFprHistory', () => {
+  it('orders newest date first, then day → swing → mid within a date', () => {
+    const input = [
+      makeDatedCheck('2026-07-10', 'swing'),
+      makeDatedCheck('2026-07-12', 'mid'),
+      makeDatedCheck('2026-07-12', 'day'),
+      makeDatedCheck('2026-07-10', 'day'),
+      makeDatedCheck('2026-07-12', 'swing'),
+    ]
+    const sorted = sortFprHistory(input)
+    expect(sorted.map(c => `${c.check_date}/${c.shift}`)).toEqual([
+      '2026-07-12/day',
+      '2026-07-12/swing',
+      '2026-07-12/mid',
+      '2026-07-10/day',
+      '2026-07-10/swing',
+    ])
+  })
+
+  it('does not mutate its input', () => {
+    const input = [makeDatedCheck('2026-07-10', 'day'), makeDatedCheck('2026-07-12', 'day')]
+    const before = input.map(c => `${c.check_date}/${c.shift}`)
+    sortFprHistory(input)
+    expect(input.map(c => `${c.check_date}/${c.shift}`)).toEqual(before)
   })
 })

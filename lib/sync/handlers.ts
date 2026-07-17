@@ -39,7 +39,7 @@ import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { logActivity } from '@/lib/supabase/activity'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createSighting } from '@/lib/supabase/wildlife'
-import { saveFprCheck } from '@/lib/supabase/fpr'
+import { saveFprCheck, FPR_SAVED_REFETCH_FAILED } from '@/lib/supabase/fpr'
 import {
   ConflictError,
   NonRetriableError,
@@ -417,7 +417,16 @@ const fprSaveHandler: WriteHandler<FprSavePayload, FprSaveResult> = async (
   payload,
 ) => {
   const { data, error } = await saveFprCheck(payload)
-  if (error) throwForStructuredError(error)
+  if (error) {
+    // The save is an idempotent natural-key upsert. This specific error means
+    // the upsert COMMITTED and only the follow-up re-fetch failed — classify
+    // it transient so the queue retries (a retry re-commits harmlessly, then
+    // re-fetches) rather than NonRetriable, which would permanently fail the
+    // item, toast "Failed to save" on an already-saved check, and skip the
+    // Events Log write.
+    if (error === FPR_SAVED_REFETCH_FAILED) throw new Error(error)
+    throwForStructuredError(error)
+  }
   if (data?.id && payload.summary) {
     try {
       await logActivity(

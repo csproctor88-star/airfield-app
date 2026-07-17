@@ -29,9 +29,12 @@ function dayLabel(iso: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
 }
 
-/** "1432Z" from a completed_at timestamp, or "—". */
+/** "1432Z" from a completed_at timestamp, or a sanitized dash fallback. */
 function completedZulu(ts: string | null): string {
-  if (!ts) return '—'
+  // This value is placed directly into the table body (not re-sanitized at
+  // the call site), so the em-dash fallback must be sanitized here or it
+  // renders as a missing glyph in the standard PDF font.
+  if (!ts) return sanitizePdfText('—')
   return `${new Date(ts).toISOString().slice(11, 16).replace(':', '')}Z`
 }
 
@@ -141,7 +144,7 @@ export function generateFprMonthlyPdf(input: FprPdfInput): { doc: jsPDF; filenam
     }
     doc.setFontSize(11)
     doc.setTextColor(20)
-    doc.text('Issues — Notes', margin, y)
+    doc.text(sanitizePdfText('Issues — Notes'), margin, y)
     y += 4
     autoTable(doc, {
       startY: y,

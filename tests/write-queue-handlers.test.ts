@@ -165,6 +165,12 @@ vi.mock('@/lib/supabase/fpr', () => ({
     if (state.fprSave.throw) throw state.fprSave.throw
     return state.fprSave.next
   }),
+  // Real value from lib/supabase/fpr.ts — the fpr_save handler imports it to
+  // classify the "committed but re-fetch failed" case as transient. The mock
+  // must provide it or the handler's identity check would compare against
+  // undefined. If the source string drifts, the transient-classification test
+  // below fails, flagging the drift.
+  FPR_SAVED_REFETCH_FAILED: 'Saved but could not re-fetch check',
 }))
 
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
@@ -697,6 +703,18 @@ describe('fpr_save handler', () => {
     const handler = HANDLERS.fpr_save!
     state.fprSave.next = { data: null, error: 'Failed to fetch' }
     await expect(handler(FPR_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats "Saved but could not re-fetch check" as transient (upsert committed; only re-fetch failed)', async () => {
+    // The upsert is idempotent on the natural key, so a retry re-commits
+    // harmlessly. Marking this NonRetriable would permanently fail an
+    // already-saved check and skip the Events Log write — the bug this guards.
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: null, error: 'Saved but could not re-fetch check' }
+    await expect(handler(FPR_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+    // No data returned this attempt → no Events Log write yet (it logs on the
+    // retry that re-commits and successfully re-fetches).
+    expect(state.activity.calls).toHaveLength(0)
   })
 
   it('lets thrown fetch errors propagate so the queue treats them as transient', async () => {
