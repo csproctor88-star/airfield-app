@@ -69,6 +69,10 @@ The **NOTAM Reference** section shows distance (NM) and bearing from the nearest
 3. Accept the browser's location prompt.
 4. Lat/lng auto-fill from GPS.
 
+## How to type coordinates
+
+Instead of tapping the map, type a point into the **Enter coordinates** field beneath the map and press **Place Pin** (or Enter). The field auto-detects the notation as you type — decimal degrees (`42.60522, -82.82047`), degrees-minutes-seconds (`42°36'19"N 082°49'13"W`), degrees-decimal-minutes (`42 36.31N 082 49.23W`), MGRS (`17TLG1234567890`), and the packed obstacle-NOTAM form (`423619N0824913W`) are all accepted. A live preview line under the field confirms the detected format and the normalized decimal-degrees value before you commit. Once placed, the map pans and the pin drops exactly as with a map tap, and elevation, surface analysis, and the NOTAM reference all follow. If the point lands more than 30 NM from the airfield, an advisory warning appears to help you catch a hemisphere or format slip — it never blocks the evaluation.
+
 ## How to save an evaluation
 
 1. After evaluating, click **Save Evaluation**.

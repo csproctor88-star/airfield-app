@@ -6,6 +6,8 @@ import dynamic from 'next/dynamic'
 import { toast } from 'sonner'
 import { ArrowLeft, AlertTriangle, History, AlertCircle, CheckCircle2, Copy } from 'lucide-react'
 import UseMyLocationButton from '@/components/ui/use-my-location-button'
+import CoordinateEntryInput from '@/components/ui/coordinate-entry-input'
+import { formatDD, formatDMS, formatDDM, formatMGRS } from '@/lib/calculations/coordinates'
 import { useInstallation } from '@/lib/installation-context'
 import type { LatLon, RunwayGeometry } from '@/lib/calculations/geometry'
 import { getRunwayGeometry, pointToRunwayRelation, distanceFt, bearing } from '@/lib/calculations/geometry'
@@ -297,6 +299,27 @@ function ObstructionsContent() {
     }
   }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass])
 
+  // Commit a typed coordinate. Reuses the full map-tap pipeline unchanged;
+  // setFlyToPoint always receives a freshly spread object so the map's flyTo
+  // effect fires even when re-placing numerically identical coordinates. Adds a
+  // typed-entry-only >30 NM sanity warning (advisory, never blocks — map taps
+  // and GPS deliberately don't get it).
+  const handleTypedPoint = useCallback((point: LatLon) => {
+    setFlyToPoint({ ...point })
+    handlePointSelected(point)
+    if (runways.length > 0) {
+      const rwy = runways[0]
+      const midpoint: LatLon = {
+        lat: ((rwy.end1_latitude ?? 0) + (rwy.end2_latitude ?? 0)) / 2,
+        lon: ((rwy.end1_longitude ?? 0) + (rwy.end2_longitude ?? 0)) / 2,
+      }
+      const nm = distanceFt(point, midpoint) / 6076.12
+      if (nm > 30) {
+        toast.warning(`Point is ~${Math.round(nm)} NM from the airfield — check hemisphere and format`)
+      }
+    }
+  }, [handlePointSelected, runways])
+
   // Run the evaluation against all runways
   const runEvaluation = () => {
     if (!pointInfo) {
@@ -582,6 +605,13 @@ function ObstructionsContent() {
         style={{ marginTop: 8 }}
       />
 
+      {/* Manual coordinate entry — type a point in DD / DMS / DDM / MGRS / packed
+          NOTAM form; commits through the same pipeline as a map tap. */}
+      <CoordinateEntryInput
+        onPoint={handleTypedPoint}
+        style={{ marginTop: 8 }}
+      />
+
       {/* Point Info Card */}
       {pointInfo && (
         <div className="card" style={{ marginTop: 10 }}>
@@ -589,8 +619,55 @@ function ObstructionsContent() {
           <div className="detail-grid-2" style={{ fontSize: 'var(--fs-base)' }}>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>Coordinates</span>
-              <div style={{ fontFamily: 'monospace', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
-                {pointInfo.point.lat.toFixed(5)}°N, {Math.abs(pointInfo.point.lon).toFixed(5)}°W
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginTop: 2 }}>
+                {(() => {
+                  const p = pointInfo.point
+                  // Hemispheres derive from sign in every format — the whole
+                  // point of the fix. MGRS is '' near the poles → show '—' and
+                  // no copy button for that line.
+                  const rows: { label: string; value: string }[] = [
+                    { label: 'DD', value: formatDD(p) },
+                    { label: 'DMS', value: formatDMS(p) },
+                    { label: 'DDM', value: formatDDM(p) },
+                    { label: 'MGRS', value: formatMGRS(p) || '—' },
+                  ]
+                  return rows.map(({ label, value }) => {
+                    const copyable = value !== '—'
+                    return (
+                      <div
+                        key={label}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          fontFamily: 'monospace', fontSize: 'var(--fs-sm)',
+                        }}
+                      >
+                        <span style={{ color: 'var(--color-text-3)', minWidth: 42, flexShrink: 0 }}>{label}</span>
+                        <span style={{ color: 'var(--color-text-1)', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{value}</span>
+                        {copyable && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(value)
+                                .then(() => toast.success('Coordinates copied'))
+                                .catch(() => toast.error('Copy failed'))
+                            }}
+                            title={`Copy ${label} coordinates`}
+                            aria-label={`Copy ${label} coordinates`}
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                              padding: 4, borderRadius: 'var(--radius-md)', flexShrink: 0,
+                              border: '1px solid color-mix(in srgb, var(--color-cyan) 35%, transparent)',
+                              background: 'color-mix(in srgb, var(--color-cyan) 12%, transparent)',
+                              color: 'var(--color-cyan)', cursor: 'pointer', fontFamily: 'inherit',
+                            }}
+                          >
+                            <Copy size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
               </div>
             </div>
             <div>

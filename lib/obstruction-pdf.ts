@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable'
 import type { ObstructionRow } from '@/lib/supabase/obstructions'
 import { parsePhotoPaths } from '@/lib/supabase/obstructions'
 import { formatZuluTime, formatZuluDate, fetchMapImageDataUrl } from '@/lib/utils'
+import { formatDD } from '@/lib/calculations/coordinates'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -89,8 +90,11 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
   y += 8
 
   // ── Obstruction Details Table ──
-  const lat = evaluation.latitude?.toFixed(5) ?? '—'
-  const lng = evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'
+  // Hemispheres derive from sign via formatDD (fixes the old hardcoded °N/°W).
+  const coordsText =
+    evaluation.latitude != null && evaluation.longitude != null
+      ? formatDD({ lat: evaluation.latitude, lon: evaluation.longitude })
+      : '—'
   const rwClass = evaluation.runway_class === 'Army_B' ? 'Army Class B' : `Class ${evaluation.runway_class}`
 
   autoTable(doc, {
@@ -102,7 +106,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       ['Top Elevation MSL', `${evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft`],
       ['Ground Elevation MSL', `${evaluation.object_elevation_msl?.toFixed(0) ?? '—'} ft`],
       ['Distance from Centerline', `${evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft`],
-      ['Coordinates', `${lat}\u00b0N, ${lng}\u00b0W`],
+      ['Coordinates', coordsText],
       ['Runway Class', rwClass],
     ],
     theme: 'grid',
