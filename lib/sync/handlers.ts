@@ -39,6 +39,7 @@ import { createOutageEvent } from '@/lib/supabase/outage-events'
 import { logActivity } from '@/lib/supabase/activity'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createSighting } from '@/lib/supabase/wildlife'
+import { saveFprCheck } from '@/lib/supabase/fpr'
 import {
   ConflictError,
   NonRetriableError,
@@ -380,6 +381,27 @@ async function dashboardBoardUpdateHandler(p: DashboardBoardUpdatePayload): Prom
 }
 
 // ---------------------------------------------------------------------------
+// fpr_save
+// ---------------------------------------------------------------------------
+
+export type FprSavePayload = Parameters<typeof saveFprCheck>[0]
+export type FprSaveResult = Awaited<ReturnType<typeof saveFprCheck>>['data']
+
+/**
+ * Replay-safe: saveFprCheck upserts on the natural key
+ * (base_id, check_date, shift) and delete-and-rewrites the child
+ * results, so draining the same queued save twice (or after a
+ * lost-response commit) converges on the same single check row.
+ */
+const fprSaveHandler: WriteHandler<FprSavePayload, FprSaveResult> = async (
+  payload,
+) => {
+  const { data, error } = await saveFprCheck(payload)
+  if (error) throwForStructuredError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -409,6 +431,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('inspection_save_draft', inspectionSaveDraftHandler)
   queue.registerHandler('dashboard_board_update', dashboardBoardUpdateHandler)
   queue.registerHandler('wildlife_sighting_create', wildlifeSightingCreateHandler)
+  queue.registerHandler('fpr_save', fprSaveHandler)
 }
 
 /**
@@ -430,4 +453,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   inspection_save_draft: inspectionSaveDraftHandler,
   dashboard_board_update: dashboardBoardUpdateHandler,
   wildlife_sighting_create: wildlifeSightingCreateHandler,
+  fpr_save: fprSaveHandler,
 }

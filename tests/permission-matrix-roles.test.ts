@@ -271,8 +271,11 @@ describe('permission matrix — role preset contracts', () => {
   })
 
   it('atc — kiosk-equivalent (view only)', () => {
+    // fpr:view added by 2026071720 (staged): the FPR design spec's access
+    // control table grants atc read access to Flight Planning Room checks.
+    // Still strictly view-only — no write/manage keys.
     expect(keysOf('atc')).toEqual(
-      new Set([PERM.AIRFIELD_STATUS_VIEW, PERM.TRAINING_VIEW, PERM.SETTINGS_VIEW]),
+      new Set([PERM.AIRFIELD_STATUS_VIEW, PERM.TRAINING_VIEW, PERM.SETTINGS_VIEW, PERM.FPR_VIEW]),
     )
   })
 

@@ -55,6 +55,11 @@ const { state } = vi.hoisted(() => ({
       throw: null as Error | null,
       calls: [] as unknown[],
     },
+    fprSave: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
   },
 }))
 
@@ -154,6 +159,14 @@ vi.mock('@/lib/supabase/activity', () => ({
   ),
 }))
 
+vi.mock('@/lib/supabase/fpr', () => ({
+  saveFprCheck: vi.fn(async (payload: unknown) => {
+    state.fprSave.calls.push(payload)
+    if (state.fprSave.throw) throw state.fprSave.throw
+    return state.fprSave.next
+  }),
+}))
+
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
 import { ConflictError, NonRetriableError } from '@/lib/sync/types'
 import { WriteQueue } from '@/lib/sync/write-queue'
@@ -175,6 +188,7 @@ beforeEach(() => {
   state.activity = { next: { error: null }, throw: null, calls: [] }
   state.discrepancy = { next: { data: null, error: null }, throw: null, calls: [] }
   state.inspectionDraft = { next: { data: null, error: null }, throw: null, calls: [] }
+  state.fprSave = { next: { data: null, error: null }, throw: null, calls: [] }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -232,6 +246,23 @@ const ACSI_PAYLOAD = {
   completed_by_name: 'A',
   completed_by_id: null,
   base_id: 'base-a',
+}
+
+const FPR_SAVE_PAYLOAD = {
+  baseId: 'base-a',
+  checkDate: '2026-07-17',
+  shift: 'day' as const,
+  operatingInitials: 'AB',
+  notes: null,
+  items: [
+    {
+      item_id: 'item-1',
+      item_label: 'FLIP products current',
+      status: 'satisfactory' as const,
+      notes: null,
+      sort_order: 10,
+    },
+  ],
 }
 
 describe('inspection_file handler', () => {
@@ -640,6 +671,46 @@ describe('discrepancy_create handler', () => {
   })
 })
 
+describe('fpr_save handler', () => {
+  it('returns the saved check on success', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: { id: 'fpr-1', check_date: '2026-07-17', shift: 'day' }, error: null }
+    const result = await handler(FPR_SAVE_PAYLOAD)
+    expect(result).toMatchObject({ id: 'fpr-1' })
+    // The upsert-by-natural-key payload must be passed through unchanged —
+    // replay safety depends on the natural key riding along.
+    expect(state.fprSave.calls).toHaveLength(1)
+    expect(state.fprSave.calls[0]).toMatchObject({
+      baseId: 'base-a',
+      checkDate: '2026-07-17',
+      shift: 'day',
+    })
+  })
+
+  it('throws NonRetriableError when saveFprCheck returns a structured error', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: null, error: 'You do not have permission to perform this action.' }
+    await expect(handler(FPR_SAVE_PAYLOAD)).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats a "Failed to fetch" structured error as transient', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.next = { data: null, error: 'Failed to fetch' }
+    await expect(handler(FPR_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('lets thrown fetch errors propagate so the queue treats them as transient', async () => {
+    const handler = HANDLERS.fpr_save!
+    state.fprSave.throw = new TypeError('Failed to fetch')
+    await expect(handler(FPR_SAVE_PAYLOAD)).rejects.toThrow(/fetch/i)
+    try {
+      await handler(FPR_SAVE_PAYLOAD)
+    } catch (err) {
+      expect(err).not.toBeInstanceOf(NonRetriableError)
+    }
+  })
+})
+
 describe('registerAllHandlers + queue end-to-end', () => {
   it('inspection: queues a transient failure and drains it once the next attempt succeeds', async () => {
     const storage = new MemoryStorage()
@@ -693,6 +764,33 @@ describe('registerAllHandlers + queue end-to-end', () => {
     state.check.throw = null
     state.check.next = { data: { id: 'chk-1', display_id: 'AC-AAAA' }, error: null }
     now = new Date('2026-04-25T12:00:30Z')
+
+    const summary = await queue.drain()
+    expect(summary.committed).toBe(1)
+    expect(await storage.list()).toHaveLength(0)
+  })
+
+  it('fpr_save is registered: queues a transient failure and drains it once reconnected', async () => {
+    const storage = new MemoryStorage()
+    let now = new Date('2026-07-17T12:00:00Z')
+    const queue = new WriteQueue({
+      storage,
+      isOnline: () => true,
+      now: () => now,
+      uuid: () => 'test-uuid-fpr',
+    })
+    registerAllHandlers(queue)
+
+    state.fprSave.throw = new TypeError('Failed to fetch')
+    const r1 = await queue.enqueueOrExecute('fpr_save', FPR_SAVE_PAYLOAD, {
+      baseId: 'base-a',
+      userId: 'user-a',
+    })
+    expect(r1.status).toBe('queued')
+
+    state.fprSave.throw = null
+    state.fprSave.next = { data: { id: 'fpr-1', shift: 'day' }, error: null }
+    now = new Date('2026-07-17T12:00:30Z')
 
     const summary = await queue.drain()
     expect(summary.committed).toBe(1)
