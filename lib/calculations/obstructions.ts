@@ -280,10 +280,14 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     },
     horizontal: {
       name: 'Horizontal Surface',
-      criteria: { height: 150, radius: 10000 },
+      // radius verified 5,000 ft per 14 CFR §77.19(a): "5,000 feet for all
+      // runways designated as utility or visual" — a visual runway takes the
+      // 5,000-ft arc regardless of utility/non-utility. Previously mis-grouped
+      // with the 10,000-ft set. law.cornell.edu/cfr/text/14/77.19, 2026-07-16.
+      criteria: { height: 150, radius: 5000 },
       ufcRef: '14 CFR §77.19(b) — Horizontal surface (non-utility)',
-      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 10,000 ft radius of each runway end (non-utility runway).',
-      description: '150 ft above airport elevation within 10,000 ft (non-utility).',
+      ufcCriteria: 'No object may protrude above 150 ft above the established airport elevation within a 5,000 ft radius of each runway end (visual runway).',
+      description: '150 ft above airport elevation within 5,000 ft (visual).',
       color: '#22C55E',
     },
     conical: {
@@ -352,17 +356,25 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     // that don't yet pass an approach type.
     primary: {
       name: 'Primary Surface',
-      criteria: { halfWidth: 250, extension: 200, maxHeight: 0 },
+      // halfWidth verified 500 ft (1,000-ft total width) per 14 CFR
+      // §77.19(c)(3)(iii): "1,000 feet for a non-precision instrument runway
+      // having a non-precision instrument approach with visibility minimums
+      // as low as three-fourths of a statute mile". Previously encoded
+      // 250/500 ft. law.cornell.edu/cfr/text/14/77.19, 2026-07-16.
+      criteria: { halfWidth: 500, extension: 200, maxHeight: 0 },
       ufcRef: '14 CFR §77.19(a) — Primary surface (non-utility non-precision <¾ mi)',
-      ufcCriteria: 'No object may protrude above the primary surface elevation within 250 ft of centerline (500 ft total width) and 200 ft beyond each runway end.',
-      description: '500 ft wide × runway length + 200 ft (non-utility non-precision <¾ mi).',
+      ufcCriteria: 'No object may protrude above the primary surface elevation within 500 ft of centerline (1,000 ft total width) and 200 ft beyond each runway end.',
+      description: '1,000 ft wide × runway length + 200 ft (non-utility non-precision <¾ mi).',
       color: '#EF4444',
     },
     approach: {
       name: 'Approach Surface',
-      criteria: { slope: 34, innerHalfWidth: 250, outerHalfWidth: 2000, length: 10000 },
+      // innerHalfWidth mirrors the corrected 500-ft primary half-width per
+      // §77.19(d): "The inner edge of the approach surface is the same width
+      // as the primary surface." law.cornell.edu fetch 2026-07-16.
+      criteria: { slope: 34, innerHalfWidth: 500, outerHalfWidth: 2000, length: 10000 },
       ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility non-precision <¾ mi)',
-      ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 500 ft to 4,000 ft wide (visibility < ¾ mile).',
+      ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 1,000 ft to 4,000 ft wide (visibility < ¾ mile).',
       description: '34:1 slope, 10,000 ft long, 4,000 ft outer width.',
       color: '#F97316',
     },
@@ -384,7 +396,9 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     },
     transitional: {
       name: 'Transitional Surface',
-      criteria: { slope: 7, primaryHalfWidth: 250 },
+      // primaryHalfWidth mirrors the corrected 500-ft primary half-width
+      // (§77.19(c)(3)(iii) primary width; transitional rises from its edge).
+      criteria: { slope: 7, primaryHalfWidth: 500 },
       ufcRef: '14 CFR §77.19(e) — Transitional surface',
       ufcCriteria: '7:1 slope from primary/approach edges upward to horizontal surface (150 ft above airport elevation).',
       description: '7:1 slope from edges to horizontal height.',

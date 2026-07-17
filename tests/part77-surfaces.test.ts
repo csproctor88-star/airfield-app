@@ -53,7 +53,7 @@ describe('FAA_APPROACH_TYPE_LABELS', () => {
 describe('getPart77Surfaces(approachType)', () => {
   it('defaults to non_utility_non_precision_low (Phase 1 default)', () => {
     const def = getPart77Surfaces()
-    expect(def.primary.criteria.halfWidth).toBe(250)         // 500 ft total per §77.19(a)
+    expect(def.primary.criteria.halfWidth).toBe(500)         // 1,000 ft total per §77.19(c)(3)(iii)
     expect(def.approach.criteria.slope).toBe(34)             // non-precision
     expect(def.approach.criteria.outerHalfWidth).toBe(2000)  // 4,000 ft total (low vis)
   })
@@ -76,8 +76,13 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(getPart77Surfaces('non_utility_non_precision_3_4').primary.criteria.halfWidth).toBe(250)
   })
 
-  it('non_utility_non_precision_low primary is 500 ft total (250 half-width)', () => {
-    expect(getPart77Surfaces('non_utility_non_precision_low').primary.criteria.halfWidth).toBe(250)
+  // Verified 1,000-ft total width (500-ft half-width) per 14 CFR §77.19(c)(3)(iii)
+  // ("1,000 feet for a non-precision instrument runway having a non-precision
+  // instrument approach with visibility minimums as low as three-fourths of a
+  // statute mile"), law.cornell.edu/cfr/text/14/77.19 fetch 2026-07-16. The
+  // table previously encoded 250/500 ft.
+  it('non_utility_non_precision_low primary is 1,000 ft total (500 half-width)', () => {
+    expect(getPart77Surfaces('non_utility_non_precision_low').primary.criteria.halfWidth).toBe(500)
   })
 
   it('non_utility_precision primary is 1,000 ft total (500 half-width)', () => {
@@ -138,15 +143,20 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(getPart77Surfaces('non_utility_precision').approach.criteria.outerHalfWidth).toBe(8000)
   })
 
-  // ── Horizontal surface radius per §77.19(b) ──
+  // ── Horizontal surface radius per §77.19(a) ──
+  // Verified per 14 CFR §77.19(a): "The radius of each arc is: (1) 5,000 feet
+  // for all runways designated as utility or visual; (2) 10,000 feet for all
+  // other runways." — law.cornell.edu/cfr/text/14/77.19 fetch 2026-07-16.
+  // non_utility_visual is a visual runway, so it takes the 5,000-ft arc
+  // (the table previously grouped it with the 10,000-ft non-utility set).
 
-  it('utility runways use 5,000 ft horizontal radius', () => {
+  it('utility or visual runways use 5,000 ft horizontal radius', () => {
     expect(getPart77Surfaces('utility_visual').horizontal.criteria.radius).toBe(5000)
     expect(getPart77Surfaces('utility_non_precision').horizontal.criteria.radius).toBe(5000)
+    expect(getPart77Surfaces('non_utility_visual').horizontal.criteria.radius).toBe(5000)
   })
 
-  it('non-utility runways use 10,000 ft horizontal radius', () => {
-    expect(getPart77Surfaces('non_utility_visual').horizontal.criteria.radius).toBe(10000)
+  it('all other runways use 10,000 ft horizontal radius', () => {
     expect(getPart77Surfaces('non_utility_non_precision_3_4').horizontal.criteria.radius).toBe(10000)
     expect(getPart77Surfaces('non_utility_non_precision_low').horizontal.criteria.radius).toBe(10000)
     expect(getPart77Surfaces('non_utility_precision').horizontal.criteria.radius).toBe(10000)
@@ -189,11 +199,27 @@ describe('getPart77Surfaces(approachType)', () => {
 
   it('transitional primaryHalfWidth tracks the primary surface halfWidth', () => {
     // The transitional surface starts at the edge of the primary, so its
-    // primaryHalfWidth must match. Utility-visual = 125, non-precision = 250,
-    // precision = 500.
+    // primaryHalfWidth must match. Utility-visual = 125, utility/non-utility
+    // ≥¾ mi non-precision = 250, low-vis non-precision + precision = 500
+    // (per §77.19(c)(3)(iii), fetch 2026-07-16).
     expect(getPart77Surfaces('utility_visual').transitional.criteria.primaryHalfWidth).toBe(125)
-    expect(getPart77Surfaces('non_utility_non_precision_low').transitional.criteria.primaryHalfWidth).toBe(250)
+    expect(getPart77Surfaces('non_utility_non_precision_low').transitional.criteria.primaryHalfWidth).toBe(500)
     expect(getPart77Surfaces('non_utility_precision').transitional.criteria.primaryHalfWidth).toBe(500)
+  })
+
+  it('approach innerHalfWidth mirrors the primary halfWidth for every approach type', () => {
+    // §77.19(d): "The inner edge of the approach surface is the same width as
+    // the primary surface" — locks the mirror so a future primary-width edit
+    // can't drift from the approach inner edge (or vice versa).
+    const types: FaaApproachType[] = [
+      'utility_visual', 'utility_non_precision', 'non_utility_visual',
+      'non_utility_non_precision_3_4', 'non_utility_non_precision_low', 'non_utility_precision',
+    ]
+    for (const t of types) {
+      const set = getPart77Surfaces(t)
+      expect(set.approach.criteria.innerHalfWidth).toBe(set.primary.criteria.halfWidth)
+      expect(set.transitional.criteria.primaryHalfWidth).toBe(set.primary.criteria.halfWidth)
+    }
   })
 
   it('every surface cites 14 CFR §77.19 in every approach type', () => {
@@ -241,8 +267,9 @@ describe('getSurfaces(set, approachType)', () => {
     // Conical extent: UFC 7,000 ft, Part 77 4,000 ft
     expect(IMAGINARY_SURFACES.conical.criteria.horizontalExtent).toBe(7000)
     expect(getPart77Surfaces('non_utility_non_precision_low').conical.criteria.horizontalExtent).toBe(4000)
-    // Primary half-width: UFC 1,000 ft, Part 77 default 250 ft (500 ft total)
+    // Primary half-width: UFC 1,000 ft, Part 77 default 500 ft (1,000 ft total
+    // per §77.19(c)(3)(iii))
     expect(IMAGINARY_SURFACES.primary.criteria.halfWidth).toBe(1000)
-    expect(getPart77Surfaces('non_utility_non_precision_low').primary.criteria.halfWidth).toBe(250)
+    expect(getPart77Surfaces('non_utility_non_precision_low').primary.criteria.halfWidth).toBe(500)
   })
 })

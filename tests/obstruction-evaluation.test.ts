@@ -149,20 +149,26 @@ describe('evaluateObstructionPart77', () => {
     expect(approach?.isWithinBounds).toBe(false)
   })
 
-  it('utility horizontal radius is 5,000 ft (vs 10,000 for non-utility)', () => {
+  it('utility-or-visual horizontal radius is 5,000 ft (vs 10,000 for all other runways)', () => {
+    // §77.19(a): 5,000-ft arc "for all runways designated as utility or
+    // visual"; 10,000 ft for all other runways (verified law.cornell.edu
+    // fetch 2026-07-16 — non_utility_visual moved to the 5,000-ft group).
     // Point 7,000 ft north of midpoint:
-    //   utility horizontal radius = 5,000 → point is OUTSIDE
-    //   non_utility horizontal radius = 10,000 → point is INSIDE → 200 ft tower violates (max = 150 ft)
+    //   utility_visual / non_utility_visual radius = 5,000 → point is OUTSIDE
+    //   non_utility_non_precision_low radius = 10,000 → point is INSIDE → 200 ft tower violates (max = 150 ft)
     const p: LatLon = { lat: latOffset(7000), lon: 0 }
     const utility = evaluateObstructionPart77(p, 200, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'utility_visual')
-    const nonUtility = evaluateObstructionPart77(p, 200, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'non_utility_visual')
+    const nonUtilVisual = evaluateObstructionPart77(p, 200, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'non_utility_visual')
+    const nonUtilLowVis = evaluateObstructionPart77(p, 200, AIRFIELD_ELEV, RUNWAY, AIRFIELD_ELEV, 'non_utility_non_precision_low')
 
     const utilH = utility.surfaces.find(s => s.surfaceKey === 'horizontal')
-    const nonUtilH = nonUtility.surfaces.find(s => s.surfaceKey === 'horizontal')
+    const nonUtilVisualH = nonUtilVisual.surfaces.find(s => s.surfaceKey === 'horizontal')
+    const nonUtilLowVisH = nonUtilLowVis.surfaces.find(s => s.surfaceKey === 'horizontal')
 
     expect(utilH?.isWithinBounds).toBe(false)
-    expect(nonUtilH?.isWithinBounds).toBe(true)
-    expect(nonUtilH?.violated).toBe(true)
+    expect(nonUtilVisualH?.isWithinBounds).toBe(false) // visual runway → 5,000-ft arc per §77.19(a)(1)
+    expect(nonUtilLowVisH?.isWithinBounds).toBe(true)
+    expect(nonUtilLowVisH?.violated).toBe(true)
   })
 })
 
