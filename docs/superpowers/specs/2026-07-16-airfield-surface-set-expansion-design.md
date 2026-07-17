@@ -544,25 +544,32 @@ Each step independently committable to `main`; `npx tsc --noEmit` after each.
    horizontal-portion (items 5–11, incl. Class A VFR/IFR split), inner horizontal
    7,500-ft radius / 15,000-ft width / 150-ft elevation (items 12–14, **N/A for
    Class A VFR**), transitional 7:1 (item 15); conical slope 20:1 and outer
-   horizontal 500-ft elevation (Figure 3-19 legend). **STILL BLOCKING for conical
-   + outer horizontal *dimensions*:** the table rows after item 15 and the table
-   NOTES (incl. Note 4) were not in the extract — owner to supply document
-   pp. 83–84. The commonly quoted 20:1 × 7,000 ft / 500 ft × 30,000 ft figures
-   still must not be encoded as verified (the 7,000-ft conical extent is
-   *derivable* from verified slope+elevations but awaits the printed row).
+   horizontal 500-ft elevation (Figure 3-19 legend). Update (same day): owner
+   also supplied the Table 3-7 NOTES (screenshot in docs/references/Screenshots/)
+   and Figure 3-17 (p. 63) — the notes directly follow item 15, so **Table 3-7
+   carries no conical / outer horizontal dimension rows**; those live only in
+   the glossary definitions (as originally researched). **STILL BLOCKING:** the
+   glossary definitions of "outer horizontal surface" (extent not derivable —
+   commonly quoted 30,000 ft must not be encoded unverified) and "conical
+   surface" (7,000-ft band *derivable* from verified 20:1 + 150→500-ft
+   elevations and structurally confirmed by Figure 3-17; sight the printed
+   definition before marking verified rather than derived).
 2. **OWNER DECISION 2026-07-16: correct the encoded Class B criteria to the UFC
    values** (and offer **all five** standards in the per-evaluation what-if
    picker — decision (c) confirmed). Verified corrections (reference doc above):
    inner_horizontal radius 13,120 ft → **7,500 ft** (item 12); ADCS width
    schedule half-widths 1,000 ft (AF start) → 4,500 ft (horizontal-portion
    start) → 8,000 ft (end), replacing the encoded 2,550-ft outer half-width.
-   **One open sub-item — ADCS sloped-portion length:** item 6 as printed says
-   50,000 ft sloped (Change-3 edit), which at 50:1 contradicts item 11's 500-ft
-   horizontal elevation (50:1 reaches 500 ft at 25,000 ft). Internally-coherent
-   reading: sloped 25,000 ft to 500 ft, then horizontal to 50,000 ft total.
-   Await the table NOTES (Note 4) / glossary ADCS definition or owner
-   adjudication before encoding the length split; every other Class B value is
-   encodable now. The ADCS horizontal-portion model gap also applies to
+   **ADCS geometry — RESOLVED (owner adjudication + Note 4, 2026-07-16):** the
+   sloped portion is 50,000 ft long as printed (owner: 1,000 ft is its max
+   height, not a length contradiction). Encodable model, all rows cohering
+   (full derivation in docs/references/ufc-3-260-01-table3-7-verified.md): one
+   50,000-ft ADCS footprint per end flaring uniformly 2,000 → 16,000 ft (width
+   at 25,000 ft = the printed 9,000 ft); 50:1 slope the full length; the 500-ft
+   horizontal portion begins where the slope crosses 500 ft above established
+   airfield elevation (nominally 25,000 ft, shifting with threshold-vs-airfield
+   elevation per Note 4); evaluation envelope = min(slope, 500-ft horizontal),
+   since penetration of any surface is an obstruction. The ADCS horizontal-portion model gap also applies to
    **Class A IFR** (7,000 → 16,000 ft at 500 ft, items 9–11 — now verified);
    the ADCS shape gains horizontal-portion fields in this build for both
    classes. Army_B's ADCS outer half-width remains PLACEHOLDER pending an
