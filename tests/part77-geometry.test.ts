@@ -348,6 +348,12 @@ describe('buildPart77SurfacePolygons', () => {
     // Precision runway carries a segment break; the visual runway does not.
     expect(feats.some(f => f.id.startsWith('p77-segment-break') && f.rwyIndex === 0)).toBe(true)
     expect(feats.some(f => f.id.startsWith('p77-segment-break') && f.rwyIndex === 1)).toBe(false)
+    // Each runway's p77-horizontal stadium uses its own type's radius, not a
+    // shared/default one: precision (10,000-ft radius) vs utility visual (5,000-ft).
+    const horiz0 = feats.find(f => f.id === 'p77-horizontal' && f.rwyIndex === 0)!
+    const horiz1 = feats.find(f => f.id === 'p77-horizontal' && f.rwyIndex === 1)!
+    expect(maxDistFromMidpoint(horiz0.coords)).toBeCloseTo(10000 + HALF_LEN_FT + EXTENSION_FT, -2) // precision
+    expect(maxDistFromMidpoint(horiz1.coords)).toBeCloseTo(5000 + HALF_LEN_FT + EXTENSION_FT, -2)   // utility visual
   })
 
   it('NULL approach type falls back to non_utility_non_precision_low', () => {

@@ -77,6 +77,11 @@ const LEGEND_ITEMS: { label: string; color: string; toggleKey: ToggleKey; defaul
   { label: 'APZ II', color: IMAGINARY_SURFACES.apz_ii.color, toggleKey: 'apz-ii', defaultOn: false },
 ]
 
+// Shared between the UFC and Part 77 layer lists — the runway outline itself
+// isn't a §77.19/UFC "surface," so it has no set-specific color; both branches
+// draw it identically.
+const RUNWAY_LAYER = { id: 'runway', color: '#FFFFFF', opacity: 0.5 }
+
 const SURFACE_LAYERS = [
   { id: 'outer-horizontal', color: IMAGINARY_SURFACES.outer_horizontal.color, opacity: 0.08 },
   { id: 'conical', color: IMAGINARY_SURFACES.conical.color, opacity: 0.1 },
@@ -94,7 +99,7 @@ const SURFACE_LAYERS = [
   { id: 'primary-surface', color: IMAGINARY_SURFACES.primary.color, opacity: 0.18 },
   { id: 'graded-area-end1', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
   { id: 'graded-area-end2', color: IMAGINARY_SURFACES.graded_area.color, opacity: 0.2 },
-  { id: 'runway', color: '#FFFFFF', opacity: 0.5 },
+  RUNWAY_LAYER,
 ]
 
 // Map surface layer IDs to their toggle key
@@ -148,6 +153,7 @@ const PART77_SURFACE_LAYERS = [
   { id: 'p77-segment-break-end1', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
   { id: 'p77-segment-break-end2', color: PART77_SURFACE_META.approach.color, opacity: 0.32 },
   { id: 'p77-primary', color: PART77_SURFACE_META.primary.color, opacity: 0.18 },
+  RUNWAY_LAYER,
 ]
 
 // Map a Part 77 layer id to its toggle key. The transitional/approach/segment-
@@ -367,8 +373,15 @@ export default function AirfieldMapGoogle({ onPointSelected, selectedPoint, surf
     // zone / APZ / graded area / outer horizontal), with per-runway stadiums.
     if (allRwys.length > 0) {
       const isPart77 = surfaceSet === 'faa_part77'
+      // Part 77's builder stays pure §77.19 geometry (no runway pavement
+      // outline, per lib/calculations/part77-geometry.ts); the outline is
+      // shared chrome, not a surface, so it's appended here — same as the
+      // UFC branch's per-runway 'runway' feature in buildSurfacePolygons.
       const surfaces = isPart77
-        ? buildPart77SurfacePolygons(runwaysWithTypes)
+        ? [
+            ...buildPart77SurfacePolygons(runwaysWithTypes),
+            ...runwaysWithTypes.map((r, ri) => ({ id: 'runway', coords: generateRunwayPolygon(r.geometry), rwyIndex: ri })),
+          ]
         : buildSurfacePolygons(allRwys)
       const activeLayers = isPart77 ? PART77_SURFACE_LAYERS : SURFACE_LAYERS
       const activeLegend: LegendItem[] = isPart77 ? PART77_LEGEND_ITEMS : LEGEND_ITEMS

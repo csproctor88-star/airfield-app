@@ -6,11 +6,19 @@ import type { ObstructionRow } from '@/lib/supabase/obstructions'
 // show a "Surface Set" row instead of "Runway Class" (a UFC-only concept);
 // UFC evaluations — including legacy rows with a NULL surface_set — keep
 // "Runway Class" and gain a "Surface Set" row above it for symmetry.
+// The Part 77 case below fixtures runway_class: null so the
+// `not.toContain('Class null')` assertion is load-bearing: `rwClass` is
+// computed unconditionally in the generator as `Class ${runway_class}`, so a
+// non-null fixture value could never produce the literal "Class null" even
+// if a regression leaked rwClass into the Part 77 branch. (Checked against
+// the live schema: obstruction_evaluations.runway_class is NOT NULL, so this
+// is a defensive test input for the generator's null-handling, not a value
+// the column can hold today.)
 // `doc.output()` is safe to substring-search here because these generators
 // construct the jsPDF with no `compress` option (defaults to false), so the
 // content stream's text-showing operators are plain, un-deflated bytes.
 
-function evaluation(overrides: Partial<ObstructionRow> = {}): ObstructionRow {
+function evaluation(overrides: Omit<Partial<ObstructionRow>, 'runway_class'> & { runway_class?: string | null } = {}): ObstructionRow {
   return {
     id: 'eval-1',
     display_id: 'OBS-2026-TEST',
@@ -41,7 +49,7 @@ function evaluation(overrides: Partial<ObstructionRow> = {}): ObstructionRow {
 describe('generateObstructionPdf — surface-set details row', () => {
   it('Part 77 evaluations print a Surface Set row and never a Runway Class row', async () => {
     const { doc, filename } = await generateObstructionPdf({
-      evaluation: evaluation({ surface_set: 'faa_part77', runway_class: 'B' }),
+      evaluation: evaluation({ surface_set: 'faa_part77', runway_class: null }),
       photoDataUrls: [],
       mapDataUrl: null,
       baseName: 'Test Muni',

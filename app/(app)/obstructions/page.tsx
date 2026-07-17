@@ -874,13 +874,24 @@ function ObstructionsContent() {
           </div>
           {surfaceSet === 'faa_part77' && runways.length > 0 && (
             <div style={{ marginTop: 6, fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-              Per-runway approach types drive Part 77 dimensions. Bases with mixed runway
-              categories should configure each runway&apos;s FAA Approach Type in{' '}
-              <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Setup → Runways</a>.
-              {runways.some(r => !(r as { faa_approach_type?: string | null }).faa_approach_type) && (
-                <span style={{ color: 'var(--color-warning)', marginLeft: 4 }}>
-                  {runways.filter(r => !(r as { faa_approach_type?: string | null }).faa_approach_type).length} runway(s) not configured — defaulting to non-utility non-precision (&lt;¾ mi vis).
-                </span>
+              {(isCivilian(currentInstallation) || getSurfaceSet(currentInstallation) === 'faa_part77') ? (
+                <>
+                  Per-runway approach types drive Part 77 dimensions. Bases with mixed runway
+                  categories should configure each runway&apos;s FAA Approach Type in{' '}
+                  <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Setup → Runways</a>.
+                  {runways.some(r => !(r as { faa_approach_type?: string | null }).faa_approach_type) && (
+                    <span style={{ color: 'var(--color-warning)', marginLeft: 4 }}>
+                      {runways.filter(r => !(r as { faa_approach_type?: string | null }).faa_approach_type).length} runway(s) not configured — defaulting to non-utility non-precision (&lt;¾ mi vis).
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  This what-if evaluation uses non-utility non-precision (&lt;¾ mi) defaults for
+                  every runway. Setting this base&apos;s obstruction surface set to Part 77 in{' '}
+                  <a href="/base-config/setup" style={{ color: 'var(--color-accent)' }}>Base Setup</a>{' '}
+                  unlocks per-runway FAA Approach Types.
+                </>
               )}
             </div>
           )}
