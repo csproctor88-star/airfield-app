@@ -44,6 +44,7 @@ const TYPE_LABELS: Record<WriteType, string> = {
   fpr_save: 'FPR check save',
   driving_check_save: 'Driving spot check save',
   driving_check_update: 'Driving spot check update',
+  local_reg_review: 'Local regulation review',
 }
 
 const STATUS_COLORS: Record<QueueStatus, { bg: string; fg: string; label: string }> = {

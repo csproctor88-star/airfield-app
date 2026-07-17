@@ -41,6 +41,7 @@ import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createSighting } from '@/lib/supabase/wildlife'
 import { saveFprCheck, FPR_SAVED_REFETCH_FAILED } from '@/lib/supabase/fpr'
 import { createDrivingCheck, updateDrivingCheck } from '@/lib/supabase/driving-checks'
+import { reviewLocalReg } from '@/lib/supabase/local-regulations'
 import {
   ConflictError,
   NonRetriableError,
@@ -535,6 +536,44 @@ const drivingCheckUpdateHandler: WriteHandler<DrivingCheckUpdatePayload, Driving
 }
 
 // ---------------------------------------------------------------------------
+// local_reg_review
+// ---------------------------------------------------------------------------
+
+export interface LocalRegReviewPayload {
+  baseId: string
+  regulationId: string
+  version: number
+}
+export type LocalRegReviewResult = Awaited<ReturnType<typeof reviewLocalReg>>['data']
+
+/**
+ * Records a Base Regs review at the document version the user saw when
+ * they attested — `version` is pinned into the payload at enqueue time,
+ * not re-read at drain time.
+ *
+ * This makes RLS the correctness backstop: local_regulation_reviews_insert
+ * (2026071731_local_regs_tables.sql) requires `version_at_review` to equal
+ * the document's LIVE version via a WITH CHECK subselect. If a manager
+ * replaces the PDF between when this write was queued (offline) and when
+ * the queue drains, the pinned version is no longer live and Postgres
+ * rejects the INSERT. That rejection can NEVER succeed on retry — the
+ * document changed out from under the queued review; the user must open
+ * the new edition and re-review it (which is also exactly what
+ * getRegReviewStatus would already report: `updated`, not `overdue`).
+ * throwForStructuredError already routes any non-network structured error
+ * to NonRetriableError, so no bespoke stale-version check is needed here
+ * — this comment exists so the classification isn't mistaken for an
+ * oversight if this handler is ever "fixed" to retry.
+ */
+const localRegReviewHandler: WriteHandler<LocalRegReviewPayload, LocalRegReviewResult> = async (
+  payload,
+) => {
+  const { data, error } = await reviewLocalReg(payload.baseId, payload.regulationId, payload.version)
+  if (error) throwForStructuredError(error)
+  return data
+}
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -567,6 +606,7 @@ export function registerAllHandlers(queue: WriteQueue): void {
   queue.registerHandler('fpr_save', fprSaveHandler)
   queue.registerHandler('driving_check_save', drivingCheckSaveHandler)
   queue.registerHandler('driving_check_update', drivingCheckUpdateHandler)
+  queue.registerHandler('local_reg_review', localRegReviewHandler)
 }
 
 /**
@@ -591,4 +631,5 @@ export const HANDLERS: Partial<Record<WriteType, WriteHandler<any, any>>> = {
   fpr_save: fprSaveHandler,
   driving_check_save: drivingCheckSaveHandler,
   driving_check_update: drivingCheckUpdateHandler,
+  local_reg_review: localRegReviewHandler,
 }

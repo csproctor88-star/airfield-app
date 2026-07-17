@@ -39,6 +39,7 @@ export type WriteType =
   | 'fpr_save'
   | 'driving_check_save'
   | 'driving_check_update'
+  | 'local_reg_review'
 
 /**
  * Lifecycle state of a queued write.

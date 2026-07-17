@@ -1,0 +1,42 @@
+-- ============================================================
+-- ****  OWNER REVIEW REQUIRED BEFORE APPLYING — READ THIS FIRST  ****
+-- ============================================================
+-- Local Regulations (Base Regs) — Migration 4/4: enable the module on
+-- existing bases.
+--
+-- *** This is a bulk UPDATE across every row of the `bases` table ***
+-- (an owner-row UPDATE, not an additive insert) — the class of change
+-- that gets extra scrutiny before ever touching the linked/remote DB.
+-- It does not drop or corrupt anything (purely additive to the
+-- enabled_modules array, and idempotent — see the WHERE guard below),
+-- but it is NOT a narrow, single-row, low-blast-radius change, so it is
+-- called out here explicitly rather than folded quietly into the other
+-- three local_regs migrations.
+--
+-- Why this migration exists at all: enabled_modules is a frozen text[]
+-- snapshot per base. lib/modules-config.ts will register 'local_regs'
+-- with `defaultEnabled: true`, but that flag ONLY affects bases created
+-- AFTER this module exists — it does nothing for bases whose
+-- enabled_modules array was already frozen before today. Every existing
+-- base needs this one-time backfill or the Base Regs tab and its badge
+-- stay invisible on them (the exact systemic gap the read_file backfill
+-- in 2026062103_read_file_enable_module.sql, and the AMTR backfill in
+-- 2026062000_backfill_amtr_enabled_modules.sql, closed for their modules).
+--
+-- STAGED — NOT applied. Staged 2026-07-17 for owner review; apply LAST
+-- in the four-migration sequence (2026071730 → 2026071731 → 2026071732 →
+-- this file) with `npx supabase db query --linked --file <path>`, and
+-- only after confirming the tab/badge/CRUD layer is ready to render —
+-- this flips the module on for every base immediately.
+--
+-- Post-apply verification:
+--   SELECT count(*) FROM bases WHERE 'local_regs' = ANY(enabled_modules);
+--   -- expect this to equal count(*) FROM bases (every base now has it)
+--   SELECT id, icao, enabled_modules FROM bases
+--     WHERE NOT ('local_regs' = ANY(COALESCE(enabled_modules, '{}')));
+--   -- expect 0 rows
+-- ============================================================
+
+UPDATE bases
+SET enabled_modules = array_append(enabled_modules, 'local_regs')
+WHERE NOT ('local_regs' = ANY(COALESCE(enabled_modules, '{}')));

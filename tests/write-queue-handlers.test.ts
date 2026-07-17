@@ -70,6 +70,11 @@ const { state } = vi.hoisted(() => ({
       throw: null as Error | null,
       calls: [] as unknown[],
     },
+    localRegReview: {
+      next: { data: null as unknown, error: null as string | null },
+      throw: null as Error | null,
+      calls: [] as unknown[],
+    },
   },
 }))
 
@@ -196,6 +201,14 @@ vi.mock('@/lib/supabase/driving-checks', () => ({
   }),
 }))
 
+vi.mock('@/lib/supabase/local-regulations', () => ({
+  reviewLocalReg: vi.fn(async (baseId: unknown, regulationId: unknown, version: unknown) => {
+    state.localRegReview.calls.push({ baseId, regulationId, version })
+    if (state.localRegReview.throw) throw state.localRegReview.throw
+    return state.localRegReview.next
+  }),
+}))
+
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
 import { ConflictError, NonRetriableError } from '@/lib/sync/types'
 import { WriteQueue } from '@/lib/sync/write-queue'
@@ -220,6 +233,7 @@ beforeEach(() => {
   state.fprSave = { next: { data: null, error: null }, throw: null, calls: [] }
   state.drivingCheckSave = { next: { data: null, error: null }, throw: null, calls: [] }
   state.drivingCheckUpdate = { next: { data: null, error: null }, throw: null, calls: [] }
+  state.localRegReview = { next: { data: null, error: null }, throw: null, calls: [] }
 })
 
 const INSPECTION_PAYLOAD = {
@@ -338,6 +352,12 @@ const DRIVING_CHECK_UPDATE_PAYLOAD = {
       sort_order: 10,
     },
   ],
+}
+
+const LOCAL_REG_REVIEW_PAYLOAD = {
+  baseId: 'base-a',
+  regulationId: 'reg-1',
+  version: 2,
 }
 
 describe('inspection_file handler', () => {
@@ -956,6 +976,54 @@ describe('driving_check_update handler', () => {
   })
 })
 
+describe('local_reg_review handler', () => {
+  it('returns the saved review row on success and passes the pinned version through', async () => {
+    const handler = HANDLERS.local_reg_review!
+    state.localRegReview.next = { data: { id: 'rev-1', version_at_review: 2 }, error: null }
+    const result = await handler(LOCAL_REG_REVIEW_PAYLOAD)
+    expect(result).toMatchObject({ id: 'rev-1' })
+    expect(state.localRegReview.calls).toEqual([
+      { baseId: 'base-a', regulationId: 'reg-1', version: 2 },
+    ])
+  })
+
+  // The stale-version case: RLS's version-equality WITH CHECK on
+  // local_regulation_reviews_insert rejects the insert when the pinned
+  // `version` no longer matches the doc's live version (someone replaced
+  // it while this write sat queued offline). That surfaces as a
+  // row-level-security structured error — friendlyError() maps it to
+  // "You do not have permission to perform this action.", which
+  // throwForStructuredError already classifies NonRetriable via the
+  // non-network branch. This is deliberate and permanent: a retry can
+  // NEVER succeed against a version that will never match again — the
+  // user must open the new edition and re-review.
+  it('classifies a stale-version RLS rejection as NonRetriable (can never succeed on retry)', async () => {
+    const handler = HANDLERS.local_reg_review!
+    state.localRegReview.next = {
+      data: null,
+      error: 'You do not have permission to perform this action.',
+    }
+    await expect(handler(LOCAL_REG_REVIEW_PAYLOAD)).rejects.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('treats a "Failed to fetch" structured error as transient', async () => {
+    const handler = HANDLERS.local_reg_review!
+    state.localRegReview.next = { data: null, error: 'Failed to fetch' }
+    await expect(handler(LOCAL_REG_REVIEW_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
+  })
+
+  it('lets thrown fetch errors propagate so the queue treats them as transient', async () => {
+    const handler = HANDLERS.local_reg_review!
+    state.localRegReview.throw = new TypeError('Failed to fetch')
+    await expect(handler(LOCAL_REG_REVIEW_PAYLOAD)).rejects.toThrow(/fetch/i)
+    try {
+      await handler(LOCAL_REG_REVIEW_PAYLOAD)
+    } catch (err) {
+      expect(err).not.toBeInstanceOf(NonRetriableError)
+    }
+  })
+})
+
 describe('registerAllHandlers + queue end-to-end', () => {
   it('inspection: queues a transient failure and drains it once the next attempt succeeds', async () => {
     const storage = new MemoryStorage()
@@ -1066,6 +1134,56 @@ describe('registerAllHandlers + queue end-to-end', () => {
 
     const summary = await queue.drain()
     expect(summary.committed).toBe(1)
+    expect(await storage.list()).toHaveLength(0)
+  })
+
+  it('local_reg_review is registered: queues a transient failure and drains it once reconnected', async () => {
+    const storage = new MemoryStorage()
+    let now = new Date('2026-07-17T12:00:00Z')
+    const queue = new WriteQueue({
+      storage,
+      isOnline: () => true,
+      now: () => now,
+      uuid: () => 'test-uuid-lrr',
+    })
+    registerAllHandlers(queue)
+
+    state.localRegReview.throw = new TypeError('Failed to fetch')
+    const r1 = await queue.enqueueOrExecute('local_reg_review', LOCAL_REG_REVIEW_PAYLOAD, {
+      baseId: 'base-a',
+      userId: 'user-a',
+    })
+    expect(r1.status).toBe('queued')
+
+    state.localRegReview.throw = null
+    state.localRegReview.next = { data: { id: 'rev-1' }, error: null }
+    now = new Date('2026-07-17T12:00:30Z')
+
+    const summary = await queue.drain()
+    expect(summary.committed).toBe(1)
+    expect(await storage.list()).toHaveLength(0)
+  })
+
+  it('local_reg_review: a stale-version rejection fails immediately without queuing a retry', async () => {
+    const storage = new MemoryStorage()
+    const queue = new WriteQueue({
+      storage,
+      isOnline: () => true,
+      now: () => new Date('2026-07-17T12:00:00Z'),
+      uuid: () => 'test-uuid-lrr-stale',
+    })
+    registerAllHandlers(queue)
+
+    state.localRegReview.next = {
+      data: null,
+      error: 'You do not have permission to perform this action.',
+    }
+    await expect(
+      queue.enqueueOrExecute('local_reg_review', LOCAL_REG_REVIEW_PAYLOAD, {
+        baseId: 'base-a',
+        userId: 'user-a',
+      }),
+    ).rejects.toBeInstanceOf(NonRetriableError)
     expect(await storage.list()).toHaveLength(0)
   })
 

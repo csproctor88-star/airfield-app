@@ -111,6 +111,11 @@ export const PERM = {
   READ_FILE_VIEW:                       'read_file:view',
   READ_FILE_MANAGE:                     'read_file:manage',
 
+  // Local Regulations (Base Regs) — recurring review of base OIs / wing
+  // instructions / local supplements (USAF + civilian)
+  LOCAL_REGS_VIEW:                      'local_regs:view',
+  LOCAL_REGS_MANAGE:                    'local_regs:manage',
+
   // SMS — Safety Management System (Part 139 §139.401-415)
   SMS_READ:                             'sms:read',
   SMS_WRITE:                            'sms:write',
