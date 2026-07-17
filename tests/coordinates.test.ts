@@ -80,6 +80,44 @@ describe('formatters', () => {
   })
 })
 
+describe(`formatDMS seconds carry (never renders 60.0" or a 60' minutes field)`, () => {
+  const carryCases: Array<{ name: string; point: LatLon; expected: string }> = [
+    {
+      name: 'seconds rounding to 60.0 carry into minutes',
+      point: { lat: 42.6166666, lon: -82.82047 }, // 42°36'59.99976"
+      expected: `42°37'00.0"N 082°49'13.7"W`,
+    },
+    {
+      name: 'cascade carry minutes into degrees',
+      point: { lat: 41 + 59 / 60 + 59.99 / 3600, lon: -82.82047 }, // 41°59'59.99"
+      expected: `42°00'00.0"N 082°49'13.7"W`,
+    },
+    {
+      name: 'longitude cascade carry into degrees',
+      point: { lat: 42.60522, lon: -(82 + 59 / 60 + 59.97 / 3600) }, // 082°59'59.97"W
+      expected: `42°36'18.8"N 083°00'00.0"W`,
+    },
+    {
+      name: 'hemisphere boundary: near -1° lat stays S with correct carry',
+      point: { lat: -0.9999999861, lon: 0 }, // 00°59'59.99995"S
+      expected: `01°00'00.0"S 000°00'00.0"E`,
+    },
+  ]
+  for (const c of carryCases) {
+    it(c.name, () => {
+      expect(formatDMS(c.point)).toBe(c.expected)
+    })
+  }
+
+  it('parser round-trips the carried formatDMS output', () => {
+    for (const c of carryCases) {
+      const res = expectOk(parseCoordinateInput(formatDMS(c.point)))
+      expect(res.format).toBe('dms')
+      expect(distMeters(res.point, c.point)).toBeLessThan(3)
+    }
+  })
+})
+
 describe('decimal degrees (dd)', () => {
   const cases: Array<{ name: string; input: string }> = [
     { name: 'comma separated, signed', input: '42.60522, -82.82047' },

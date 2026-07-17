@@ -30,16 +30,22 @@ export function formatDD(point: LatLon, digits = 5): string {
 }
 
 /** Degrees-minutes-seconds with hemisphere suffix,
- *  e.g. `42°36'18.8"N 082°49'13.7"W`. Seconds carry one decimal. */
+ *  e.g. `42°36'18.8"N 082°49'13.7"W`. Seconds carry one decimal.
+ *  Seconds are rounded to one decimal BEFORE the fields are printed, and a
+ *  60.0 result carries into minutes (and minutes into degrees), so the output
+ *  never shows an out-of-range `60.0"` / `60'` field — e.g. 42°36'59.99"
+ *  renders as 42°37'00.0" and 41°59'59.99" as 42°00'00.0". */
 export function formatDMS(point: LatLon): string {
   const part = (dec: number, degPad: number, pos: string, neg: string) => {
     const dir = dec >= 0 ? pos : neg
     const abs = Math.abs(dec)
-    const d = Math.floor(abs)
+    let d = Math.floor(abs)
     const minFloat = (abs - d) * 60
-    const m = Math.floor(minFloat)
-    const s = ((minFloat - m) * 60).toFixed(1)
-    return `${String(d).padStart(degPad, '0')}°${String(m).padStart(2, '0')}'${s.padStart(4, '0')}"${dir}`
+    let m = Math.floor(minFloat)
+    let s = Math.round((minFloat - m) * 60 * 10) / 10
+    if (s >= 60) { s = 0; m += 1 }
+    if (m >= 60) { m = 0; d += 1 }
+    return `${String(d).padStart(degPad, '0')}°${String(m).padStart(2, '0')}'${s.toFixed(1).padStart(4, '0')}"${dir}`
   }
   return `${part(point.lat, 2, 'N', 'S')} ${part(point.lon, 3, 'E', 'W')}`
 }
