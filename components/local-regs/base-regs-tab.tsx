@@ -55,9 +55,10 @@ const STATE_META: Record<Exclude<RegReviewState, 'current'>, { label: string; da
 }
 
 export function BaseRegsTab() {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
   const { has } = usePermissions()
   const canManage = has(PERM.LOCAL_REGS_MANAGE)
+  const [generatingReport, setGeneratingReport] = useState(false)
 
   const [regs, setRegs] = useState<LocalRegulationRow[]>([])
   const [myReviews, setMyReviews] = useState<LocalRegReviewRow[]>([])
@@ -208,6 +209,28 @@ export function BaseRegsTab() {
     return { reviewed, outstanding, reviewedRoster, total: reviewers.length }
   }, [allReviews, reviewers])
 
+  // ── Compliance report (manager) — same reviewed/outstanding partition as
+  // the on-screen Compliance panels, so the PDF never disagrees with the chips.
+  const runReport = async () => {
+    setGeneratingReport(true)
+    try {
+      const { generateLocalRegsReviewPdf } = await import('@/lib/local-regs-review-pdf')
+      const { doc, filename } = await generateLocalRegsReviewPdf({
+        baseName: currentInstallation?.name,
+        baseIcao: currentInstallation?.icao,
+        regs: active,
+        reviewers,
+        reviews: allReviews,
+        generatedAtIso: new Date().toISOString(),
+      })
+      doc.save(filename)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not generate the compliance report')
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
+
   return (
     <div>
       {/* Header row: intro + manager actions */}
@@ -218,9 +241,8 @@ export function BaseRegsTab() {
         </div>
         {canManage && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {/* Compliance report ships disabled — the PDF arrives with the badge task. */}
-            <Btn variant="secondary" disabled title="PDF report arrives with the badge task">
-              <FileDown size={15} /> Compliance report
+            <Btn variant="secondary" onClick={runReport} disabled={generatingReport}>
+              <FileDown size={15} /> {generatingReport ? 'Generating…' : 'Compliance report'}
             </Btn>
             <Btn variant="primary" onClick={() => setShowAdd(true)}>
               <Upload size={15} /> Add regulation

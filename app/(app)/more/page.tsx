@@ -394,6 +394,7 @@ export default function MorePage() {
     if (href === '/ppr') return badgeCounts.ppr
     if (href === '/discrepancies') return badgeCounts.discrepancies
     if (href === '/notams') return expiringNotamCount
+    if (href === '/regulations') return badgeCounts.localRegsDue
     return 0
   }
 

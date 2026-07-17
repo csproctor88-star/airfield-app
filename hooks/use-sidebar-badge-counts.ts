@@ -12,6 +12,7 @@ import { fetchRevisedQrcCount } from '@/lib/supabase/qrc-reviews'
 import { fetchPendingVerificationCount } from '@/lib/supabase/discrepancies'
 import { fetchAmtrNotificationCount } from '@/lib/supabase/amtr'
 import { fetchUnacknowledgedReadFileCount } from '@/lib/supabase/read-files'
+import { fetchDueLocalRegCount } from '@/lib/supabase/local-regulations'
 
 /**
  * Per-module pending-action counts for sidebar badges.
@@ -32,6 +33,10 @@ import { fetchUnacknowledgedReadFileCount } from '@/lib/supabase/read-files'
  *           marked the work done; AMOPS still needs to verify and close).
  *           Gated on discrepancies:close — only the AFM verification
  *           role sees the dot.
+ *   localRegsDue — active local regulations (Base Regs) the current user
+ *           has never reviewed / must re-review (version bump or interval
+ *           elapsed). Gated on local_regs:view. Drives the /regulations
+ *           sidebar dot — the Read File dot's sibling.
  *   total — sum across all modules tracked here. Used to drive the
  *           Operations section-header dot.
  */
@@ -48,6 +53,7 @@ export function useSidebarBadgeCounts() {
   const [discrepanciesPendingVerification, setDiscrepanciesPendingVerification] = useState(0)
   const [amtrNotifications, setAmtrNotifications] = useState(0)
   const [readFileOutstanding, setReadFileOutstanding] = useState(0)
+  const [localRegsDue, setLocalRegsDue] = useState(0)
 
   const refresh = useCallback(async () => {
     if (!installationId || !permsLoaded) return
@@ -108,6 +114,11 @@ export function useSidebarBadgeCounts() {
       tasks.push(fetchUnacknowledgedReadFileCount(installationId).then(setReadFileOutstanding))
     } else {
       setReadFileOutstanding(0)
+    }
+    if (has(PERM.LOCAL_REGS_VIEW)) {
+      tasks.push(fetchDueLocalRegCount(installationId).then(setLocalRegsDue))
+    } else {
+      setLocalRegsDue(0)
     }
     await Promise.all(tasks)
   }, [installationId, has, permsLoaded])
@@ -180,6 +191,16 @@ export function useSidebarBadgeCounts() {
         { event: '*', schema: 'public', table: 'read_file_acknowledgments', filter: `base_id=eq.${installationId}` },
         () => refresh(),
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'local_regulations', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'local_regulation_reviews', filter: `base_id=eq.${installationId}` },
+        () => refresh(),
+      )
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.warn('[sidebar-badge] realtime channel', status,
@@ -242,7 +263,8 @@ export function useSidebarBadgeCounts() {
   const amtr = amtrNotifications
   const readFile = readFileOutstanding
   const qrcReviseCount = qrcRevised
-  const total = ppr + qrc + discrepancies + amtr + readFile + qrcReviseCount
+  const localRegs = localRegsDue
+  const total = ppr + qrc + discrepancies + amtr + readFile + qrcReviseCount + localRegs
 
-  return { ppr, qrc, qrcRevised: qrcReviseCount, discrepancies, amtr, readFile, total }
+  return { ppr, qrc, qrcRevised: qrcReviseCount, discrepancies, amtr, readFile, localRegsDue: localRegs, total }
 }

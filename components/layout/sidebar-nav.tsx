@@ -528,6 +528,22 @@ export function SidebarNav() {
               {badgeCounts.readFile > 9 ? '9+' : badgeCounts.readFile}
             </span>
           )}
+          {/* Local Regulations (Base Regs) due dot — active regs the current user has
+              never reviewed / must re-review at the current version. Sibling of the
+              Read File dot; rides the existing Reference Library entry (/regulations)
+              since Base Regs has no dedicated sidebar item. Red: action-required. */}
+          {href === '/regulations' && badgeCounts.localRegsDue > 0 && !active && (
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: isOpen ? 16 : 14, height: isOpen ? 16 : 14,
+              borderRadius: '50%', background: 'var(--color-danger)', color: '#fff',
+              fontSize: 9, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              lineHeight: 1, boxShadow: '0 0 6px rgba(239,68,68,0.5)',
+            }}>
+              {badgeCounts.localRegsDue > 9 ? '9+' : badgeCounts.localRegsDue}
+            </span>
+          )}
         </span>
         {isOpen && <span style={{ flex: 1 }}>{def.name}</span>}
         {isOpen && href === '/notams' && expiringNotamCount > 0 && (
@@ -563,6 +579,11 @@ export function SidebarNav() {
         {isOpen && href === '/read-file' && badgeCounts.readFile > 0 && !active && (
           <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
             {badgeCounts.readFile} to review
+          </span>
+        )}
+        {isOpen && href === '/regulations' && badgeCounts.localRegsDue > 0 && !active && (
+          <span style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-danger)', marginLeft: 'auto' }}>
+            {badgeCounts.localRegsDue} to review
           </span>
         )}
       </Link>
@@ -641,15 +662,16 @@ export function SidebarNav() {
     const sectionAmtr = section.items.includes('/amtr') ? badgeCounts.amtr : 0
     const sectionReadFile = section.items.includes('/read-file') ? badgeCounts.readFile : 0
     const sectionQrcRevised = section.items.includes('/qrc') ? badgeCounts.qrcRevised : 0
-    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr + sectionReadFile + sectionQrcRevised
+    const sectionLocalRegs = section.items.includes('/regulations') ? badgeCounts.localRegsDue : 0
+    const sectionPendingCount = sectionPpr + sectionQrc + sectionDisc + sectionAmtr + sectionReadFile + sectionQrcRevised + sectionLocalRegs
 
     // Dot color matches the contributor (so it reads the same as the module's
-    // own nav dot): red for PPR/QRC action, amber for AMTR training action,
-    // green for Discrepancies-pending-verification. Priority red > amber > green
-    // when a section mixes them.
+    // own nav dot): red for PPR/QRC/Read File/Local Regs action, amber for AMTR
+    // training action, green for Discrepancies-pending-verification. Priority
+    // red > amber > green when a section mixes them.
     let sectionDotColor = 'var(--color-danger)'
     let sectionDotGlow = '0 0 6px rgba(239,68,68,0.5)'
-    if (sectionPpr === 0 && sectionQrc === 0 && sectionReadFile === 0) {
+    if (sectionPpr === 0 && sectionQrc === 0 && sectionReadFile === 0 && sectionLocalRegs === 0) {
       if (sectionAmtr > 0 || sectionQrcRevised > 0) {
         sectionDotColor = 'var(--color-warning)'
         sectionDotGlow = '0 0 6px rgba(245,158,11,0.5)'

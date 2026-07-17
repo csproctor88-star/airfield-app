@@ -189,6 +189,55 @@ describe('partitionCompliance', () => {
   })
 })
 
+describe('generateLocalRegsReviewPdf', () => {
+  it('returns a {doc, filename} and does not throw for an empty base (no regs, no reviewers)', async () => {
+    const { generateLocalRegsReviewPdf } = await import('@/lib/local-regs-review-pdf')
+    const { doc, filename } = await generateLocalRegsReviewPdf({
+      baseName: 'Example AFB',
+      baseIcao: 'KXYZ',
+      regs: [],
+      reviewers: [],
+      reviews: [],
+      generatedAtIso: '2026-07-17T15:00:00Z',
+    })
+    expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1)
+    expect(filename).toBe('local-regs-review-kxyz-2026-07-17.pdf')
+  })
+
+  it('falls back to "base" in the filename when no ICAO is supplied', async () => {
+    const { generateLocalRegsReviewPdf } = await import('@/lib/local-regs-review-pdf')
+    const { filename } = await generateLocalRegsReviewPdf({
+      regs: [], reviewers: [], reviews: [],
+      generatedAtIso: '2026-07-17T15:00:00Z',
+    })
+    expect(filename).toBe('local-regs-review-base-2026-07-17.pdf')
+  })
+
+  it('renders reviewed + outstanding rows without throwing (contract check, not pixel content)', async () => {
+    const { generateLocalRegsReviewPdf } = await import('@/lib/local-regs-review-pdf')
+    const reg = {
+      id: 'reg-1', base_id: 'base-1', title: 'Local OI 13-204 — Airfield Operations',
+      description: null, storage_path: 'x', file_name: 'oi.pdf', mime_type: 'application/pdf',
+      file_size_bytes: 1024, version: 2, review_interval: 'monthly' as const, is_archived: false,
+      created_by: null, created_at: daysAgo(60), updated_at: daysAgo(1),
+    }
+    const reviewers = [
+      { user_id: 'u1', name: 'Snuffy', rank: 'SSgt', operating_initials: 'JS', role: 'airfield_manager' },
+      { user_id: 'u2', name: 'Doe', rank: 'A1C', operating_initials: null, role: 'amops' },
+    ]
+    const reviews = [
+      { id: 'r1', base_id: 'base-1', regulation_id: 'reg-1', user_id: 'u1', reviewed_at: daysAgo(1), version_at_review: 2, initials_snapshot: 'JS', created_at: daysAgo(1) },
+    ]
+    const { doc, filename } = await generateLocalRegsReviewPdf({
+      baseName: 'Example AFB', baseIcao: 'KXYZ',
+      regs: [reg], reviewers, reviews,
+      generatedAtIso: '2026-07-17T15:00:00Z',
+    })
+    expect(doc.getNumberOfPages()).toBeGreaterThanOrEqual(1)
+    expect(filename).toMatch(/\.pdf$/)
+  })
+})
+
 // ─────────────────────────────────────────────────────────────
 // Static RLS guard for the staged local_regs migrations.
 //
