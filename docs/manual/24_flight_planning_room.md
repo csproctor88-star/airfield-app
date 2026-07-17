@@ -1,7 +1,7 @@
 # 24 — Flight Planning Room Check
 
 **Path:** Sidebar → Flight Planning Room (daily-ops section) · Also on the Menu (`/more`) on mobile · URL `/fpr`
-**Module status:** Off by default. An Airfield Manager, NAMO, or Base Administrator enables it at **Settings → Modules** before it appears anywhere in the app.
+**Module status:** Off by default. An Airfield Manager, NAMO, or Base Administrator enables it at **Base Configuration → Modules** (`/base-config/modules`) before it appears anywhere in the app.
 
 The Flight Planning Room Check module gives each shift a per-item record of the Flight
 Planning Room check — FLIP currency, charts, forms, NOTAM display, and similar materials —
@@ -120,7 +120,7 @@ read at the time the check was logged, even if the item is later renamed or dele
 Flight Planning Room Check is off by default (it ships opt-in, the same way Read File and FLIP
 Management do). To turn it on:
 
-1. Go to **Settings → Modules**.
+1. Go to **Base Configuration → Modules** (`/base-config/modules`).
 2. Enable **Flight Planning Room Check**.
 3. The sidebar entry, the Menu entry, and the Base Setup → FPR Checklist step all appear
    automatically once enabled — no separate configuration is needed to reveal them.
@@ -137,7 +137,7 @@ None specific to Flight Planning Room Check.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Flight Planning Room doesn't appear in the sidebar or Menu | Module not enabled | Settings → Modules → enable Flight Planning Room Check. |
+| Flight Planning Room doesn't appear in the sidebar or Menu | Module not enabled | Base Configuration → Modules → enable Flight Planning Room Check. |
 | Base Setup has no FPR Checklist step | Module not enabled | Same as above — the step appears automatically once the module is on. |
 | "No checklist configured" banner, Start disabled | No active checklist items at this base | Base Setup → FPR Checklist → Load Default Checklist or add items. |
 | Can't save a check with an Issue row | Issue rows require notes | Add notes describing the issue, then save. |
