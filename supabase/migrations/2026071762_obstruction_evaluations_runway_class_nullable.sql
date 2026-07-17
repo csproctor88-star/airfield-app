@@ -14,22 +14,42 @@
 -- 'A'/'B' so UFC evaluations can still record the Army_B class.
 -- Existing rows ('A'/'B') are untouched.
 --
--- Note: the auto-generated constraint name below follows this repo's
--- consistent Postgres default-naming convention for a single inline
--- column CHECK (<table>_<column>_check — see base_runways_runway_
--- class_check, base_taxiways_runway_class_check). No tracked migration
--- created or renamed this constraint, so this is inferred, not
--- confirmed against the live catalog; the owner should verify
--- `SELECT conname FROM pg_constraint WHERE conrelid =
--- 'obstruction_evaluations'::regclass AND contype = 'c'` before or
--- after applying.
+-- Because no tracked migration ever created this constraint (it came
+-- from the pre-tracking inline CHECK), its live name can't be read
+-- from the migrations directory. Rather than guess it — a wrong guess
+-- would silently no-op a name-based DROP CONSTRAINT IF EXISTS and
+-- leave the old two-member CHECK alive alongside the new one, failing
+-- 'Army_B' writes at runtime — the DO block below discovers the
+-- actual CHECK constraint(s) on the column via pg_constraint and
+-- drops them by their real names, then the widened CHECK is re-added
+-- under the conventional name. No name verification needed before
+-- applying; to confirm the result afterwards:
+--   SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint
+--    WHERE conrelid = 'obstruction_evaluations'::regclass
+--      AND contype = 'c';
 -- ============================================================
 
 ALTER TABLE obstruction_evaluations
   ALTER COLUMN runway_class DROP NOT NULL;
 
-ALTER TABLE obstruction_evaluations
-  DROP CONSTRAINT IF EXISTS obstruction_evaluations_runway_class_check;
+-- Drop every existing CHECK on runway_class by its discovered name
+-- (name-independent — survives whatever the pre-tracking inline CHECK
+-- was actually auto-named). The definition-text match is safe here:
+-- no other CHECK on this table references runway_class.
+DO $$
+DECLARE
+  rec RECORD;
+BEGIN
+  FOR rec IN
+    SELECT conname
+      FROM pg_constraint
+     WHERE conrelid = 'public.obstruction_evaluations'::regclass
+       AND contype = 'c'
+       AND pg_get_constraintdef(oid) ILIKE '%runway_class%'
+  LOOP
+    EXECUTE format('ALTER TABLE public.obstruction_evaluations DROP CONSTRAINT %I', rec.conname);
+  END LOOP;
+END $$;
 
 ALTER TABLE obstruction_evaluations
   ADD CONSTRAINT obstruction_evaluations_runway_class_check
