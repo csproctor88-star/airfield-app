@@ -3,10 +3,11 @@
 // NAMO/NAMT Report Tool — per-user activity counts across selected modules.
 // Spec: docs/superpowers/specs/2026-07-16-namo-namt-report-tool-design.md
 // Modeled on app/(app)/reports/daily/page.tsx (picker → fetch → preview).
-// Exports (PDF/Excel/email) are Task 3 — the three buttons below render
-// disabled; no generators or email wiring here.
+// Exports (PDF/Excel/email) consume the SNAPSHOTTED result (resultDomains /
+// resultRange), never the live picker state, so an export always matches
+// whatever the preview last rendered.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { ArrowLeft, Calendar, Download, FileSpreadsheet, Mail, Loader2, Users } from 'lucide-react'
@@ -21,6 +22,9 @@ import {
 } from '@/lib/reports/user-activity-data'
 import { UserActivityMatrix } from '@/components/reports/user-activity-matrix'
 import { EmptyState } from '@/components/ui/empty-state'
+import { getInspectorName } from '@/lib/supabase/inspections'
+import { sendPdfViaEmail } from '@/lib/email-pdf'
+import EmailPdfModal from '@/components/ui/email-pdf-modal'
 
 // ── Local-day date helpers (mirrors reports/daily/page.tsx:63-69: pick in
 // local calendar days, convert to UTC boundaries only for the query). ──
@@ -72,9 +76,12 @@ const MODULE_NAME_BY_VIEW_PERM: Record<string, string> = {
 
 const ALL_DOMAIN_KEYS: UserActivityDomain[] = USER_ACTIVITY_DOMAINS.map((d) => d.key)
 
+/** Human-readable export-gate title, mirroring the house "Requires the <Label> permission." convention. */
+const EXPORT_PERM_TITLE = 'Requires the Export Reports permission.'
+
 export default function UserActivityReportPage() {
   const router = useRouter()
-  const { installationId, currentInstallation } = useInstallation()
+  const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
   const { has, loaded: permsLoaded } = usePermissions()
 
   const today = useMemo(() => localToday(), [])
@@ -91,7 +98,22 @@ export default function UserActivityReportPage() {
   const [resultDomains, setResultDomains] = useState<DomainDef[]>([])
   const [resultRange, setResultRange] = useState<{ start: string; end: string } | null>(null)
 
+  const [generatorName, setGeneratorName] = useState<string>('Unknown')
+  const [exportingPdf, setExportingPdf] = useState(false)
+  const [exportingExcel, setExportingExcel] = useState(false)
+  const [emailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [emailPdfData, setEmailPdfData] = useState<{ doc: any; filename: string } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    getInspectorName().then((inspector) => { if (!cancelled) setGeneratorName(inspector.name || 'Unknown') })
+    return () => { cancelled = true }
+  }, [])
+
   const canAccess = has(PERM.REPORTS_USER_ACTIVITY)
+  const canExport = has(PERM.REPORTS_EXPORT)
 
   // Page gate — same pattern as app/(app)/amtr/page.tsx: wait for perms to
   // load before deciding, so we never flash the notice while still loading.
@@ -167,6 +189,87 @@ export default function UserActivityReportPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  // ── Exports — always read the snapshotted result (data/resultDomains/
+  // resultRange), never the live picker state, so an export always matches
+  // what the preview last rendered. ──
+
+  const makePdfOpts = () => ({
+    baseName: currentInstallation?.name,
+    baseIcao: currentInstallation?.icao,
+    startDate: resultRange?.start ?? '',
+    endDate: resultRange?.end ?? '',
+    generatedBy: generatorName,
+    domains: resultDomains,
+  })
+
+  const exportFilenameBase = () => {
+    const slug = (currentInstallation?.icao || currentInstallation?.name || 'base').replace(/[^A-Za-z0-9]+/g, '-')
+    return `namo-namt-report_${slug}_${resultRange?.start ?? ''}_${resultRange?.end ?? ''}`
+  }
+
+  const handleExportPdf = async () => {
+    if (!data || !resultRange) return
+    setExportingPdf(true)
+    try {
+      const { generateUserActivityPdf } = await import('@/lib/reports/user-activity-pdf')
+      const { doc, filename } = generateUserActivityPdf(data, makePdfOpts())
+      doc.save(filename)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate the PDF')
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  const handleExportExcel = async () => {
+    if (!data || !resultRange) return
+    setExportingExcel(true)
+    try {
+      const [{ buildUserActivityWorkbook }, { saveWorkbook }] = await Promise.all([
+        import('@/lib/reports/user-activity-excel'),
+        import('@/lib/excel-export'),
+      ])
+      const wb = await buildUserActivityWorkbook(data, { domains: resultDomains })
+      await saveWorkbook(wb, `${exportFilenameBase()}.xlsx`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate the Excel workbook')
+    } finally {
+      setExportingExcel(false)
+    }
+  }
+
+  const handleEmailPdf = async () => {
+    if (!data || !resultRange) return
+    setExportingPdf(true)
+    try {
+      const { generateUserActivityPdf } = await import('@/lib/reports/user-activity-pdf')
+      const result = generateUserActivityPdf(data, makePdfOpts())
+      setEmailPdfData(result)
+      setEmailModalOpen(true)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to generate the PDF')
+    } finally {
+      setExportingPdf(false)
+    }
+  }
+
+  const handleSendEmail = async (email: string) => {
+    if (!emailPdfData) return
+    setSendingEmail(true)
+    const result = await sendPdfViaEmail(
+      emailPdfData.doc, emailPdfData.filename, email,
+      `Report: ${emailPdfData.filename.replace(/_/g, ' ').replace('.pdf', '')}`,
+    )
+    if (result.success) {
+      toast.success('Email sent successfully')
+      setEmailModalOpen(false)
+      setEmailPdfData(null)
+    } else {
+      toast.error(result.error || 'Failed to send email')
+    }
+    setSendingEmail(false)
   }
 
   return (
@@ -312,15 +415,42 @@ export default function UserActivityReportPage() {
               {resultRange.start} — {resultRange.end}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <ExportButton disabled title="Exports arrive in the next commit" icon={<Download size={16} />} label="PDF" />
-              <ExportButton disabled title="Exports arrive in the next commit" icon={<FileSpreadsheet size={16} />} label="Excel" />
-              <ExportButton disabled title="Exports arrive in the next commit" icon={<Mail size={16} />} label="Email" />
+              <ExportButton
+                onClick={handleExportPdf}
+                disabled={!canExport || exportingPdf}
+                title={canExport ? undefined : EXPORT_PERM_TITLE}
+                icon={<Download size={16} />}
+                label={exportingPdf ? 'Generating…' : 'PDF'}
+              />
+              <ExportButton
+                onClick={handleExportExcel}
+                disabled={!canExport || exportingExcel}
+                title={canExport ? undefined : EXPORT_PERM_TITLE}
+                icon={<FileSpreadsheet size={16} />}
+                label={exportingExcel ? 'Generating…' : 'Excel'}
+              />
+              <ExportButton
+                onClick={handleEmailPdf}
+                disabled={!canExport || exportingPdf}
+                title={canExport ? undefined : EXPORT_PERM_TITLE}
+                icon={<Mail size={16} />}
+                label="Email"
+              />
             </div>
           </div>
 
           <UserActivityMatrix data={data} domains={resultDomains} />
         </div>
       )}
+
+      <EmailPdfModal
+        open={emailModalOpen}
+        onClose={() => { setEmailModalOpen(false); setEmailPdfData(null) }}
+        onSend={handleSendEmail}
+        sending={sendingEmail}
+        filename={emailPdfData?.filename}
+        defaultEmail={defaultPdfEmail}
+      />
     </div>
   )
 }
@@ -342,17 +472,21 @@ function ChipButton({ active, onClick, children }: { active: boolean; onClick: (
 }
 
 function ExportButton({
-  disabled, title, icon, label,
-}: { disabled: boolean; title: string; icon: React.ReactNode; label: string }) {
+  onClick, disabled, title, icon, label,
+}: { onClick: () => void; disabled: boolean; title?: string; icon: React.ReactNode; label: string }) {
   return (
     <button
+      onClick={onClick}
       disabled={disabled}
       title={title}
       style={{
-        padding: '8px 12px', borderRadius: 8, border: '1px solid var(--color-border)',
-        background: 'transparent', color: 'var(--color-text-4)',
-        fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'not-allowed', fontFamily: 'inherit',
-        display: 'flex', alignItems: 'center', gap: 6, opacity: 0.6,
+        padding: '8px 12px', borderRadius: 8,
+        border: `1px solid ${disabled ? 'var(--color-border)' : 'var(--color-accent)'}`,
+        background: disabled ? 'transparent' : 'color-mix(in srgb, var(--color-accent) 12%, transparent)',
+        color: disabled ? 'var(--color-text-4)' : 'var(--color-accent)',
+        fontSize: 'var(--fs-xs)', fontWeight: 700, fontFamily: 'inherit',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        display: 'flex', alignItems: 'center', gap: 6, opacity: disabled ? 0.6 : 1,
       }}
     >
       {icon}

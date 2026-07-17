@@ -30,13 +30,14 @@ Two surfaces in one module:
 
 ## Report types available on the Reports page
 
-Five report cards surface directly from the Reports module:
+Six report cards can surface from the Reports module:
 
 1. **Daily Operations** — full shift summary for a selected date
 2. **Discrepancy** — single or filter-based discrepancy PDF
 3. **Discrepancy Trends** — aggregated trend analysis over a time window
 4. **Aging Report** — discrepancies grouped by age tier
 5. **Airfield Lighting** — NAVAID / lighting-specific discrepancy report
+6. **NAMO/NAMT Report Tool** — per-user activity counts across modules (leadership access only — see below)
 
 Other exports (ACSI, Waivers, Obstructions, Parking, Wildlife, Events Log) are generated from their own module detail pages — not from the Reports module.
 
@@ -72,6 +73,42 @@ Apply filters (date range, status, priority, type) before generating.
 ### Airfield Lighting Report
 
 NAVAID / lighting-specific discrepancy report surfaced on the Reports page. Groups outages by system and includes Table A3.1 context.
+
+### NAMO/NAMT Report Tool
+
+A management-insight report, not a compliance record — no regulation requires it, and none is cited by it. It answers "who did what, and how much, over a period" by turning on-demand counting into a users-by-modules matrix instead of leadership counting rows by hand.
+
+**How to generate:**
+1. Reports → **NAMO/NAMT Report Tool** (only visible if you hold access — see below).
+2. Pick a date range: **Last 7 / 30 / 90 Days**, **Month-to-Date**, **FY-to-Date**, or a custom From/To pair.
+3. Choose which data domains to count. All nine are checked by default:
+   - Wildlife Sightings
+   - Wildlife Strikes
+   - Airfield Checks
+   - Inspections
+   - Discrepancies Reported
+   - QRCs Initiated
+   - QRCs Completed
+   - Daily Review Sign-offs
+   - PPR Entries
+
+   A domain you don't hold view access to shows disabled with a note naming which module's view access it needs — this keeps the report from silently under-counting a domain you can't actually see.
+4. Optionally turn on **Include personnel with zero activity** to add every active base member with no counted records as an all-zero row — useful for confirming who did *not* generate any activity in the period, not just who did.
+5. **Generate Report**. The matrix shows one row per person, one column per selected domain, plus a **Total** column and a **Totals** footer row. Click a row to expand a drill-down of that person's underlying records (label, date, and a link to the record where one exists).
+
+**Reading the matrix.** Rows are grouped into up to three sections:
+- **Personnel** — activity resolved to a linked user account.
+- **Unlinked names** — activity attributed only to a free-text name (no linked account), rendered as typed and tagged **unlinked**.
+- **Unattributed** — activity with neither a linked account nor a name on file. If any of it traces to a uuid whose profile no longer exists, this row is labeled **Former user** instead.
+
+**Coverage footnotes.** Per-user attribution wasn't always captured for every domain. If your selected range reaches back before a domain's attribution start date, the report adds a footnote naming the domain, the date attribution began, and how many records in range lack per-user attribution — so a thin-looking Unlinked/Unattributed count is never mistaken for the real total. (Airfield Checks is presently the only domain with a coverage start date, March 2026; every other domain has full-history attribution.)
+
+**Exports.** Download PDF, Download Excel, and Email PDF all require export access (see below) in addition to running the report itself:
+- **PDF** — the matrix as one table, with the same Personnel/Unlinked/Unattributed grouping, a Totals row, and the same coverage footnotes as the screen. Selecting more than seven domains shrinks the table to fit and truncates long column names and unlinked names — the full, untruncated names are always in the Excel export.
+- **Excel** — a **Summary** sheet with the full matrix (no truncation), plus one additional sheet per selected domain listing that domain's underlying records (person, record, date) for a deeper audit than the on-screen drill-down allows.
+- **Email** — same Email PDF flow as every other report: pick a recipient (pre-filled with your default PDF email) and send.
+
+**Who has access.** This report is restricted to leadership: Airfield Manager, NAMO, Base Administrator, and — on civilian Part 139 bases — Accountable Executive and Operations Supervisor. It is not granted to the AMOPS office, CES, Safety, ATC, or read-only/kiosk accounts by default, because the matrix ranks individual output rather than reporting module-wide status. An Airfield Manager can extend access to a specific person (for example, a NAMT whose assigned role wouldn't normally include it) with a per-user permission override, without changing anyone's role. Running the report always reads through each domain's own view permission and Row-Level Security — holding report access never exposes a domain you couldn't otherwise see.
 
 ### Exports generated from other modules
 
@@ -177,6 +214,9 @@ None specific to Reports.
 | Email PDF silently fails | Resend key misconfigured, or recipient invalid | Admin: verify Resend credentials; check recipient email syntax. |
 | Average time seems wrong | `started_at` not captured (pre-v2.25 records) | Older records may not have `started_at`; averages only count records with both timestamps. |
 | Excel export opens as plain text | Incorrect mime type on server (rare) | Save and rename `.xlsx`, open in Excel manually. |
+| No **NAMO/NAMT Report Tool** card on Reports | Signed in without access | Access is restricted to leadership roles (Airfield Manager, NAMO, Base Administrator, Accountable Executive, Operations Supervisor); ask your Airfield Manager for a per-user override if you need it and don't hold one of those roles. |
+| A domain checkbox is disabled on the NAMO/NAMT Report Tool | You lack that domain's own view access | The note under the checkboxes names the module to request access to; the report never counts a domain silently. |
+| NAMO/NAMT Report Tool export buttons are greyed out | You can run the report but lack export access | Ask your Airfield Manager or Base Administrator for the Export Reports permission. |
 
 ---
 
