@@ -150,10 +150,19 @@ function ObstructionsContent() {
 
   // Surface set selection — defaults per base mode (UFC for USAF,
   // Part 77 for civilian). User can override per-evaluation.
+  // In edit mode the loaded row's pinned surface_set is authoritative
+  // (restored by the loadExisting effect below), so never reseed from
+  // the installation: on a cold deep-link load, currentInstallation
+  // resolves asynchronously — often AFTER loadExisting has pinned the
+  // row's set — and an unguarded re-fire would silently revert the
+  // state to the base default (desyncing header/map/picker from the
+  // computed analysis, and letting a later save overwrite the row's
+  // pinned surface_set). Reseeds as before once edit mode is left.
   const [surfaceSet, setSurfaceSet] = useState<SurfaceSet>(() => getSurfaceSet(currentInstallation))
   useEffect(() => {
+    if (editId) return
     setSurfaceSet(getSurfaceSet(currentInstallation))
-  }, [currentInstallation])
+  }, [currentInstallation, editId])
 
   // Evaluation result — supports multi-runway
   const [multiAnalysis, setMultiAnalysis] = useState<MultiRunwayAnalysis | null>(null)
