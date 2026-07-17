@@ -6,13 +6,14 @@ tools: Read, Edit, Write, Bash, Grep, Glob
 
 # Wrap Session
 
-End-of-session checklist for Glidepath. Three jobs:
+End-of-session checklist for Glidepath. Four jobs:
 
 1. Verify the app builds clean.
 2. Rewrite `SESSION_HANDOFF.md` so the next session can start cold.
 3. Surface anything that needs the user's attention before they sign off (uncommitted work, unapplied migrations, failing checks).
+4. Commit and push — behind a confirmation — so the next machine (or the next session) starts from a synced tree.
 
-**Do not commit, push, tag, or bump the version unless the user explicitly asks.** This skill writes one file (`SESSION_HANDOFF.md`) and runs read-only build checks. Everything else is the user's call.
+**This skill commits and pushes on exit, behind a confirmation, so wrapping leaves the repo synced.** It rewrites `SESSION_HANDOFF.md`, verifies the build, then (step 5) shows exactly what will be committed and asks before running `git commit` + `git push`. It still will **not** tag or bump the version unless the user explicitly asks — those stay separate, deliberate steps. If the build fails (step 2), it stops there and never commits broken code.
 
 ## Workflow
 
@@ -83,7 +84,45 @@ Run `git status` one more time. Surface to the user:
 - Any failing checks from step 2 the user chose not to fix.
 - Any local servers still running from this session (`netstat -ano | grep -E ":300[0-9]" | grep LISTENING`) — kill the ones this session started. Orphaned `next start` processes serve stale builds and become the next session's ghost listeners (2026-07-03).
 
-End with a one-line summary: "Handoff written. Build clean. N migrations pending." or equivalent. Do not commit unless asked.
+### 5. Sync to origin (commit + push)
+
+This is the step that actually gets the handoff and code to the next machine.
+Only reach it if the build passed in step 2 — never push a broken tree.
+
+1. Show the user the full set of changes that will be committed:
+
+   ```bash
+   git status
+   git diff --stat
+   ```
+
+2. **Confirm before committing.** State plainly what you're about to do — e.g.
+   "I'll commit these N files and push to `origin/main`. OK?" — and wait for a
+   yes. If the user declines, stop here: the handoff is still written and they
+   can sync manually.
+
+3. On confirmation, stage everything, commit with an imperative summary of the
+   session plus the current co-author trailer, and push:
+
+   ```bash
+   git add -A
+   git commit -m "<imperative summary of the session>
+
+   <optional body — why, not what>
+
+   Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
+   git push origin main
+   ```
+
+   Keep the trailer's model current with the one in use (see the Git convention
+   in `CLAUDE.md`).
+
+4. Confirm the push landed — `git status` should read `up to date with
+   origin/main` — and report the pushed short SHA.
+
+Still **do not** tag or bump the version unless the user explicitly asks.
+
+End with a one-line summary: "Handoff written. Build clean. Pushed `<sha>`. N migrations pending." or, if the user declined the push, "Handoff written. Build clean. Not pushed (your call)."
 
 ## Style guidance for the handoff
 
