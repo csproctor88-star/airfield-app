@@ -40,11 +40,7 @@ import { logActivity } from '@/lib/supabase/activity'
 import { createDiscrepancy } from '@/lib/supabase/discrepancies'
 import { createSighting } from '@/lib/supabase/wildlife'
 import { saveFprCheck, FPR_SAVED_REFETCH_FAILED } from '@/lib/supabase/fpr'
-import {
-  createDrivingCheck,
-  updateDrivingCheck,
-  DRIVING_CHECK_SAVED_REFETCH_FAILED,
-} from '@/lib/supabase/driving-checks'
+import { createDrivingCheck, updateDrivingCheck } from '@/lib/supabase/driving-checks'
 import {
   ConflictError,
   NonRetriableError,
@@ -469,15 +465,20 @@ export type DrivingCheckSaveResult = Awaited<ReturnType<typeof createDrivingChec
 /**
  * NOT idempotent: `driving_checks` has no natural key (spot checks are
  * random and unbounded per day — plain inserts, like an event log; see
- * the design spec's Architecture decision). If the INSERT commits but the
- * queue crashes/reloads before the drain loop's `storage.delete(item.id)`
- * runs, replaying this item on a later drain inserts a second row for the
- * same check. This mirrors the `check_file` handler above — `createCheck`
- * on `airfield_checks` is likewise a plain insert with no dedup key —
- * so this is an accepted risk carried forward from existing precedent,
- * not a new gap introduced here. Do not add new idempotency
- * infrastructure to close it; it's an owner call for a future task if the
- * duplicate-row rate in practice warrants it.
+ * the design spec's Architecture decision), so a replayed payload inserts
+ * a second row. createDrivingCheck narrows the replay surface itself: the
+ * check + results inserts return their own rows via `.select()` (no
+ * post-insert re-fetch that could fail transiently after the commit), and
+ * a results-insert failure triggers a best-effort compensating delete of
+ * the just-inserted check so a retry starts clean. The remaining accepted
+ * windows are (a) that compensating delete itself failing (e.g. the
+ * network dropped mid-save), and (b) the queue crashing/reloading between
+ * this handler resolving and the drain loop's ack — write-queue.ts
+ * runDrain() `await handler(item.payload)` then `storage.delete(item.id)`;
+ * a crash between the two replays a committed insert. (b) is the same
+ * window every plain-insert handler accepts (`check_file`'s createCheck
+ * precedent). Do not add new idempotency infrastructure for these; it's
+ * an owner call for a future task if duplicates show up in practice.
  *
  * Events Log write happens HERE (after a successful createDrivingCheck),
  * same placement as fpr_save above: a queued/offline check documents its
@@ -490,10 +491,7 @@ const drivingCheckSaveHandler: WriteHandler<DrivingCheckSavePayload, DrivingChec
   payload,
 ) => {
   const { data, error } = await createDrivingCheck(payload)
-  if (error) {
-    if (error === DRIVING_CHECK_SAVED_REFETCH_FAILED) throw new Error(error)
-    throwForStructuredError(error)
-  }
+  if (error) throwForStructuredError(error)
   if (data?.id && payload.summary) {
     try {
       await logActivity(
@@ -523,17 +521,16 @@ export type DrivingCheckUpdateResult = Awaited<ReturnType<typeof updateDrivingCh
  * completion logs once, on create; edits don't re-log. Replay-safe: this
  * is a real UPDATE by id (not an insert), so replaying an already-applied
  * update just re-applies the same fields and re-rewrites the same child
- * results — no double-insert risk like the create path above.
+ * results — no double-insert risk like the create path above. The payload
+ * type (UpdateDrivingCheckInput) structurally cannot carry checker
+ * attribution — edits never reassign completed_by/_oi/_name.
  */
 const drivingCheckUpdateHandler: WriteHandler<DrivingCheckUpdatePayload, DrivingCheckUpdateResult> = async (
   payload,
 ) => {
   const { id, ...input } = payload
   const { data, error } = await updateDrivingCheck(id, input)
-  if (error) {
-    if (error === DRIVING_CHECK_SAVED_REFETCH_FAILED) throw new Error(error)
-    throwForStructuredError(error)
-  }
+  if (error) throwForStructuredError(error)
   return data
 }
 

@@ -21,7 +21,7 @@ import { DRIVING_CHECK_DEFAULT_ITEMS } from '@/lib/driving-check-default-items'
 //
 // House rule: this module never calls logActivity. The Events Log write
 // happens in the offline-queue handler (lib/sync/handlers.ts), after a
-// successful save — see saveDrivingCheck's queue wiring there.
+// successful createDrivingCheck — see the driving_check_save handler.
 // ─────────────────────────────────────────────────────────────
 
 function db(): SupabaseClient | null {
@@ -387,18 +387,6 @@ async function attachResults(supabase: SupabaseClient, checks: DrivingCheckRow[]
   return checks.map((c) => ({ ...c, results: byCheck.get(c.id) ?? [] }))
 }
 
-async function fetchDrivingCheckWithResultsById(supabase: SupabaseClient, id: string): Promise<DrivingCheckWithResults | null> {
-  const { data: check, error } = await supabase
-    .from('driving_checks')
-    .select('*')
-    .eq('id', id)
-    .single()
-  if (error || !check) return null
-
-  const [withResults] = await attachResults(supabase, [check as DrivingCheckRow])
-  return withResults ?? null
-}
-
 export async function fetchDrivingChecksInRange(
   baseId: string,
   startIso: string,
@@ -418,15 +406,6 @@ export async function fetchDrivingChecksInRange(
   if (!checks || checks.length === 0) return []
   return attachResults(supabase, checks as DrivingCheckRow[])
 }
-
-/**
- * `createDrivingCheck`/`updateDrivingCheck`'s error string for the narrow
- * case where the INSERT/UPDATE COMMITTED but the follow-up re-fetch
- * round-trip failed. The write is durable, so callers (the write-queue
- * handler) must treat this as transient, never as a hard save failure.
- * Exported so the handler can classify it exactly, without string-drift.
- */
-export const DRIVING_CHECK_SAVED_REFETCH_FAILED = 'Saved but could not re-fetch check'
 
 export type DrivingCheckFormInput = {
   /** Defaults to now() via the DB column default when omitted. An offline-
@@ -456,11 +435,32 @@ export type DrivingCheckFormInput = {
 }
 
 export type CreateDrivingCheckInput = DrivingCheckFormInput & { baseId: string }
-export type UpdateDrivingCheckInput = DrivingCheckFormInput
 
-function buildCheckPayload(input: DrivingCheckFormInput, userId: string | null): Record<string, unknown> {
-  return {
-    checked_at: input.checkedAt || new Date().toISOString(),
+/**
+ * Update input deliberately CANNOT carry checker attribution
+ * (operatingInitials / completedByName): attribution stays with whoever
+ * CONDUCTED the check. Edits are typo fixes on a log — a fix by another
+ * user must not silently move the check between checkers' rows in the
+ * by-checker AOB report (computeAobStats groups on completed_by_oi /
+ * completed_by_name).
+ */
+export type UpdateDrivingCheckInput = Omit<DrivingCheckFormInput, 'operatingInitials' | 'completedByName'>
+
+/**
+ * Shared field builder for the non-attribution driving_checks columns.
+ * Pure and exported for the attribution-invariant test: this is the FULL
+ * update payload source (updateDrivingCheck adds only `updated_at`), so
+ * asserting its output never contains completed_by / completed_by_oi /
+ * completed_by_name locks the "edits don't reassign the checker" rule.
+ * createDrivingCheck layers base_id + attribution on top explicitly.
+ *
+ * `checked_at` is included only when the caller provides it: create
+ * falls back to the DB column default (now()), and an update that omits
+ * it preserves the original check time instead of silently re-dating the
+ * check to the moment of the edit.
+ */
+export function buildDrivingCheckFields(input: UpdateDrivingCheckInput): Record<string, unknown> {
+  const fields: Record<string, unknown> = {
     driver_name: input.driverName.trim(),
     driver_rank: input.driverRank?.trim() || null,
     driver_unit: input.driverUnit?.trim() || null,
@@ -476,10 +476,9 @@ function buildCheckPayload(input: DrivingCheckFormInput, userId: string | null):
     overall_result: input.overallResult,
     violation_description: input.violationDescription?.trim() || null,
     notes: input.notes?.trim() || null,
-    completed_by: userId,
-    completed_by_oi: input.operatingInitials?.trim() || null,
-    completed_by_name: input.completedByName?.trim() || null,
   }
+  if (input.checkedAt) fields.checked_at = input.checkedAt
+  return fields
 }
 
 async function currentUserId(supabase: SupabaseClient): Promise<string | null> {
@@ -491,14 +490,28 @@ async function currentUserId(supabase: SupabaseClient): Promise<string | null> {
   }
 }
 
+function toResultRows(checkId: string, items: DrivingCheckResultInput[]): Array<Record<string, unknown>> {
+  return items.map((i) => ({
+    check_id: checkId,
+    item_id: i.item_id,
+    item_label: i.item_label,
+    status: i.status,
+    notes: i.notes || null,
+    sort_order: i.sort_order,
+  }))
+}
+
 /**
  * Insert a new spot check + its item results. Plain insert — no natural
- * key, no upsert (see the module header). Replay caveat: because there is
- * no natural key, replaying an already-committed create (e.g. the write
- * queue retries after the INSERT committed but the drain loop's ack step
- * never ran) inserts a second row for the same check. This mirrors
- * `check_file` (createCheck on `airfield_checks`, also a plain insert
- * with no dedup key) — an accepted risk, not a new gap introduced here.
+ * key, no upsert (see the module header).
+ *
+ * Both inserts return their own rows via `.select()` — there is NO
+ * post-insert re-fetch, so a transient network blip after the INSERT
+ * commits cannot surface as a retriable "saved but couldn't re-read"
+ * error that would make the write queue replay the whole (non-idempotent)
+ * insert. If the child-results insert fails after the check row
+ * committed, a best-effort compensating delete removes the orphan check
+ * so a queued retry starts clean instead of duplicating it.
  */
 export async function createDrivingCheck(
   input: CreateDrivingCheckInput,
@@ -507,32 +520,48 @@ export async function createDrivingCheck(
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
   const userId = await currentUserId(supabase)
-  const checkPayload = { base_id: input.baseId, ...buildCheckPayload(input, userId) }
+  const checkPayload = {
+    base_id: input.baseId,
+    ...buildDrivingCheckFields(input),
+    // Attribution is set ONLY here, at create time — updateDrivingCheck
+    // never touches these columns (edits don't reassign the checker).
+    completed_by: userId,
+    completed_by_oi: input.operatingInitials?.trim() || null,
+    completed_by_name: input.completedByName?.trim() || null,
+  }
 
   const { data: inserted, error } = await supabase
     .from('driving_checks')
     .insert(checkPayload)
-    .select('id')
+    .select('*')
     .single()
   if (error || !inserted) return { data: null, error: friendlyError(error?.message || 'Failed to save check') }
-  const checkId = (inserted as { id: string }).id
+  const check = inserted as DrivingCheckRow
 
+  let results: DrivingCheckResultRow[] = []
   if (input.items.length > 0) {
-    const resultRows = input.items.map((i) => ({
-      check_id: checkId,
-      item_id: i.item_id,
-      item_label: i.item_label,
-      status: i.status,
-      notes: i.notes || null,
-      sort_order: i.sort_order,
-    }))
-    const { error: rErr } = await supabase.from('driving_check_results').insert(resultRows)
-    if (rErr) return { data: null, error: friendlyError(rErr.message) }
+    const { data: insertedResults, error: rErr } = await supabase
+      .from('driving_check_results')
+      .insert(toResultRows(check.id, input.items))
+      .select('*')
+    if (rErr) {
+      // The check row committed but its results didn't. Compensate by
+      // deleting the orphan check (results cascade) so a retry of this
+      // whole save can't leave a duplicate check row behind. Best-effort:
+      // if the delete itself fails (e.g. we just went offline), the
+      // orphan remains and a retry may duplicate — the narrow residual
+      // window documented on the queue handler.
+      try {
+        await supabase.from('driving_checks').delete().eq('id', check.id)
+      } catch { /* best-effort */ }
+      return { data: null, error: friendlyError(rErr.message) }
+    }
+    results = ((insertedResults || []) as DrivingCheckResultRow[])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
   }
 
-  const full = await fetchDrivingCheckWithResultsById(supabase, checkId)
-  if (!full) return { data: null, error: DRIVING_CHECK_SAVED_REFETCH_FAILED }
-  return { data: full, error: null }
+  return { data: { ...check, results }, error: null }
 }
 
 /**
@@ -541,6 +570,11 @@ export async function createDrivingCheck(
  * re-running the same update lands on the same row and rewrites the same
  * results — unlike create, this is a real UPDATE by id, not an insert, so
  * there's no double-insert risk on replay.
+ *
+ * Never touches completed_by / completed_by_oi / completed_by_name —
+ * attribution stays with whoever conducted the check (see
+ * UpdateDrivingCheckInput). The UPDATE returns its own row via
+ * `.select()`; no post-write re-fetch.
  */
 export async function updateDrivingCheck(
   id: string,
@@ -549,33 +583,38 @@ export async function updateDrivingCheck(
   const supabase = db()
   if (!supabase) return { data: null, error: 'Supabase not configured' }
 
-  const userId = await currentUserId(supabase)
-  const checkPayload = buildCheckPayload(input, userId)
+  const checkPayload = {
+    ...buildDrivingCheckFields(input),
+    updated_at: new Date().toISOString(),
+  }
 
-  const { error } = await supabase.from('driving_checks').update(checkPayload).eq('id', id)
-  if (error) return { data: null, error: friendlyError(error.message) }
+  const { data: updated, error } = await supabase
+    .from('driving_checks')
+    .update(checkPayload)
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !updated) return { data: null, error: friendlyError(error?.message || 'Failed to save check') }
+  const check = updated as DrivingCheckRow
 
   // Clear existing results so we can rewrite — a silent delete failure
   // followed by the reinsert below would duplicate result rows.
   const { error: clearError } = await supabase.from('driving_check_results').delete().eq('check_id', id)
   if (clearError) return { data: null, error: friendlyError(clearError.message) }
 
+  let results: DrivingCheckResultRow[] = []
   if (input.items.length > 0) {
-    const resultRows = input.items.map((i) => ({
-      check_id: id,
-      item_id: i.item_id,
-      item_label: i.item_label,
-      status: i.status,
-      notes: i.notes || null,
-      sort_order: i.sort_order,
-    }))
-    const { error: rErr } = await supabase.from('driving_check_results').insert(resultRows)
+    const { data: insertedResults, error: rErr } = await supabase
+      .from('driving_check_results')
+      .insert(toResultRows(id, input.items))
+      .select('*')
     if (rErr) return { data: null, error: friendlyError(rErr.message) }
+    results = ((insertedResults || []) as DrivingCheckResultRow[])
+      .slice()
+      .sort((a, b) => a.sort_order - b.sort_order)
   }
 
-  const full = await fetchDrivingCheckWithResultsById(supabase, id)
-  if (!full) return { data: null, error: DRIVING_CHECK_SAVED_REFETCH_FAILED }
-  return { data: full, error: null }
+  return { data: { ...check, results }, error: null }
 }
 
 export async function deleteDrivingCheck(id: string): Promise<{ error: string | null }> {

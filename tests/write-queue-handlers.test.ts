@@ -194,11 +194,6 @@ vi.mock('@/lib/supabase/driving-checks', () => ({
     if (state.drivingCheckUpdate.throw) throw state.drivingCheckUpdate.throw
     return state.drivingCheckUpdate.next
   }),
-  // Real value from lib/supabase/driving-checks.ts — the driving_check_save/
-  // driving_check_update handlers import it to classify the "committed but
-  // re-fetch failed" case as transient. The mock must provide it or the
-  // handler's identity check would compare against undefined.
-  DRIVING_CHECK_SAVED_REFETCH_FAILED: 'Saved but could not re-fetch check',
 }))
 
 import { HANDLERS, registerAllHandlers } from '@/lib/sync/handlers'
@@ -322,6 +317,10 @@ const DRIVING_CHECK_SAVE_PAYLOAD = {
   ],
 }
 
+// Deliberately carries NO operatingInitials / completedByName —
+// UpdateDrivingCheckInput omits attribution (edits never reassign the
+// checker; see the attribution-invariant test in
+// tests/driving-check-update-fields.test.ts).
 const DRIVING_CHECK_UPDATE_PAYLOAD = {
   id: 'dc-1',
   driverName: 'Snuffy',
@@ -330,8 +329,6 @@ const DRIVING_CHECK_UPDATE_PAYLOAD = {
   form483Status: 'valid' as const,
   location: 'Taxiway A',
   overallResult: 'pass' as const,
-  operatingInitials: 'AB',
-  completedByName: 'SSgt Checker',
   items: [
     {
       item_id: 'item-1',
@@ -868,14 +865,6 @@ describe('driving_check_save handler', () => {
     const handler = HANDLERS.driving_check_save!
     state.drivingCheckSave.next = { data: null, error: 'Failed to fetch' }
     await expect(handler(DRIVING_CHECK_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
-  })
-
-  it('treats "Saved but could not re-fetch check" as transient (insert committed; only re-fetch failed)', async () => {
-    const handler = HANDLERS.driving_check_save!
-    state.drivingCheckSave.next = { data: null, error: 'Saved but could not re-fetch check' }
-    await expect(handler(DRIVING_CHECK_SAVE_PAYLOAD)).rejects.not.toBeInstanceOf(NonRetriableError)
-    // No data returned this attempt → no Events Log write yet.
-    expect(state.activity.calls).toHaveLength(0)
   })
 
   it('lets thrown fetch errors propagate so the queue treats them as transient', async () => {
