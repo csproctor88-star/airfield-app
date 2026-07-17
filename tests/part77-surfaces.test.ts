@@ -127,8 +127,11 @@ describe('getPart77Surfaces(approachType)', () => {
     expect(getPart77Surfaces('non_utility_non_precision_low').approach.criteria.outerHalfWidth).toBe(2000)
   })
 
-  it('non_utility_non_precision_3_4 outer half-width is 1,000 ft (2,000 ft total)', () => {
-    expect(getPart77Surfaces('non_utility_non_precision_3_4').approach.criteria.outerHalfWidth).toBe(1000)
+  // Verified 3,500-ft end width (1,750-ft half-width) per 14 CFR §77.19(d),
+  // law.cornell.edu/cfr/text/14/77.19 fetch 2026-07-16. The table previously
+  // encoded 1,000/2,000 ft, which understated the surface footprint.
+  it('non_utility_non_precision_3_4 outer half-width is 1,750 ft (3,500 ft total)', () => {
+    expect(getPart77Surfaces('non_utility_non_precision_3_4').approach.criteria.outerHalfWidth).toBe(1750)
   })
 
   it('non_utility_precision outer half-width is 8,000 ft (16,000 ft total)', () => {

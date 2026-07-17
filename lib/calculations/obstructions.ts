@@ -314,10 +314,12 @@ const PART77_DIMENSIONS: Record<FaaApproachType, Part77SurfaceSet> = {
     },
     approach: {
       name: 'Approach Surface',
-      criteria: { slope: 34, innerHalfWidth: 250, outerHalfWidth: 1000, length: 10000 },
+      // outerHalfWidth verified 1,750 ft (3,500-ft total end width) per
+      // 14 CFR §77.19(d), law.cornell.edu/cfr/text/14/77.19 fetch 2026-07-16.
+      criteria: { slope: 34, innerHalfWidth: 250, outerHalfWidth: 1750, length: 10000 },
       ufcRef: '14 CFR §77.19(c) — Approach surface (non-utility non-precision ≥¾ mi)',
-      ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 500 ft to 2,000 ft wide (visibility ≥ ¾ mile).',
-      description: '34:1 slope, 10,000 ft long, 2,000 ft outer width.',
+      ufcCriteria: '34:1 slope extending 10,000 ft from the runway end, expanding from 500 ft to 3,500 ft wide (visibility ≥ ¾ mile).',
+      description: '34:1 slope, 10,000 ft long, 3,500 ft outer width.',
       color: '#F97316',
     },
     horizontal: {
