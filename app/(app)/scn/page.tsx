@@ -13,12 +13,16 @@ import {
   saveCheck,
   deleteCheck,
   summarizeCheck,
+  buildScnAgencyDrafts,
+  buildScnSavePayload,
+  sortScnHistory,
   todayZuluDate,
   SCN_STATUS_LABELS,
   SCN_STATUS_COLORS,
   type ScnCheckType,
   type ScnAgencyStatus,
   type ScnCheckWithResults,
+  type ScnAgencyDraft,
 } from '@/lib/supabase/scn'
 import { fetchScnAgencies, type ScnAgency } from '@/lib/supabase/scn-agencies'
 import { formatZuluDate, formatZuluTime } from '@/lib/utils'
@@ -41,7 +45,20 @@ function formatScnHistoryDate(iso: string, todayIso: string): { primary: string;
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
 
-type AgencyDraft = { agency_id: string | null; agency_name: string; sort_order: number; status: ScnAgencyStatus; notes: string }
+type ModalState = {
+  type: ScnCheckType
+  // The date this check belongs to: today's Zulu date for a new check, or
+  // the edited check's own check_date. Threaded into the save payload so an
+  // edit upserts onto the historical row, not onto today's
+  // (base, date, check_type).
+  checkDate: string
+  draft: ScnAgencyDraft[]
+  notes: string
+  // priorStatus: the row's status before the OOS dialog opened, so
+  // "Cancel OOS" restores it (e.g. back to No Response) instead of forcing
+  // loud & clear.
+  oosDialog: { idx: number; priorStatus: ScnAgencyStatus } | null
+}
 
 export default function ScnPage() {
   const { installationId } = useInstallation()
@@ -53,7 +70,7 @@ export default function ScnPage() {
   const [operatingInitials, setOperatingInitials] = useState<string | null>(null)
 
   // Modal state
-  const [modal, setModal] = useState<{ type: ScnCheckType; draft: AgencyDraft[]; notes: string; oosDialog: { idx: number } | null } | null>(null)
+  const [modal, setModal] = useState<ModalState | null>(null)
   const [saving, setSaving] = useState(false)
 
   // Monthly PDF range (default: this calendar month in Zulu)
@@ -74,8 +91,9 @@ export default function ScnPage() {
     const end = todayZuluDate()
     const start = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
     const rows = await fetchChecksInRange(installationId, start, end)
-    // Keep only rows from strictly before today for the history panel
-    setHistory(rows.filter(r => r.check_date !== end))
+    // Keep only rows from strictly before today for the history panel.
+    // Newest-first for display (fetch order is check_date ASC).
+    setHistory(sortScnHistory(rows.filter(r => r.check_date !== end)))
 
     setLoaded(true)
   }, [installationId])
@@ -108,31 +126,26 @@ export default function ScnPage() {
       toast.error('Configure SCN agencies in Base Setup before starting a check.')
       return
     }
-    const existingByName = new Map<string, { status: ScnAgencyStatus; notes: string }>()
-    if (edit) {
-      for (const r of edit.results) existingByName.set(r.agency_name, { status: r.status, notes: r.notes || '' })
-    }
-    const draft: AgencyDraft[] = agencies.map((a, i) => {
-      const prior = existingByName.get(a.agency_name)
-      return {
-        agency_id: a.id,
-        agency_name: a.agency_name,
-        sort_order: a.sort_order || i,
-        status: prior?.status ?? 'loud_clear',
-        notes: prior?.notes ?? '',
-      }
+    const draft = buildScnAgencyDrafts(agencies, edit?.results ?? null)
+    setModal({
+      type,
+      checkDate: edit?.check_date ?? todayZuluDate(),
+      draft,
+      notes: edit?.notes || '',
+      oosDialog: null,
     })
-    setModal({ type, draft, notes: edit?.notes || '', oosDialog: null })
   }
 
   function setAgencyStatus(idx: number, status: ScnAgencyStatus) {
     setModal(m => {
       if (!m) return m
+      const prior = m.draft[idx].status
       const next = [...m.draft]
       next[idx] = { ...next[idx], status }
-      // When switching to OOS, open the notes dialog for that agency
+      // When switching to OOS with no notes yet, open the required-notes
+      // dialog, remembering the pre-OOS status so "Cancel OOS" restores it.
       if (status === 'oos' && !next[idx].notes) {
-        return { ...m, draft: next, oosDialog: { idx } }
+        return { ...m, draft: next, oosDialog: { idx, priorStatus: prior === 'oos' ? 'loud_clear' : prior } }
       }
       return { ...m, draft: next }
     })
@@ -156,20 +169,16 @@ export default function ScnPage() {
       return
     }
     setSaving(true)
-    const res = await saveCheck({
+    const res = await saveCheck(buildScnSavePayload({
       baseId: installationId,
-      checkDate: todayZuluDate(),
+      // modal.checkDate — today for a new check, the edited check's own date
+      // for an edit (NOT hardcoded today, which overwrote today's real check).
+      checkDate: modal.checkDate,
       checkType: modal.type,
       operatingInitials,
-      notes: modal.notes.trim() || null,
-      agencies: modal.draft.map(d => ({
-        agency_id: d.agency_id,
-        agency_name: d.agency_name,
-        status: d.status,
-        notes: d.notes || null,
-        sort_order: d.sort_order,
-      })),
-    })
+      notes: modal.notes,
+      draft: modal.draft,
+    }))
     setSaving(false)
     if (res.error) {
       toast.error(res.error)
@@ -336,7 +345,7 @@ export default function ScnPage() {
             {modal.type === 'backup' ? 'Monthly Back-up SCN Check' : 'Daily SCN Check'}
           </div>
           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 14 }}>
-            {formatZuluDate(todayZuluDate())} · attribution: {operatingInitials || '—'}
+            {formatZuluDate(modal.checkDate)} · attribution: {operatingInitials || '—'}
           </div>
 
           {/* Opening script — daily check only */}
@@ -357,7 +366,14 @@ export default function ScnPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
               <button
                 onClick={() => setModal(m => m
-                  ? { ...m, draft: m.draft.map(d => ({ ...d, status: 'loud_clear' as ScnAgencyStatus })) }
+                  ? { ...m, draft: m.draft.map(d => ({
+                      ...d,
+                      status: 'loud_clear' as ScnAgencyStatus,
+                      // Clear a row's OOS notes as it leaves 'oos' — stale
+                      // out-of-service text must not persist onto a loud &
+                      // clear row.
+                      notes: d.status === 'oos' ? '' : d.notes,
+                    })) }
                   : m)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -380,7 +396,13 @@ export default function ScnPage() {
                 key={d.agency_name}
                 draft={d}
                 onChange={(status) => setAgencyStatus(i, status)}
-                onOpenOosNotes={() => setModal(m => m ? { ...m, oosDialog: { idx: i } } : m)}
+                onOpenOosNotes={() => setModal(m => {
+                  if (!m) return m
+                  const prior = m.draft[i].status
+                  // Editing an already-'oos' row: backing out with "Cancel
+                  // OOS" un-flags to loud & clear (no earlier state to keep).
+                  return { ...m, oosDialog: { idx: i, priorStatus: prior === 'oos' ? 'loud_clear' : prior } }
+                })}
               />
             ))}
           </div>
@@ -450,7 +472,7 @@ export default function ScnPage() {
 
       {/* OOS notes dialog */}
       {modal?.oosDialog && (() => {
-        const { idx } = modal.oosDialog
+        const { idx, priorStatus } = modal.oosDialog
         const d = modal.draft[idx]
         return (
           <ModalOverlay onClose={() => setModal(m => m ? { ...m, oosDialog: null } : m)} tightZ>
@@ -475,7 +497,7 @@ export default function ScnPage() {
             />
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button
-                onClick={() => { setAgencyStatus(idx, 'loud_clear'); setOosNotes(idx, ''); setModal(m => m ? { ...m, oosDialog: null } : m) }}
+                onClick={() => { setAgencyStatus(idx, priorStatus); setOosNotes(idx, ''); setModal(m => m ? { ...m, oosDialog: null } : m) }}
                 style={{
                   flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                   border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)',
@@ -608,7 +630,7 @@ function TodayCheckCard({
 }
 
 function AgencyRow({ draft, onChange, onOpenOosNotes }: {
-  draft: AgencyDraft
+  draft: ScnAgencyDraft
   onChange: (status: ScnAgencyStatus) => void
   onOpenOosNotes: () => void
 }) {
@@ -669,7 +691,7 @@ function AgencyRow({ draft, onChange, onOpenOosNotes }: {
   )
 }
 
-function SummaryPreview({ draft, type }: { draft: AgencyDraft[]; type: ScnCheckType }) {
+function SummaryPreview({ draft, type }: { draft: ScnAgencyDraft[]; type: ScnCheckType }) {
   const exceptions = draft.filter(d => d.status !== 'loud_clear')
   const label = type === 'backup' ? 'Monthly Back-up SCN check complete' : 'Daily SCN check complete'
   const text = exceptions.length === 0

@@ -58,6 +58,129 @@ export type ScnAgencyResultInput = {
   sort_order: number
 }
 
+export type ScnAgencyDraft = {
+  agency_id: string | null
+  agency_name: string
+  sort_order: number
+  status: ScnAgencyStatus
+  notes: string
+}
+
+/**
+ * Build the check modal's per-agency draft rows from the base's active
+ * agency list plus (in EDIT mode) the check's saved results.
+ *
+ * Prior results are matched by agency_id first (survives renames), then
+ * by agency_name (covers rows whose agency_id was nulled by an agency
+ * delete).
+ *
+ * Snapshot preservation (EDIT mode): a saved check is a point-in-time
+ * record. If the agency roster changed since it was logged — an agency
+ * was deactivated or hard-deleted — that agency's prior result row no
+ * longer maps to any active agency. Because the save path delete-and-
+ * rewrites all child rows from this draft, such rows would be silently
+ * dropped. To keep the snapshot intact, any prior result NOT consumed by
+ * an active agency is appended after the active rows, carrying its own
+ * name / status / notes / sort_order. (New checks pass no `existing`, so
+ * there are no orphans to append.)
+ */
+export function buildScnAgencyDrafts(
+  agencies: { id: string; agency_name: string; sort_order: number }[],
+  existing?: ScnCheckResultRow[] | null,
+): ScnAgencyDraft[] {
+  const existingRows = existing ?? []
+  const byAgencyId = new Map<string, ScnCheckResultRow>()
+  const byName = new Map<string, ScnCheckResultRow>()
+  for (const r of existingRows) {
+    if (r.agency_id) byAgencyId.set(r.agency_id, r)
+    if (!byName.has(r.agency_name)) byName.set(r.agency_name, r)
+  }
+
+  const consumed = new Set<ScnCheckResultRow>()
+  const activeDrafts: ScnAgencyDraft[] = agencies.map((a, i) => {
+    const prior = byAgencyId.get(a.id) ?? byName.get(a.agency_name)
+    if (prior) consumed.add(prior)
+    return {
+      agency_id: a.id,
+      agency_name: a.agency_name,
+      sort_order: a.sort_order || i,
+      status: prior?.status ?? 'loud_clear',
+      notes: prior?.notes ?? '',
+    }
+  })
+
+  // Prior result rows with no matching active agency (agency deactivated
+  // or deleted since the check was logged) — preserve them so the delete-
+  // and-rewrite save can't drop them from the historical record.
+  const orphanDrafts: ScnAgencyDraft[] = existingRows
+    .filter(r => !consumed.has(r))
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map(r => ({
+      agency_id: r.agency_id,
+      agency_name: r.agency_name,
+      sort_order: r.sort_order,
+      status: r.status,
+      notes: r.notes ?? '',
+    }))
+
+  return [...activeDrafts, ...orphanDrafts]
+}
+
+/**
+ * Build the `saveCheck` input from the modal's live draft. Pure —
+ * extracted so the page's save path is unit-testable and so the check's
+ * date is threaded through explicitly. `checkDate` comes from the caller
+ * (a NEW check passes today's Zulu date; EDITING a check passes that
+ * check's own `check_date`) rather than being hardcoded to "today" —
+ * editing a historical check must upsert onto that check's
+ * (base, check_date, check_type) natural key, not today's.
+ */
+export function buildScnSavePayload(args: {
+  baseId: string
+  checkDate: string
+  checkType: ScnCheckType
+  operatingInitials: string | null
+  notes: string
+  draft: ScnAgencyDraft[]
+}): {
+  baseId: string
+  checkDate: string
+  checkType: ScnCheckType
+  operatingInitials: string | null
+  notes: string | null
+  agencies: ScnAgencyResultInput[]
+} {
+  return {
+    baseId: args.baseId,
+    checkDate: args.checkDate,
+    checkType: args.checkType,
+    operatingInitials: args.operatingInitials,
+    notes: args.notes.trim() || null,
+    agencies: args.draft.map(d => ({
+      agency_id: d.agency_id,
+      agency_name: d.agency_name,
+      status: d.status,
+      notes: d.notes.trim() || null,
+      sort_order: d.sort_order,
+    })),
+  }
+}
+
+/**
+ * Sort checks for the history list: newest date first, then daily
+ * (primary) before monthly back-up within a date. `fetchChecksInRange`
+ * returns them check_date ASC / check_type alphabetically ('backup' <
+ * 'primary'), but the history UI reads newest-first — so re-sort
+ * page-side. Pure; does not mutate its input.
+ */
+const SCN_TYPE_ORDER: ScnCheckType[] = ['primary', 'backup']
+export function sortScnHistory(checks: ScnCheckWithResults[]): ScnCheckWithResults[] {
+  return [...checks].sort((a, b) => {
+    if (a.check_date !== b.check_date) return b.check_date.localeCompare(a.check_date)
+    return SCN_TYPE_ORDER.indexOf(a.check_type) - SCN_TYPE_ORDER.indexOf(b.check_type)
+  })
+}
+
 /** Zulu YYYY-MM-DD for today. Checks are tracked by Zulu date to match the rest of the app. */
 export function todayZuluDate(): string {
   return new Date().toISOString().slice(0, 10)

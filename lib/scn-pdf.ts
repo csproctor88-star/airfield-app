@@ -84,6 +84,7 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
   const pageWidth = doc.internal.pageSize.getWidth()
   const margin = 10
   let y = margin + 4
+  const s = sanitizePdfText  // shorthand — em dashes etc. render as missing glyphs in the standard PDF font
 
   // ── Header ──
   doc.setFontSize(16)
@@ -95,7 +96,7 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
   const totalPrimary = primaryByDay.size
   const totalBackup = backupDays.size
   doc.text(
-    `${totalPrimary} daily check${totalPrimary === 1 ? '' : 's'} logged · ${totalBackup} monthly check${totalBackup === 1 ? '' : 's'} logged · ${agencies.length} agency list`,
+    s(`${totalPrimary} daily check${totalPrimary === 1 ? '' : 's'} logged · ${totalBackup} monthly check${totalBackup === 1 ? '' : 's'} logged · ${agencies.length} agency list`),
     margin, y,
   )
   y += 6
@@ -118,15 +119,16 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     }
     doc.rect(lx, y - 3, 3.5, 3.5, 'F')
     doc.setTextColor(60)
-    doc.text(item.label, lx + 5, y)
-    lx += doc.getTextWidth(item.label) + 12
+    const label = s(item.label)
+    doc.text(label, lx + 5, y)
+    lx += doc.getTextWidth(label) + 12
   }
   y += 5
 
   // ── Matrix table: rows = agencies, columns = days ──
   const head = [['Agency', ...Array.from({ length: dayCount }, (_, i) => String(i + 1))]]
   const body: (string | { content: string; meta?: ScnAgencyStatus })[][] = agencies.map(name => {
-    const row: (string | { content: string; meta?: ScnAgencyStatus })[] = [name]
+    const row: (string | { content: string; meta?: ScnAgencyStatus })[] = [s(name)]
     const perDay = primary.get(name)
     for (let d = 1; d <= dayCount; d++) {
       const entry = perDay?.get(d)
@@ -183,12 +185,12 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     if (y > pageBreakThreshold) { doc.addPage(); y = margin }
     doc.setFontSize(11)
     doc.setTextColor(20)
-    doc.text('Out of Service — Notes', margin, y)
+    doc.text(s('Out of Service — Notes'), margin, y)
     y += 4
     autoTable(doc, {
       startY: y,
       head: [['Day', 'Agency', 'Reason']],
-      body: oosFootnotes.map(f => [String(f.day), f.agency, f.note]),
+      body: oosFootnotes.map(f => [String(f.day), s(f.agency), s(f.note)]),
       theme: 'striped',
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [153, 27, 27], textColor: 255 },
@@ -202,12 +204,12 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
     if (y > pageBreakThreshold) { doc.addPage(); y = margin }
     doc.setFontSize(11)
     doc.setTextColor(20)
-    doc.text('No Response — Days & Controller OI', margin, y)
+    doc.text(s('No Response — Days & OI'), margin, y)
     y += 4
     autoTable(doc, {
       startY: y,
-      head: [['Day', 'Agency', 'Controller']],
-      body: noResponseFootnotes.map(f => [String(f.day), f.agency, f.oi || '—']),
+      head: [['Day', 'Agency', 'Logged by']],
+      body: noResponseFootnotes.map(f => [String(f.day), s(f.agency), s(f.oi || '—')]),
       theme: 'striped',
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [146, 88, 6], textColor: 255 },
@@ -230,12 +232,12 @@ export function generateScnMonthlyPdf(input: ScnPdfInput): { doc: jsPDF; filenam
       head: [['Day', 'Controller', 'Result']],
       body: sortedBackup.map(day => {
         const c = checks.find(ch => ch.check_type === 'backup' && parseInt(ch.check_date.slice(8, 10), 10) === day && ch.check_date.startsWith(monthYyyyMm))
-        if (!c) return [String(day), '—', '—']
+        if (!c) return [String(day), s('—'), s('—')]
         const exceptions = c.results.filter(r => r.status !== 'loud_clear')
         const result = exceptions.length === 0
           ? 'All agencies loud & clear'
           : `Except: ${exceptions.map(e => `${e.agency_name} (${SCN_STATUS_LABELS[e.status]})`).join(', ')}`
-        return [String(day), c.completed_by_oi || '—', result]
+        return [String(day), s(c.completed_by_oi || '—'), s(result)]
       }),
       theme: 'striped',
       styles: { fontSize: 8, cellPadding: 2 },
