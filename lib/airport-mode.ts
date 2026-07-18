@@ -278,7 +278,11 @@ export function getRegSource(base: BaseLike): string[] {
  */
 export function getSurfaceSet(base: BaseLike): SurfaceSet {
   if (base && typeof base === 'object' && 'obstruction_surface_set' in base) {
-    const explicit = (base as { obstruction_surface_set?: SurfaceSet }).obstruction_surface_set
+    const explicit = (base as { obstruction_surface_set?: string }).obstruction_surface_set
+    // USAFE-AFAFRICA 32-1007 evaluates obstructions against ICAO/NATO surfaces,
+    // so it resolves to the ICAO engine here; only PARKING keeps its own variant
+    // (parkingStandardForBase reads the raw value to tell 32-1007 from civil ICAO).
+    if (explicit === 'usafe_32_1007') return 'icao_annex14'
     if (explicit === 'faa_part77' || explicit === 'ufc_3_260_01' || explicit === 'icao_annex14') return explicit
   }
   return isCivilian(base) ? 'faa_part77' : 'ufc_3_260_01'

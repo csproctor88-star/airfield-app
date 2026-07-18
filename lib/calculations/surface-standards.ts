@@ -52,8 +52,8 @@ export type SurfaceRunwayInput = Part77RunwayInput & {
 /** UFC runway classes that parameterize the UFC geometry generators. */
 export type UfcRunwayClass = 'A' | 'B' | 'Army_B'
 
-/** The five user-selectable obstruction standards. */
-export type SurfaceStandardId = 'af_class_a' | 'af_class_b' | 'army_class_b' | 'icao_annex14' | 'faa_part77'
+/** The user-selectable obstruction standards. */
+export type SurfaceStandardId = 'af_class_a' | 'af_class_b' | 'army_class_b' | 'icao_annex14' | 'usafe_32_1007' | 'faa_part77'
 
 /**
  * Every selectable standard, keyed by id. `runwayClass` is non-null only for
@@ -66,11 +66,16 @@ export const SURFACE_STANDARD_OPTIONS: Record<SurfaceStandardId, {
   runwayClass: UfcRunwayClass | null
   label: string
   citation: string
+  /** Raw value persisted to bases.obstruction_surface_set. Defaults to `set`;
+   *  32-1007 persists its own id so it stays distinct from civil ICAO even
+   *  though both evaluate obstructions with the ICAO engine. */
+  persistAs?: string
 }> = {
   af_class_a:   { set: 'ufc_3_260_01', runwayClass: 'A',      label: 'Air Force Class A', citation: 'UFC 3-260-01 Table 3-7' },
   af_class_b:   { set: 'ufc_3_260_01', runwayClass: 'B',      label: 'Air Force Class B', citation: 'UFC 3-260-01 Table 3-7' },
   army_class_b: { set: 'ufc_3_260_01', runwayClass: 'Army_B', label: 'Army Class B',      citation: 'UFC 3-260-01 Table 3-7' },
   icao_annex14: { set: 'icao_annex14', runwayClass: null,     label: 'ICAO Annex 14 (NATO)', citation: 'ICAO Annex 14 Vol I Table 4-1' },
+  usafe_32_1007:{ set: 'icao_annex14', runwayClass: null,     label: 'USAFE-AFAFRICA 32-1007 (NATO)', citation: 'USAFE-AFAFRICAI 32-1007', persistAs: 'usafe_32_1007' },
   faa_part77:   { set: 'faa_part77',   runwayClass: null,     label: 'FAA Part 77',       citation: '14 CFR §77.19' },
 }
 
@@ -80,6 +85,7 @@ export const SURFACE_STANDARD_IDS: SurfaceStandardId[] = [
   'af_class_b',
   'army_class_b',
   'icao_annex14',
+  'usafe_32_1007',
   'faa_part77',
 ]
 

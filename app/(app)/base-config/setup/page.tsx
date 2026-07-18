@@ -1293,7 +1293,10 @@ function RunwayTab({
         : `Set the surface evaluation standard to ${opt.label}? Runway classes are kept; Part 77 uses each runway's FAA approach type.`
     if (!confirm(confirmMsg)) return
 
-    const prevSet = getSurfaceSet(currentInstallation)
+    // Raw persisted value (not normalized) so a revert restores 32-1007 rather
+    // than the ICAO engine set it normalizes to.
+    const prevSet = (currentInstallation as { obstruction_surface_set?: string } | null)?.obstruction_surface_set
+      ?? getSurfaceSet(currentInstallation)
     const prevRunways = runways
     setStandardSaving(true)
     const supabase = createClient()
@@ -1301,7 +1304,7 @@ function RunwayTab({
 
     const { error: baseError } = await supabase
       .from('bases')
-      .update({ obstruction_surface_set: opt.set, updated_at: new Date().toISOString() } as any)
+      .update({ obstruction_surface_set: opt.persistAs ?? opt.set, updated_at: new Date().toISOString() } as any)
       .eq('id', installationId)
 
     if (baseError) {
@@ -1367,7 +1370,12 @@ function RunwayTab({
 
   // Current standard, resolved from the base's persisted set + its runways'
   // classes — 'mixed' when UFC runways disagree on class.
-  const surfaceStandardId = resolveStandard(getSurfaceSet(currentInstallation), runways.map(r => r.runway_class))
+  // USAFE 32-1007 normalizes to the ICAO engine, so resolveStandard can't tell
+  // it apart — read the raw persisted value first to keep the picker on 32-1007.
+  const rawSurfaceSet = (currentInstallation as { obstruction_surface_set?: string } | null)?.obstruction_surface_set
+  const surfaceStandardId = rawSurfaceSet === 'usafe_32_1007'
+    ? 'usafe_32_1007'
+    : resolveStandard(getSurfaceSet(currentInstallation), runways.map(r => r.runway_class))
 
   return (
     <div>

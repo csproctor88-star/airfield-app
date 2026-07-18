@@ -56,18 +56,19 @@ function trapezoidDims(ring: [number, number][]) {
 // ── 1. SURFACE_STANDARD_OPTIONS locks all four tuples ────────────────────────
 
 describe('SURFACE_STANDARD_OPTIONS', () => {
-  it('locks the five (set, runwayClass, label, citation) tuples', () => {
+  it('locks the six (set, runwayClass, label, citation) tuples', () => {
     expect(SURFACE_STANDARD_OPTIONS).toEqual({
       af_class_a:   { set: 'ufc_3_260_01', runwayClass: 'A',      label: 'Air Force Class A', citation: 'UFC 3-260-01 Table 3-7' },
       af_class_b:   { set: 'ufc_3_260_01', runwayClass: 'B',      label: 'Air Force Class B', citation: 'UFC 3-260-01 Table 3-7' },
       army_class_b: { set: 'ufc_3_260_01', runwayClass: 'Army_B', label: 'Army Class B',      citation: 'UFC 3-260-01 Table 3-7' },
       icao_annex14: { set: 'icao_annex14', runwayClass: null,     label: 'ICAO Annex 14 (NATO)', citation: 'ICAO Annex 14 Vol I Table 4-1' },
+      usafe_32_1007:{ set: 'icao_annex14', runwayClass: null,     label: 'USAFE-AFAFRICA 32-1007 (NATO)', citation: 'USAFE-AFAFRICAI 32-1007', persistAs: 'usafe_32_1007' },
       faa_part77:   { set: 'faa_part77',   runwayClass: null,     label: 'FAA Part 77',       citation: '14 CFR §77.19' },
     })
   })
 
   it('SURFACE_STANDARD_IDS is the stable display order', () => {
-    expect(SURFACE_STANDARD_IDS).toEqual(['af_class_a', 'af_class_b', 'army_class_b', 'icao_annex14', 'faa_part77'])
+    expect(SURFACE_STANDARD_IDS).toEqual(['af_class_a', 'af_class_b', 'army_class_b', 'icao_annex14', 'usafe_32_1007', 'faa_part77'])
   })
 
   it('SURFACE_SET_LABELS locks all three engine-set labels', () => {
