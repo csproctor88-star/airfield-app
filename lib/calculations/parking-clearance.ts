@@ -130,8 +130,85 @@ export function getWingtipClearance(
   wingspanFt: number,
   context: ApronContext = 'parking',
   aircraftName?: string | null,
+  standard: ParkingStandard = 'ufc',
 ): number {
-  return getWingtipClearanceDetail(wingspanFt, context, aircraftName).clearance_ft
+  return getClearanceDetail(wingspanFt, context, aircraftName, standard).clearance_ft
+}
+
+// ── Parking clearance standard (follows the base's obstruction standard) ──
+
+/** The regulatory framework a base's parking clearances follow. */
+export type ParkingStandard = 'ufc' | 'icao' | 'usafe_32_1007'
+
+/** ICAO Annex 14 Vol I aerodrome reference code letter (Table 1-1). */
+export type IcaoCodeLetter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+
+const M_PER_FT = 0.3048
+
+/** ICAO Annex 14 Table 1-1 — code letter from wingspan (metric thresholds). */
+export function getIcaoCodeLetter(wingspanFt: number): IcaoCodeLetter {
+  const m = wingspanFt * M_PER_FT
+  if (m < 15) return 'A'
+  if (m < 24) return 'B'
+  if (m < 36) return 'C'
+  if (m < 52) return 'D'
+  if (m < 65) return 'E'
+  return 'F'
+}
+
+// ICAO Annex 14 Vol I §3.13.6 — minimum clearance between an aircraft on a stand
+// and any adjacent building/aircraft/object, by code letter (metres). Verbatim:
+// A 3 m · B 3 m · C 4.5 m · D 7.5 m · E 7.5 m · F 7.5 m.
+const ICAO_STAND_CLEARANCE_M: Record<IcaoCodeLetter, number> = {
+  A: 3, B: 3, C: 4.5, D: 7.5, E: 7.5, F: 7.5,
+}
+
+/**
+ * Standard-aware clearance detail. UFC and USAFE 32-1007 share the wingtip
+ * model — 32-1007's clearances are direct SI conversions of the UFC values, so
+ * only the citation differs. ICAO Annex 14 instead uses the §3.13.6 aircraft-
+ * stand clearance keyed by code letter (independent of apron context). Values
+ * are returned in FEET (the engine's native unit); the display layer converts
+ * for metric bases.
+ */
+export function getClearanceDetail(
+  wingspanFt: number,
+  context: ApronContext,
+  aircraftName: string | null | undefined,
+  standard: ParkingStandard = 'ufc',
+): ClearanceDetail {
+  if (standard === 'icao') {
+    const letter = getIcaoCodeLetter(wingspanFt)
+    return {
+      clearance_ft: ICAO_STAND_CLEARANCE_M[letter] / M_PER_FT,
+      ufc_item: `Annex 14 §3.13.6 (Code ${letter})`,
+      description: `Aircraft stand clearance — ICAO code letter ${letter}`,
+    }
+  }
+  const detail = getWingtipClearanceDetail(wingspanFt, context, aircraftName)
+  if (standard === 'usafe_32_1007') {
+    return {
+      ...detail,
+      ufc_item: `USAFE 32-1007 / NATO (${detail.ufc_item})`,
+      description: `${detail.description} — per USAFE-AFAFRICA 32-1007`,
+    }
+  }
+  return detail
+}
+
+/**
+ * Resolve the parking-clearance standard a base follows from its persisted
+ * obstruction standard — one base setting drives both. USAFE 32-1007 and civil
+ * ICAO both run ICAO/NATO imaginary surfaces, but diverge on parking: 32-1007
+ * keeps the UFC wingtip clearances (shown in metric), while civil ICAO uses the
+ * §3.13.6 code-letter stand clearance — so they resolve distinctly here. Read
+ * through a cast (the generated types don't carry the raw value).
+ */
+export function parkingStandardForBase(base: unknown): ParkingStandard {
+  const raw = (base as { obstruction_surface_set?: string | null } | null)?.obstruction_surface_set
+  if (raw === 'usafe_32_1007') return 'usafe_32_1007'
+  if (raw === 'icao_annex14') return 'icao'
+  return 'ufc'
 }
 
 /** UI labels for context selector */
@@ -462,7 +539,8 @@ function getAircraftPerimeterPoints(spot: SpotWithAircraft): LatLon[] {
 export function checkWingtipClearance(
   spotA: SpotWithAircraft,
   spotB: SpotWithAircraft,
-  apronContext: ApronContext = 'parking'
+  apronContext: ApronContext = 'parking',
+  standard: ParkingStandard = 'ufc',
 ): ClearanceResult {
   // Sample points along each aircraft's outline and measure distance
   // to the other aircraft's bounding rectangle
@@ -478,10 +556,10 @@ export function checkWingtipClearance(
   // Get clearance detail for each aircraft (includes KC-refuel auto-detect)
   const detailA = spotA.clearance_ft != null
     ? { clearance_ft: spotA.clearance_ft, ufc_item: 'Manual', description: 'Manual override' }
-    : getWingtipClearanceDetail(spotA.wingspan_ft, apronContext, spotA.aircraft_name)
+    : getClearanceDetail(spotA.wingspan_ft, apronContext, spotA.aircraft_name, standard)
   const detailB = spotB.clearance_ft != null
     ? { clearance_ft: spotB.clearance_ft, ufc_item: 'Manual', description: 'Manual override' }
-    : getWingtipClearanceDetail(spotB.wingspan_ft, apronContext, spotB.aircraft_name)
+    : getClearanceDetail(spotB.wingspan_ft, apronContext, spotB.aircraft_name, standard)
 
   // Use the more restrictive clearance requirement
   const governing = detailA.clearance_ft >= detailB.clearance_ft ? detailA : detailB
@@ -570,7 +648,8 @@ function pointToLineDistance(spot: SpotWithAircraft, obstacle: ParkingObstacle):
 export function checkObstacleClearance(
   spot: SpotWithAircraft,
   obstacle: ParkingObstacle,
-  apronContext: ApronContext = 'parking'
+  apronContext: ApronContext = 'parking',
+  standard: ParkingStandard = 'ufc',
 ): ClearanceResult {
   let distance: number
 
@@ -590,7 +669,7 @@ export function checkObstacleClearance(
 
   const detail = spot.clearance_ft != null
     ? { clearance_ft: spot.clearance_ft, ufc_item: 'Manual', description: 'Manual override' }
-    : getWingtipClearanceDetail(spot.wingspan_ft, apronContext, spot.aircraft_name)
+    : getClearanceDetail(spot.wingspan_ft, apronContext, spot.aircraft_name, standard)
 
   let status: ClearanceResult['status'] = 'ok'
   if (distance < detail.clearance_ft) {
@@ -626,7 +705,8 @@ export type TaxilaneForCheck = {
 
 /** Compute the required taxilane envelope half-width */
 export function getTaxilaneEnvelopeHalfWidth(
-  taxilane: TaxilaneForCheck
+  taxilane: TaxilaneForCheck,
+  standard: ParkingStandard = 'ufc',
 ): { halfWidth: number; detail: ClearanceDetail } {
   const designWingspan = taxilane.design_wingspan_ft ?? 100
 
@@ -640,7 +720,7 @@ export function getTaxilaneEnvelopeHalfWidth(
     context = 'peripheral_taxilane'
   }
 
-  const detail = getWingtipClearanceDetail(designWingspan, context)
+  const detail = getClearanceDetail(designWingspan, context, null, standard)
   const halfWidth = 0.5 * designWingspan + detail.clearance_ft
 
   return { halfWidth, detail }
@@ -735,8 +815,9 @@ export function generateTaxilaneEnvelopePolygon(
 export function checkTaxilaneClearance(
   spot: SpotWithAircraft,
   taxilane: TaxilaneForCheck,
+  standard: ParkingStandard = 'ufc',
 ): ClearanceResult {
-  const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane)
+  const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane, standard)
 
   const center: LatLon = spotCenter(spot)
 
@@ -826,8 +907,9 @@ function getObstaclePoints(obstacle: ParkingObstacle): LatLon[] {
 export function checkObstacleTaxilaneClearance(
   obstacle: ParkingObstacle,
   taxilane: TaxilaneForCheck,
+  standard: ParkingStandard = 'ufc',
 ): ClearanceResult {
-  const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane)
+  const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(taxilane, standard)
 
   const obsPts = getObstaclePoints(obstacle)
 
@@ -869,13 +951,14 @@ export function findAllViolations(
   spots: SpotWithAircraft[],
   obstacles: ParkingObstacle[],
   apronContext: ApronContext = 'parking',
-  taxilanes?: TaxilaneForCheck[]
+  taxilanes?: TaxilaneForCheck[],
+  standard: ParkingStandard = 'ufc',
 ): ClearanceResult[] {
   const results: ClearanceResult[] = []
 
   for (let i = 0; i < spots.length; i++) {
     for (let j = i + 1; j < spots.length; j++) {
-      const result = checkWingtipClearance(spots[i], spots[j], apronContext)
+      const result = checkWingtipClearance(spots[i], spots[j], apronContext, standard)
       if (result.status !== 'ok') {
         results.push(result)
       }
@@ -884,7 +967,7 @@ export function findAllViolations(
 
   for (const spot of spots) {
     for (const obstacle of obstacles) {
-      const result = checkObstacleClearance(spot, obstacle, apronContext)
+      const result = checkObstacleClearance(spot, obstacle, apronContext, standard)
       if (result.status !== 'ok') {
         results.push(result)
       }
@@ -894,7 +977,7 @@ export function findAllViolations(
   if (taxilanes) {
     for (const spot of spots) {
       for (const taxilane of taxilanes) {
-        const result = checkTaxilaneClearance(spot, taxilane)
+        const result = checkTaxilaneClearance(spot, taxilane, standard)
         if (result.status !== 'ok') {
           results.push(result)
         }
@@ -903,7 +986,7 @@ export function findAllViolations(
     // Obstacle-to-taxilane checks
     for (const obstacle of obstacles) {
       for (const taxilane of taxilanes) {
-        const result = checkObstacleTaxilaneClearance(obstacle, taxilane)
+        const result = checkObstacleTaxilaneClearance(obstacle, taxilane, standard)
         if (result.status !== 'ok') {
           results.push(result)
         }
@@ -925,32 +1008,33 @@ export function getAllClearanceResults(
   spots: SpotWithAircraft[],
   obstacles: ParkingObstacle[],
   apronContext: ApronContext = 'parking',
-  taxilanes?: TaxilaneForCheck[]
+  taxilanes?: TaxilaneForCheck[],
+  standard: ParkingStandard = 'ufc',
 ): ClearanceResult[] {
   const results: ClearanceResult[] = []
 
   for (let i = 0; i < spots.length; i++) {
     for (let j = i + 1; j < spots.length; j++) {
-      results.push(checkWingtipClearance(spots[i], spots[j], apronContext))
+      results.push(checkWingtipClearance(spots[i], spots[j], apronContext, standard))
     }
   }
 
   for (const spot of spots) {
     for (const obstacle of obstacles) {
-      results.push(checkObstacleClearance(spot, obstacle, apronContext))
+      results.push(checkObstacleClearance(spot, obstacle, apronContext, standard))
     }
   }
 
   if (taxilanes) {
     for (const spot of spots) {
       for (const taxilane of taxilanes) {
-        results.push(checkTaxilaneClearance(spot, taxilane))
+        results.push(checkTaxilaneClearance(spot, taxilane, standard))
       }
     }
     // Obstacle-to-taxilane checks
     for (const obstacle of obstacles) {
       for (const taxilane of taxilanes) {
-        results.push(checkObstacleTaxilaneClearance(obstacle, taxilane))
+        results.push(checkObstacleTaxilaneClearance(obstacle, taxilane, standard))
       }
     }
   }

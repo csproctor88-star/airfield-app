@@ -46,9 +46,10 @@ import {
 import {
   getADGFromWingspan,
   getWingtipClearance,
-  getWingtipClearanceDetail,
   findAllViolations,
   getAllClearanceResults,
+  getClearanceDetail,
+  parkingStandardForBase,
   generateClearanceZonePolygon,
   APRON_CONTEXT_LABELS,
   TABLE_6_1A_ITEMS,
@@ -423,6 +424,10 @@ export default function ParkingPage() {
   // feet (UFC engine works in feet); this only reformats them for display, so an
   // overseas metric base sees metres everywhere. Feet is the identity case.
   const resultUnit = baseDistanceUnit(currentInstallation)
+  // Parking clearance standard follows the base's obstruction standard (UFC
+  // wingtip / ICAO code-letter / USAFE 32-1007). Drives clearances + citations.
+  const parkingStandard = parkingStandardForBase(currentInstallation)
+  const stdLabel = parkingStandard === 'icao' ? 'ICAO' : parkingStandard === 'usafe_32_1007' ? '32-1007' : 'UFC'
 
   // ── State ──
   const [plans, setPlans] = useState<ParkingPlan[]>([])
@@ -735,8 +740,8 @@ export default function ParkingPage() {
   )
 
   const allResults: ClearanceResult[] = useMemo(
-    () => getAllClearanceResults(spotsWithAircraft, obstacles, apronContext, taxilanesForCheck.length > 0 ? taxilanesForCheck : undefined),
-    [spotsWithAircraft, obstacles, apronContext, taxilanesForCheck]
+    () => getAllClearanceResults(spotsWithAircraft, obstacles, apronContext, taxilanesForCheck.length > 0 ? taxilanesForCheck : undefined, parkingStandard),
+    [spotsWithAircraft, obstacles, apronContext, taxilanesForCheck, parkingStandard]
   )
 
   const violations = useMemo(
@@ -953,7 +958,7 @@ export default function ParkingPage() {
 
       if (placingAircraft && selectedPlanId && installationId) {
         const ws = parseNum(placingAircraft.wing_span_ft)
-        const clearance = getWingtipClearance(ws, apronContext, placingAircraft.aircraft)
+        const clearance = getWingtipClearance(ws, apronContext, placingAircraft.aircraft, parkingStandard)
         const acName = placingAircraft.aircraft
 
         // Compute sequential number for this aircraft type — read via ref so
@@ -1108,7 +1113,7 @@ export default function ParkingPage() {
     // ── Clearance zones ──
     if (showClearances && visibleLayers.clearance) {
       for (const spot of spotsWithAircraft) {
-        const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext, spot.aircraft_name)
+        const clearanceFt = spot.clearance_ft ?? getWingtipClearance(spot.wingspan_ft, apronContext, spot.aircraft_name, parkingStandard)
         const polygon = generateClearanceZonePolygon(spot, clearanceFt)
         const spotResults = allResults.filter(r => r.spot_a_id === spot.id || r.spot_b_id === spot.id)
         const hasViolation = spotResults.some(r => r.status === 'violation')
@@ -1191,7 +1196,7 @@ export default function ParkingPage() {
     for (const tl of taxilanes) {
       if (!tl.line_coords || tl.line_coords.length < 2) continue
       const tlForCheck: TaxilaneForCheck = { id: tl.id, name: tl.name, taxilane_type: tl.taxilane_type, design_wingspan_ft: tl.design_wingspan_ft, line_coords: tl.line_coords, is_transient: tl.is_transient }
-      const { halfWidth } = getTaxilaneEnvelopeHalfWidth(tlForCheck)
+      const { halfWidth } = getTaxilaneEnvelopeHalfWidth(tlForCheck, parkingStandard)
       const envelope = generateTaxilaneEnvelopePolygon(tl.line_coords, halfWidth)
 
       const hasViolation = spotsWithAircraft.some(s => checkTaxilaneClearance(s, tlForCheck).status === 'violation')
@@ -1760,7 +1765,7 @@ export default function ParkingPage() {
             const dx = (lng - other.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
             const dy = (lat - other.latitude) * 364567
             if (Math.sqrt(dx * dx + dy * dy) > 500) continue
-            const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current)
+            const result = getAllClearanceResults([movedSpot, other], [], apronContextRef.current, undefined, parkingStandard)
             if (result.length > 0) {
               const r = result[0]
               const color = r.status === 'violation' ? '#EF4444' : r.status === 'warning' ? '#F59E0B' : '#22C55E'
@@ -1787,7 +1792,7 @@ export default function ParkingPage() {
             const dx = (lng - obs.longitude) * 364567 * Math.cos(lat * Math.PI / 180)
             const dy = (lat - obs.latitude) * 364567
             if (Math.sqrt(dx * dx + dy * dy) > 500) continue
-            const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current)
+            const result = getAllClearanceResults([movedSpot], [obs], apronContextRef.current, undefined, parkingStandard)
             if (result.length > 0) {
               const r2 = result[0]
               const color = r2.status === 'violation' ? '#EF4444' : r2.status === 'warning' ? '#F59E0B' : '#22C55E'
@@ -2699,6 +2704,7 @@ export default function ParkingPage() {
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
       distanceUnit: resultUnit,
+      parkingStandard,
       sections: sections.map(s => ({
         label: s.label || null,
         spots: s.spots,
@@ -3701,7 +3707,7 @@ export default function ParkingPage() {
                       {isGroupOpen && groupSpots.map(s => {
                         const clearanceDetail = s.clearance_ft != null
                           ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual', description: 'Override' }
-                          : getWingtipClearanceDetail(ws, apronContext, s.aircraft_name)
+                          : getClearanceDetail(ws, apronContext, s.aircraft_name, parkingStandard)
                         const clearance = clearanceDetail.clearance_ft
                         const spotViolations = allResults.filter(r =>
                           (r.spot_a_id === s.id || r.spot_b_id === s.id) && r.status !== 'ok'
@@ -3809,7 +3815,7 @@ export default function ParkingPage() {
                                       background: s.clearance_ft === val ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg-surface)',
                                       color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
                                     }}>
-                                      {val ? fmtDistance(val, resultUnit) : `UFC (${fmtDistance(getWingtipClearance(ws, apronContext, s.aircraft_name), resultUnit)})`}
+                                      {val ? fmtDistance(val, resultUnit) : `${stdLabel} (${fmtDistance(getWingtipClearance(ws, apronContext, s.aircraft_name, parkingStandard), resultUnit)})`}
                                     </button>
                                   ))}
                                   <select value={s.status} onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
@@ -4061,7 +4067,7 @@ export default function ParkingPage() {
               {taxilanes.map(tl => {
                 const isEditing = editingTaxilane?.id === tl.id
                 const tlForCheck: TaxilaneForCheck = { id: tl.id, name: tl.name, taxilane_type: tl.taxilane_type, design_wingspan_ft: tl.design_wingspan_ft, line_coords: tl.line_coords, is_transient: tl.is_transient }
-                const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(tlForCheck)
+                const { halfWidth, detail } = getTaxilaneEnvelopeHalfWidth(tlForCheck, parkingStandard)
                 const tlViolations = allResults.filter(r => r.spot_b_id === tl.id && r.status !== 'ok')
 
                 return (
@@ -5036,7 +5042,7 @@ export default function ParkingPage() {
                       background: s.clearance_ft === val ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg-inset)',
                       color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
                     }}>
-                      {val ? fmtDistance(val, resultUnit) : `UFC (${fmtDistance(getWingtipClearance(ws, apronContext, s.aircraft_name), resultUnit)})`}
+                      {val ? fmtDistance(val, resultUnit) : `${stdLabel} (${fmtDistance(getWingtipClearance(ws, apronContext, s.aircraft_name, parkingStandard), resultUnit)})`}
                     </button>
                   ))}
                 </div>

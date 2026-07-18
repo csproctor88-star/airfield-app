@@ -10,10 +10,11 @@ import {
 } from '@/lib/pdf-utils'
 import {
   getADGFromWingspan,
-  getWingtipClearanceDetail,
+  getClearanceDetail,
   APRON_CONTEXT_LABELS,
   type ADGGroup,
   type ApronContext,
+  type ParkingStandard,
   type SpotWithAircraft,
   type ClearanceResult,
 } from '@/lib/calculations/parking-clearance'
@@ -40,12 +41,15 @@ interface ParkingPdfInput {
   baseName?: string | null
   baseIcao?: string | null
   distanceUnit?: DistanceUnit
+  parkingStandard?: ParkingStandard
 }
 
 export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc: jsPDF; filename: string }> {
   const { plan, apronContext, sections, baseName, baseIcao } = input
   // Values are STORED in feet; the base's unit only reformats them for display.
   const unit: DistanceUnit = input.distanceUnit ?? 'ft'
+  // Parking clearance standard (UFC wingtip / ICAO code-letter / USAFE 32-1007).
+  const standard: ParkingStandard = input.parkingStandard ?? 'ufc'
   const isMulti = sections.length > 1
 
   const ctx = createPdf({ orientation: 'landscape' })
@@ -122,7 +126,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         const adg = getADGFromWingspan(s.wingspan_ft)
         const detail = s.clearance_ft != null
           ? { clearance_ft: s.clearance_ft, ufc_item: 'Manual' }
-          : getWingtipClearanceDetail(s.wingspan_ft, apronContext, name)
+          : getClearanceDetail(s.wingspan_ft, apronContext, name, standard)
 
         return [
           name,
@@ -229,7 +233,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
 
       autoTable(doc, {
         startY: y,
-        head: [['Aircraft A', 'Aircraft B / Obstacle', `Actual (${unit})`, `Required (${unit})`, 'UFC Item', 'Status']],
+        head: [['Aircraft A', 'Aircraft B / Obstacle', `Actual (${unit})`, `Required (${unit})`, 'Reference', 'Status']],
         body: crRows,
         margin: { left: margin, right: margin },
         styles: { fontSize: 7, cellPadding: 1.5 },
