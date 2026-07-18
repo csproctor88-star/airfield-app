@@ -8,6 +8,7 @@ import { PhotoViewerModal } from '@/components/discrepancies/modals'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { fetchMapImageDataUrl, compressImageForPdf } from '@/lib/utils'
+import { baseDistanceUnit, fmtDistance } from '@/lib/distance-units'
 
 // Compact relative-aware date for the saved-evaluation subtitle.
 // Today / Yesterday / 'Mar 9 HHMMZ' (drop year same-year) /
@@ -132,6 +133,7 @@ export default function ObstructionDetailPage() {
       mapDataUrl,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
+      distanceUnit: baseDistanceUnit(currentInstallation),
     })
   }
 
@@ -200,6 +202,8 @@ export default function ObstructionDetailPage() {
   const applicableResults = results.filter((r) => r.isWithinBounds)
   const violatedResults = results.filter((r) => r.violated)
   const createdAt = new Date(evaluation.created_at)
+  // Base display unit for result values (feet is identity for US bases).
+  const resultUnit = baseDistanceUnit(currentInstallation)
   const photoPaths = parsePhotoPaths(evaluation.photo_storage_path)
 
   // Surface set this evaluation was pinned under at save time (or the
@@ -383,10 +387,10 @@ export default function ObstructionDetailPage() {
       <div className="card" style={{ marginBottom: 10 }}>
         <span className="section-label">Obstruction Details</span>
         <DetailGrid gap={8} items={[
-          { label: 'Height AGL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_height_agl} ft</span> },
-          { label: 'Top Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft</span> },
-          { label: 'Ground Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.object_elevation_msl?.toFixed(0) ?? (currentInstallation?.elevation_msl ?? 580)} ft</span> },
-          { label: 'From Centerline', value: <span style={{ fontFamily: 'monospace' }}>{evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft</span> },
+          { label: 'Height AGL', value: <span style={{ fontFamily: 'monospace' }}>{fmtDistance(evaluation.object_height_agl, resultUnit)}</span> },
+          { label: 'Top Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{fmtDistance(evaluation.obstruction_top_msl, resultUnit)}</span> },
+          { label: 'Ground Elevation MSL', value: <span style={{ fontFamily: 'monospace' }}>{fmtDistance(evaluation.object_elevation_msl ?? (currentInstallation?.elevation_msl ?? 580), resultUnit)}</span> },
+          { label: 'From Centerline', value: <span style={{ fontFamily: 'monospace' }}>{fmtDistance(evaluation.distance_from_centerline_ft, resultUnit)}</span> },
           { label: 'Coordinates', value: <span style={{ fontFamily: 'monospace', fontSize: 'var(--fs-sm)' }}>{evaluation.latitude?.toFixed(5)}°N, {evaluation.longitude ? Math.abs(evaluation.longitude).toFixed(5) : '—'}°W</span> },
           { label: 'Standard', value: resolveStandardLabel(pinnedSurfaceSet, evaluation.runway_class) },
         ]} />
@@ -512,7 +516,7 @@ export default function ObstructionDetailPage() {
                       letterSpacing: '0.04em',
                     }}
                   >
-                    {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
+                    {s.violated ? `VIOLATION (${fmtDistance(s.penetrationFt, resultUnit, { digits: 1 })})` : 'CLEAR'}
                   </span>
                 )}
               </div>
@@ -524,18 +528,18 @@ export default function ObstructionDetailPage() {
                 <>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>
                     Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>
-                      {s.maxAllowableHeightMSL.toFixed(0)} ft MSL
+                      {fmtDistance(s.maxAllowableHeightMSL, resultUnit)} MSL
                     </strong>{' '}
-                    ({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                    ({fmtDistance(s.maxAllowableHeightAGL, resultUnit)} AGL)
                   </div>
                   {s.baselineLabel && (
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2 }}>
-                      Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${s.baselineElevation.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL)` : ''}
+                      Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${fmtDistance(s.baselineElevation, resultUnit, { digits: 1 })} MSL)` : ''}
                     </div>
                   )}
                   {s.violated && (
                     <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-red)', marginTop: 2 }}>
-                      Penetration: {s.penetrationFt.toFixed(1)} ft above allowable height
+                      Penetration: {fmtDistance(s.penetrationFt, resultUnit, { digits: 1 })} above allowable height
                     </div>
                   )}
                   {showVerify && s.calculationBreakdown && (
@@ -549,7 +553,7 @@ export default function ObstructionDetailPage() {
                       }}
                     >
                       <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
-                        Verify the numbers
+                        Verify the numbers{resultUnit === 'm' ? ' (feet)' : ''}
                       </div>
                       <div style={{ fontSize: 'var(--fs-sm)', fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
                         {s.calculationBreakdown}
@@ -612,7 +616,7 @@ export default function ObstructionDetailPage() {
               <ul style={{ margin: '4px 0 0 32px', padding: 0, color: 'var(--color-text-1)', fontSize: 'var(--fs-base)', lineHeight: 1.6 }}>
                 {violatedResults.map((v, i) => (
                   <li key={i}>
-                    {v.surfaceName} violation ({v.penetrationFt.toFixed(1)} ft) — {v.ufcReference}
+                    {v.surfaceName} violation ({fmtDistance(v.penetrationFt, resultUnit, { digits: 1 })}) — {v.ufcReference}
                   </li>
                 ))}
               </ul>

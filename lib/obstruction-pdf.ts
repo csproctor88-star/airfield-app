@@ -5,6 +5,7 @@ import { parsePhotoPaths } from '@/lib/supabase/obstructions'
 import { formatZuluTime, formatZuluDate, fetchMapImageDataUrl } from '@/lib/utils'
 import { formatDD } from '@/lib/calculations/coordinates'
 import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
+import { fmtDistance, type DistanceUnit } from '@/lib/distance-units'
 
 type SurfaceResult = {
   surfaceKey: string
@@ -25,10 +26,13 @@ interface ObstructionPdfInput {
   mapDataUrl?: string | null
   baseName?: string | null
   baseIcao?: string | null
+  distanceUnit?: DistanceUnit
 }
 
 export async function generateObstructionPdf(input: ObstructionPdfInput) {
   const { evaluation, photoDataUrls, baseName, baseIcao } = input
+  // Values are STORED in feet; the base's unit only reformats them for display.
+  const unit: DistanceUnit = input.distanceUnit ?? 'ft'
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -115,10 +119,10 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     margin: { left: margin, right: margin },
     head: [['Metric', 'Value']],
     body: [
-      ['Height AGL', `${evaluation.object_height_agl} ft`],
-      ['Top Elevation MSL', `${evaluation.obstruction_top_msl?.toFixed(0) ?? '—'} ft`],
-      ['Ground Elevation MSL', `${evaluation.object_elevation_msl?.toFixed(0) ?? '—'} ft`],
-      ['Distance from Centerline', `${evaluation.distance_from_centerline_ft?.toFixed(0) ?? '—'} ft`],
+      ['Height AGL', fmtDistance(evaluation.object_height_agl, unit)],
+      ['Top Elevation MSL', fmtDistance(evaluation.obstruction_top_msl, unit)],
+      ['Ground Elevation MSL', fmtDistance(evaluation.object_elevation_msl, unit)],
+      ['Distance from Centerline', fmtDistance(evaluation.distance_from_centerline_ft, unit)],
       ['Coordinates', coordsText],
       ['Surface Standard', surfaceStandardLabel],
     ],
@@ -176,10 +180,10 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
       }
       return [
         s.surfaceName,
-        `${s.maxAllowableHeightMSL.toFixed(0)} ft`,
-        `${s.obstructionTopMSL.toFixed(0)} ft`,
+        fmtDistance(s.maxAllowableHeightMSL, unit),
+        fmtDistance(s.obstructionTopMSL, unit),
         s.violated ? 'VIOLATION' : 'CLEAR',
-        s.violated ? `${s.penetrationFt.toFixed(1)} ft` : '—',
+        s.violated ? fmtDistance(s.penetrationFt, unit, { digits: 1 }) : '—',
       ]
     })
 
@@ -232,12 +236,12 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
   }
 
   // ── ICAO Annex 14 evaluation-scope caveat ──
-  // Inner approach + balked landing (precision code 3/4) are now evaluated and
-  // drawn; the inner transitional surface is not yet evaluated (Phase 2b — its
-  // geometry follows the inner-approach and balked-landing edges). Shown for
-  // every ICAO evaluation: the saved row does not persist the per-runway ICAO
-  // classification, so precision can't be re-derived here, and the note is a
-  // true scope disclosure for any Annex 14 evaluation.
+  // Inner approach, inner transitional, and balked landing (precision code 3/4)
+  // are all evaluated and drawn; the inner transitional is modeled along the
+  // strip (a documented simplification). Shown for every ICAO evaluation: the
+  // saved row does not persist the per-runway ICAO classification, so precision
+  // can't be re-derived here, and the note is a true scope disclosure for any
+  // Annex 14 evaluation.
   if (evaluation.surface_set === 'icao_annex14') {
     checkPageBreak(10)
     doc.setFontSize(7)

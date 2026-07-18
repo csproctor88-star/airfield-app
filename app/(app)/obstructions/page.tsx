@@ -39,7 +39,7 @@ import {
 } from '@/lib/calculations/surface-standards'
 import { fetchTaxiways } from '@/lib/supabase/taxiways'
 import { fetchElevation } from '@/lib/calculations/geometry'
-import { baseDistanceUnit } from '@/lib/distance-units'
+import { baseDistanceUnit, fmtDistance } from '@/lib/distance-units'
 import {
   createObstructionEvaluation,
   updateObstructionEvaluation,
@@ -101,6 +101,9 @@ function ObstructionsContent() {
 
   // Airfield elevation from base config
   const airfieldElevMSL = currentInstallation?.elevation_msl ?? 580
+  // Base display unit for all result values (feet is identity for US bases).
+  // The engine computes in feet; this only reformats results for display.
+  const resultUnit = baseDistanceUnit(currentInstallation)
 
   // Edit mode
   const editId = searchParams.get('edit')
@@ -438,11 +441,11 @@ function ObstructionsContent() {
     )
 
     if (elev) {
-      toast.success(`Elevation: ${elev.toFixed(0)} ft MSL`)
+      toast.success(`Elevation: ${fmtDistance(elev, resultUnit)} MSL`)
     } else {
-      toast(`Using airfield elevation (${airfieldElevMSL} ft MSL)`, { description: 'Elevation API unavailable' })
+      toast(`Using airfield elevation (${fmtDistance(airfieldElevMSL, resultUnit)} MSL)`, { description: 'Elevation API unavailable' })
     }
-  }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass, surfaceSet])
+  }, [getAllRunways, findClosestRunway, airfieldElevMSL, runwayClass, surfaceSet, resultUnit])
 
   // Commit a typed coordinate. Reuses the full map-tap pipeline unchanged;
   // setFlyToPoint always receives a freshly spread object so the map's flyTo
@@ -833,13 +836,13 @@ function ObstructionsContent() {
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>From Centerline</span>
               <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
-                {pointInfo.distFromCenterline.toFixed(0)} ft
+                {fmtDistance(pointInfo.distFromCenterline, resultUnit)}
               </div>
             </div>
             <div>
               <span style={{ color: 'var(--color-text-3)' }}>From Nearest Threshold</span>
               <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
-                {pointInfo.distFromThreshold.toFixed(0)} ft (RWY {pointInfo.nearerEnd === 'end1'
+                {fmtDistance(pointInfo.distFromThreshold, resultUnit)} (RWY {pointInfo.nearerEnd === 'end1'
                   ? (runways[pointInfo.closestRunwayIndex]?.end1_designator ?? '01')
                   : (runways[pointInfo.closestRunwayIndex]?.end2_designator ?? '19')})
               </div>
@@ -911,7 +914,7 @@ function ObstructionsContent() {
               <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                 {pointInfo.loadingElev
                   ? 'Fetching...'
-                  : `${(pointInfo.groundElevMSL ?? airfieldElevMSL).toFixed(0)} ft MSL`}
+                  : `${fmtDistance(pointInfo.groundElevMSL ?? airfieldElevMSL, resultUnit)} MSL`}
               </div>
             </div>
             <div>
@@ -940,8 +943,8 @@ function ObstructionsContent() {
                   <span style={{ color: 'var(--color-text-3)' }}>Nearest Threshold Elev</span>
                   <div style={{ color: 'var(--color-text-1)', fontFamily: 'monospace', fontSize: 'var(--fs-sm)', marginTop: 2 }}>
                     {thresholdElev != null
-                      ? `${thresholdElev.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL (RWY ${designator})`
-                      : `Not set (using ${airfieldElevMSL} ft airfield elev)`}
+                      ? `${fmtDistance(thresholdElev, resultUnit, { digits: 1 })} MSL (RWY ${designator})`
+                      : `Not set (using ${fmtDistance(airfieldElevMSL, resultUnit)} airfield elev)`}
                   </div>
                 </div>
               )
@@ -1219,21 +1222,21 @@ function ObstructionsContent() {
               <div style={{ background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                 <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>Total Obstruction Height MSL</div>
                 <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {multiAnalysis.obstructionTopMSL.toFixed(0)} ft MSL
+                  {fmtDistance(multiAnalysis.obstructionTopMSL, resultUnit)} MSL
                 </div>
               </div>
               <div style={{ background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                 <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>Max Allowable</div>
                 <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
                   {multiAnalysis.controllingSurface
-                    ? `${multiAnalysis.controllingSurface.maxAllowableHeightMSL.toFixed(0)} ft MSL`
+                    ? `${fmtDistance(multiAnalysis.controllingSurface.maxAllowableHeightMSL, resultUnit)} MSL`
                     : 'N/A'}
                 </div>
               </div>
               <div style={{ background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-sm)', padding: '6px 8px' }}>
                 <div style={{ color: 'var(--color-text-3)', marginBottom: 2 }}>CL Distance</div>
                 <div style={{ color: 'var(--color-text-1)', fontWeight: 700, fontFamily: 'monospace' }}>
-                  {pointInfo?.distFromCenterline.toFixed(0) ?? '—'} ft
+                  {pointInfo ? fmtDistance(pointInfo.distFromCenterline, resultUnit) : '—'}
                 </div>
               </div>
             </div>
@@ -1335,7 +1338,7 @@ function ObstructionsContent() {
                               letterSpacing: '0.04em',
                             }}
                           >
-                            {s.violated ? `VIOLATION (${s.penetrationFt.toFixed(1)} ft)` : 'CLEAR'}
+                            {s.violated ? `VIOLATION (${fmtDistance(s.penetrationFt, resultUnit, { digits: 1 })})` : 'CLEAR'}
                           </span>
                         )}
                       </div>
@@ -1346,12 +1349,12 @@ function ObstructionsContent() {
                       ) : (
                         <>
                           <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.4 }}>
-                            Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{s.maxAllowableHeightMSL.toFixed(0)} ft MSL</strong>
-                            {' '}({s.maxAllowableHeightAGL.toFixed(0)} ft AGL)
+                            Max allowable: <strong style={{ color: 'var(--color-text-1)' }}>{fmtDistance(s.maxAllowableHeightMSL, resultUnit)} MSL</strong>
+                            {' '}({fmtDistance(s.maxAllowableHeightAGL, resultUnit)} AGL)
                           </div>
                           {s.baselineLabel && (
                             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 2 }}>
-                              Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${s.baselineElevation.toLocaleString('en-US', { maximumFractionDigits: 1 })} ft MSL)` : ''}
+                              Baseline: {s.baselineLabel}{s.baselineElevation != null ? ` (${fmtDistance(s.baselineElevation, resultUnit, { digits: 1 })} MSL)` : ''}
                             </div>
                           )}
                           {showVerify && s.calculationBreakdown && (
@@ -1365,7 +1368,7 @@ function ObstructionsContent() {
                               }}
                             >
                               <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 3 }}>
-                                Verify the numbers
+                                Verify the numbers{resultUnit === 'm' ? ' (feet)' : ''}
                               </div>
                               <div style={{ fontSize: 'var(--fs-sm)', fontFamily: 'monospace', color: 'var(--color-text-1)', lineHeight: 1.5 }}>
                                 {s.calculationBreakdown}
@@ -1458,8 +1461,8 @@ function ObstructionsContent() {
                       </span>
                     </div>
                     <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
-                      Distance from centerline: <strong style={{ color: 'var(--color-text-1)' }}>{r.distanceFromCenterlineFt} ft</strong>
-                      {' '}| OFA boundary: {r.halfWidthFt} ft
+                      Distance from centerline: <strong style={{ color: 'var(--color-text-1)' }}>{fmtDistance(r.distanceFromCenterlineFt, resultUnit)}</strong>
+                      {' '}| OFA boundary: {fmtDistance(r.halfWidthFt, resultUnit)}
                     </div>
                     <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 4, fontStyle: 'italic' }}>
                       {r.ufcReference}
@@ -1482,7 +1485,7 @@ function ObstructionsContent() {
                         }}
                       >
                         <span style={{ width: 6, height: 6, borderRadius: 'var(--radius-xs)', background: r.color, opacity: 0.3, flexShrink: 0 }} />
-                        {r.surfaceName} ({r.distanceFromCenterlineFt} ft from CL)
+                        {r.surfaceName} ({fmtDistance(r.distanceFromCenterlineFt, resultUnit)} from CL)
                       </div>
                     ))}
                 </div>
@@ -1518,7 +1521,7 @@ function ObstructionsContent() {
                     {vs.ufcReference}
                   </div>
                   <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', lineHeight: 1.4 }}>
-                    {vs.surfaceName}{vs.runwayLabel ? ` (RWY ${vs.runwayLabel})` : ''} — {vs.penetrationFt.toFixed(1)} ft penetration
+                    {vs.surfaceName}{vs.runwayLabel ? ` (RWY ${vs.runwayLabel})` : ''} — {fmtDistance(vs.penetrationFt, resultUnit, { digits: 1 })} penetration
                   </div>
                   <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.4 }}>
                     {vs.ufcCriteria}

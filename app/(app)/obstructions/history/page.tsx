@@ -10,6 +10,7 @@ import { formatZuluDate } from '@/lib/utils'
 import { getSurfaceSet } from '@/lib/airport-mode'
 import type { SurfaceSet } from '@/lib/calculations/obstructions'
 import { resolveStandardLabel } from '@/lib/calculations/surface-standards'
+import { baseDistanceUnit, fmtDistance } from '@/lib/distance-units'
 
 const ObstructionMapView = lazy(() => import('@/components/obstructions/obstruction-map-view-google'))
 
@@ -40,6 +41,8 @@ function matchesSearch(ev: ObstructionRow, query: string, standardLabel: string)
 export default function ObstructionHistoryPage() {
   const router = useRouter()
   const { installationId, currentInstallation } = useInstallation()
+  // Base display unit for the stats row (feet is identity for US bases).
+  const resultUnit = baseDistanceUnit(currentInstallation)
   const [evaluations, setEvaluations] = useState<ObstructionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -350,13 +353,13 @@ export default function ObstructionHistoryPage() {
               {/* Stats row */}
               <div style={{ display: 'flex', gap: 12, fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>
                 <span>
-                  <strong style={{ color: 'var(--color-text-1)' }}>{ev.object_height_agl}</strong> ft AGL
+                  <strong style={{ color: 'var(--color-text-1)' }}>{fmtDistance(ev.object_height_agl, resultUnit, { withUnit: false })}</strong> {resultUnit} AGL
                 </span>
                 <span>
                   <strong style={{ color: 'var(--color-text-1)' }}>
-                    {ev.distance_from_centerline_ft?.toFixed(0) ?? '—'}
+                    {ev.distance_from_centerline_ft != null ? fmtDistance(ev.distance_from_centerline_ft, resultUnit, { withUnit: false }) : '—'}
                   </strong>{' '}
-                  ft from CL
+                  {resultUnit} from CL
                 </span>
                 {ev.has_violation && (
                   <span style={{ color: 'var(--color-danger)' }}>
