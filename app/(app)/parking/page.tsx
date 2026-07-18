@@ -6,6 +6,7 @@ import { applyMapProvider } from '@/lib/map-providers'
 import { toast } from 'sonner'
 import { useGoogleMapRuler } from '@/hooks/use-google-map-ruler'
 import { useInstallation } from '@/lib/installation-context'
+import { baseDistanceUnit, fmtDistance } from '@/lib/distance-units'
 import { formatCoordsDMS } from '@/lib/utils'
 import { allAircraft } from '@/lib/aircraft-data'
 import type { AircraftCharacteristics } from '@/lib/aircraft_database_schema'
@@ -418,6 +419,10 @@ function computeIconScale(wingspanFt: number, lengthFt: number, gmap: google.map
 
 export default function ParkingPage() {
   const { installationId, currentInstallation, runways, defaultPdfEmail, mapProvider } = useInstallation()
+  // Base display unit for parking dimensions + clearances. Values are STORED in
+  // feet (UFC engine works in feet); this only reformats them for display, so an
+  // overseas metric base sees metres everywhere. Feet is the identity case.
+  const resultUnit = baseDistanceUnit(currentInstallation)
 
   // ── State ──
   const [plans, setPlans] = useState<ParkingPlan[]>([])
@@ -912,7 +917,7 @@ export default function ParkingPage() {
             setObstacles(prev => [...prev, obs])
             setEditingObstacle(obs)
             setOpenSections(prev => ({ ...prev, obstacles: true }))
-            toast.success(`Circle placed (${Math.round(radius)}ft radius)`)
+            toast.success(`Circle placed (${fmtDistance(radius, resultUnit)} radius)`)
           }
         } else if (drawingObsType === 'building') {
           // Compute width/length from start→current in local frame
@@ -937,7 +942,7 @@ export default function ParkingPage() {
             setObstacles(prev => [...prev, obs])
             setEditingObstacle(obs)
             setOpenSections(prev => ({ ...prev, obstacles: true }))
-            toast.success(`Building placed (${Math.round(widthFt)}×${Math.round(lengthFt)}ft)`)
+            toast.success(`Building placed (${fmtDistance(widthFt, resultUnit, { withUnit: false })}×${fmtDistance(lengthFt, resultUnit)})`)
           }
         }
         setDrawingObsType(null)
@@ -1240,7 +1245,7 @@ export default function ParkingPage() {
         objs.polygons.push(poly)
       }
     }
-  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers])
+  }, [mapLoaded, spotsWithAircraft, obstacles, taxilanes, apronBoundaries, allResults, showClearances, apronContext, visibleLayers, resultUnit])
 
   // ── Layer 2: Aircraft silhouette markers (separate from geometry) ──
   // Uses incremental updates: reuses existing markers when only positions change (e.g. drag),
@@ -1772,7 +1777,7 @@ export default function ParkingPage() {
                 other.length_ft / 2, other.wingspan_ft / 2,
                 movedCenter.lat, movedCenter.lon,
               )
-              addLabel(fromA.lat, fromA.lon, toA.lat, toA.lon, `${r.distance_ft.toFixed(0)}/${r.required_ft}ft`, color)
+              addLabel(fromA.lat, fromA.lon, toA.lat, toA.lon, `${fmtDistance(r.distance_ft, resultUnit, { withUnit: false })}/${fmtDistance(r.required_ft, resultUnit)}`, color)
             }
           }
 
@@ -1791,7 +1796,7 @@ export default function ParkingPage() {
                 movedSpot.length_ft / 2, movedSpot.wingspan_ft / 2,
                 obs.latitude, obs.longitude,
               )
-              addLabel(fromA.lat, fromA.lon, obs.latitude, obs.longitude, `${r2.distance_ft.toFixed(0)}/${r2.required_ft}ft`, color)
+              addLabel(fromA.lat, fromA.lon, obs.latitude, obs.longitude, `${fmtDistance(r2.distance_ft, resultUnit, { withUnit: false })}/${fmtDistance(r2.required_ft, resultUnit)}`, color)
             }
           }
         }
@@ -2693,6 +2698,7 @@ export default function ParkingPage() {
       apronContext,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
+      distanceUnit: resultUnit,
       sections: sections.map(s => ({
         label: s.label || null,
         spots: s.spots,
@@ -3559,7 +3565,7 @@ export default function ParkingPage() {
                             background: 'var(--color-bg-surface)', color: 'var(--color-text-secondary)', cursor: 'pointer',
                           }}
                         >
-                          {val ? `${val}ft` : 'UFC'}
+                          {val ? fmtDistance(val, resultUnit) : 'UFC'}
                         </button>
                       ))}
                     </div>
@@ -3747,7 +3753,7 @@ export default function ParkingPage() {
                                 </span>
                               )}
                               <span style={{ fontSize: 'var(--fs-2xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-                                {clearance}ft &middot; {s.heading_deg}°
+                                {fmtDistance(clearance, resultUnit)} &middot; {s.heading_deg}°
                               </span>
                               {spotViolations.length > 0 && (
                                 <span style={{ color: 'var(--color-danger)', fontSize: 10, fontWeight: 700 }}>!</span>
@@ -3803,7 +3809,7 @@ export default function ParkingPage() {
                                       background: s.clearance_ft === val ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg-surface)',
                                       color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
                                     }}>
-                                      {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
+                                      {val ? fmtDistance(val, resultUnit) : `UFC (${fmtDistance(getWingtipClearance(ws, apronContext, s.aircraft_name), resultUnit)})`}
                                     </button>
                                   ))}
                                   <select value={s.status} onChange={e => handleUpdateSpot(s.id, { status: e.target.value as ParkingSpot['status'] })}
@@ -3931,12 +3937,12 @@ export default function ParkingPage() {
                       </span>
                       {obs.obstacle_type === 'building' && (
                         <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                          {obs.width_ft || 0}x{obs.length_ft || 0}ft
+                          {fmtDistance(obs.width_ft || 0, resultUnit, { withUnit: false })}x{fmtDistance(obs.length_ft || 0, resultUnit)}
                         </span>
                       )}
                       {obs.obstacle_type === 'circle' && (
                         <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                          r={obs.radius_ft || 0}ft
+                          r={fmtDistance(obs.radius_ft || 0, resultUnit)}
                         </span>
                       )}
                       <span style={{ fontSize: 10, color: 'var(--color-text-secondary)', flexShrink: 0 }}>{isEditing ? '\u25B2' : '\u25BC'}</span>
@@ -4082,7 +4088,7 @@ export default function ParkingPage() {
                         {tl.name || 'Unnamed'}
                       </span>
                       <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
-                        {detail.ufc_item} &middot; {Math.round(halfWidth)}ft env
+                        {detail.ufc_item} &middot; {fmtDistance(halfWidth, resultUnit)} env
                       </span>
                       {tlViolations.length > 0 && (
                         <span style={{ color: 'var(--color-danger)', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>!</span>
@@ -4117,7 +4123,7 @@ export default function ParkingPage() {
                             >
                               <option value="">Select aircraft...</option>
                               {allAircraft.map(ac => (
-                                <option key={ac.aircraft} value={ac.aircraft}>{ac.aircraft} ({ac.wing_span_ft}ft)</option>
+                                <option key={ac.aircraft} value={ac.aircraft}>{ac.aircraft} ({fmtDistance(Number(ac.wing_span_ft), resultUnit)})</option>
                               ))}
                             </select>
                           </label>
@@ -4141,7 +4147,7 @@ export default function ParkingPage() {
                           </select>
                         </div>
                         <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', padding: '2px 0' }}>
-                          Envelope: 0.5 × {tl.design_wingspan_ft || 100}ft + {detail.clearance_ft}ft ({detail.ufc_item}) = {Math.round(halfWidth)}ft half-width
+                          Envelope: 0.5 × {fmtDistance(tl.design_wingspan_ft || 100, resultUnit)} + {fmtDistance(detail.clearance_ft, resultUnit)} ({detail.ufc_item}) = {fmtDistance(halfWidth, resultUnit)} half-width
                         </div>
                         {tlViolations.length > 0 && (
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', padding: '2px 0' }}>
@@ -4303,7 +4309,7 @@ export default function ParkingPage() {
                     {r.aircraft_a} / {r.aircraft_b}
                   </span>
                   <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap', marginLeft: 'auto' }}>
-                    {r.distance_ft.toFixed(1)}ft / {r.required_ft}ft
+                    {fmtDistance(r.distance_ft, resultUnit, { digits: 1, withUnit: false })} / {fmtDistance(r.required_ft, resultUnit)}
                   </span>
                   {r.status === 'violation' && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-danger)', fontWeight: 600, flexShrink: 0 }}>VIOLATION</span>}
                   {r.status === 'warning' && <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', fontWeight: 600, flexShrink: 0 }}>WARNING</span>}
@@ -5030,7 +5036,7 @@ export default function ParkingPage() {
                       background: s.clearance_ft === val ? 'color-mix(in srgb, var(--color-cyan) 13%, transparent)' : 'var(--color-bg-inset)',
                       color: s.clearance_ft === val ? 'var(--color-cyan)' : 'var(--color-text-secondary)', cursor: 'pointer',
                     }}>
-                      {val ? `${val}ft` : `UFC (${getWingtipClearance(ws, apronContext, s.aircraft_name)}ft)`}
+                      {val ? fmtDistance(val, resultUnit) : `UFC (${fmtDistance(getWingtipClearance(ws, apronContext, s.aircraft_name), resultUnit)})`}
                     </button>
                   ))}
                 </div>
@@ -5199,7 +5205,7 @@ export default function ParkingPage() {
                         <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 500 }}>{ac.aircraft}</div>
                         {ws > 0 && (
                           <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                            {ws}ft wingspan
+                            {fmtDistance(ws, resultUnit)} wingspan
                           </div>
                         )}
                       </div>

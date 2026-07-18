@@ -18,6 +18,7 @@ import {
   type ClearanceResult,
 } from '@/lib/calculations/parking-clearance'
 import type { ParkingPlan, ParkingSpot } from '@/lib/supabase/parking'
+import { fmtDistance, type DistanceUnit } from '@/lib/distance-units'
 
 // One framed capture from the parking map — a single "page bundle" in the
 // PDF. Single-apron exports pass a one-element array with no label;
@@ -38,10 +39,13 @@ interface ParkingPdfInput {
   sections: ParkingPdfSection[]
   baseName?: string | null
   baseIcao?: string | null
+  distanceUnit?: DistanceUnit
 }
 
 export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc: jsPDF; filename: string }> {
   const { plan, apronContext, sections, baseName, baseIcao } = input
+  // Values are STORED in feet; the base's unit only reformats them for display.
+  const unit: DistanceUnit = input.distanceUnit ?? 'ft'
   const isMulti = sections.length > 1
 
   const ctx = createPdf({ orientation: 'landscape' })
@@ -124,14 +128,14 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
           name,
           String(group.length),
           adg,
-          `${Math.round(s.wingspan_ft)} × ${Math.round(s.length_ft)}`,
-          `${detail.clearance_ft} ft`,
+          `${fmtDistance(s.wingspan_ft, unit, { withUnit: false })} × ${fmtDistance(s.length_ft, unit, { withUnit: false })}`,
+          fmtDistance(detail.clearance_ft, unit),
         ]
       })
 
       autoTable(doc, {
         startY: y,
-        head: [['Aircraft Type', 'Qty', 'ADG', 'WS × Len (ft)', 'Min Clearance']],
+        head: [['Aircraft Type', 'Qty', 'ADG', `WS × Len (${unit})`, 'Min Clearance']],
         body: summaryRows,
         margin: { left: margin, right: margin },
         tableWidth: 'wrap',
@@ -217,15 +221,15 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
         .map(r => [
           r.aircraft_a,
           r.aircraft_b || '—',
-          r.distance_ft.toFixed(1),
-          String(r.required_ft),
+          fmtDistance(r.distance_ft, unit, { digits: 1, withUnit: false }),
+          fmtDistance(r.required_ft, unit, { withUnit: false }),
           r.ufc_item,
           r.status.toUpperCase(),
         ])
 
       autoTable(doc, {
         startY: y,
-        head: [['Aircraft A', 'Aircraft B / Obstacle', 'Actual (ft)', 'Required (ft)', 'UFC Item', 'Status']],
+        head: [['Aircraft A', 'Aircraft B / Obstacle', `Actual (${unit})`, `Required (${unit})`, 'UFC Item', 'Status']],
         body: crRows,
         margin: { left: margin, right: margin },
         styles: { fontSize: 7, cellPadding: 1.5 },
