@@ -274,6 +274,38 @@ export function apronContextsForStandard(standard: ParkingStandard): ApronContex
   return ['parking', 'parking_transient', 'parking_kc_refuel', 'interior_taxilane', 'peripheral_taxilane', 'peripheral_transient']
 }
 
+/** Heading + citation for the parking sidebar's reference section, per standard. */
+export function getClearanceReferenceMeta(standard: ParkingStandard): { heading: string; citation: string } {
+  switch (standard) {
+    case 'icao':
+      return { heading: 'ICAO Reference', citation: 'ICAO Annex 14 Vol I §3.13.6 — Aircraft Stand Clearances (by code letter)' }
+    case 'faa':
+      return { heading: 'FAA Reference', citation: 'FAA AC 150/5300-13B Table 4-1 — Wingtip Clearance by Airplane Design Group (Change 1)' }
+    case 'usafe_32_1007':
+      return { heading: 'USAFE 32-1007 Reference', citation: 'USAFE-AFAFRICA 32-1007 (NATO) — apron/wingtip clearances per UFC 3-260-01 Table 6-1a, in SI units' }
+    default:
+      return { heading: 'UFC Reference', citation: 'UFC 3-260-01 Table 6-1a — A/AF Apron Clearances (4 Feb 2019, Change 3)' }
+  }
+}
+
+/** Compact reference rows for ICAO / FAA. UFC + USAFE 32-1007 render the richer
+ *  TABLE_6_1A_ITEMS list instead, so this returns [] for them. */
+export function getClearanceReferenceRows(standard: ParkingStandard): { key: string; value: string }[] {
+  if (standard === 'icao') {
+    return (['A', 'B', 'C', 'D', 'E', 'F'] as IcaoCodeLetter[]).map((l) => ({
+      key: `Code ${l}`,
+      value: `${ICAO_STAND_CLEARANCE_M[l]} m`,
+    }))
+  }
+  if (standard === 'faa') {
+    return (['I', 'II', 'III', 'IV', 'V', 'VI'] as ADGGroup[]).map((g) => ({
+      key: `ADG ${g}`,
+      value: `taxilane ${FAA_TAXILANE_WINGTIP_FT[g]} ft · taxiway ${FAA_TAXIWAY_WINGTIP_FT[g]} ft`,
+    }))
+  }
+  return []
+}
+
 // Keep old function signature for compatibility
 export type ClearanceContext = 'taxiway' | 'apron' | 'reduced'
 

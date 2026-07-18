@@ -53,6 +53,8 @@ import {
   generateClearanceZonePolygon,
   apronContextLabel,
   apronContextsForStandard,
+  getClearanceReferenceMeta,
+  getClearanceReferenceRows,
   TABLE_6_1A_ITEMS,
   getTaxilaneEnvelopeHalfWidth,
   generateTaxilaneEnvelopePolygon,
@@ -429,6 +431,8 @@ export default function ParkingPage() {
   // wingtip / ICAO code-letter / USAFE 32-1007). Drives clearances + citations.
   const parkingStandard = parkingStandardForBase(currentInstallation)
   const stdLabel = parkingStandard === 'icao' ? 'ICAO' : parkingStandard === 'usafe_32_1007' ? '32-1007' : 'UFC'
+  const refMeta = getClearanceReferenceMeta(parkingStandard)
+  const refRows = getClearanceReferenceRows(parkingStandard)
 
   // ── State ──
   const [plans, setPlans] = useState<ParkingPlan[]>([])
@@ -1965,10 +1969,24 @@ export default function ParkingPage() {
       onMouseDown(pos.lat, pos.lng, touch.clientX, touch.clientY, () => ev.preventDefault())
     }
     const onTouchMove = (ev: TouchEvent) => {
-      if (contextMenuTimerRef.current) { clearTimeout(contextMenuTimerRef.current); contextMenuTimerRef.current = null }
-      if (!isDraggingRef.current || ev.touches.length !== 1) return
-      ev.preventDefault()
+      if (ev.touches.length !== 1) {
+        if (contextMenuTimerRef.current) { clearTimeout(contextMenuTimerRef.current); contextMenuTimerRef.current = null }
+        return
+      }
       const touch = ev.touches[0]
+      // Keep the long-press alive through minor finger jitter so the aircraft
+      // "adjust" context menu can open (the touch equivalent of Ctrl-click).
+      // Only movement past the threshold cancels it and becomes an actual drag.
+      // dragStartPt is set in onMouseDown at touchstart.
+      if (contextMenuTimerRef.current) {
+        const start = dragStartPt.current
+        const moved = start ? Math.hypot(touch.clientX - start.x, touch.clientY - start.y) : Infinity
+        if (moved < 12) return
+        clearTimeout(contextMenuTimerRef.current)
+        contextMenuTimerRef.current = null
+      }
+      if (!isDraggingRef.current) return
+      ev.preventDefault()
       const rect = mapDiv.getBoundingClientRect()
       const pos = toLatLng(touch.clientX - rect.left, touch.clientY - rect.top)
       if (!pos) return
@@ -4381,14 +4399,20 @@ export default function ParkingPage() {
               </div>
             </div>
 
-            {/* UFC Reference */}
-            <SectionHeader id="reference" label="UFC Reference" />
+            {/* Clearance standard reference (standard-aware) */}
+            <SectionHeader id="reference" label={refMeta.heading} />
             {openSections.reference && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <p style={{ margin: '0 0 4px', fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                UFC 3-260-01 Table 6-1a — A/AF Apron Clearances (4 Feb 2019, Change 3)
+                {refMeta.citation}
               </p>
-              {TABLE_6_1A_ITEMS.map(item => (
+              {refRows.map(row => (
+                <div key={row.key} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '4px 8px', borderBottom: '1px solid var(--color-border)' }}>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-primary)', fontWeight: 600 }}>{row.key}</span>
+                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>{row.value}</span>
+                </div>
+              ))}
+              {refRows.length === 0 && TABLE_6_1A_ITEMS.map(item => (
                 <div
                   key={item.item}
                   style={{
