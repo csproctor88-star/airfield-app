@@ -100,6 +100,10 @@ export default function ReadFilePage() {
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
       files: active,
+      // The archive confirm dialog promises archived files stay in the
+      // report history — rendered in the "Archived (history)" section,
+      // excluded from the active stats.
+      archivedFiles: archived,
       reviewers,
       acks: allAcks,
       generatedAtIso: new Date().toISOString(),
