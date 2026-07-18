@@ -572,7 +572,12 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   const civilian = isCivilian(currentInstallation)
   const part77 = getSurfaceSet(currentInstallation) === 'faa_part77'
   const icao = getSurfaceSet(currentInstallation) === 'icao_annex14'
-  const rwyUnit = baseDistanceUnit(currentInstallation)
+  // Freeze the unit for the form's lifetime so the initial load (dimIn/elevIn)
+  // and the save (dimToFt/elevToFt) ALWAYS use the same unit. If it read the
+  // base unit live, toggling the ft/m switch while the form is open would
+  // double-convert the stored feet — e.g. 9,000 ft loads as "9000", then saves
+  // as 9000 m = 29,528 ft. A fresh open picks up the current base unit.
+  const [rwyUnit] = useState<'ft' | 'm'>(() => baseDistanceUnit(currentInstallation))
   // Dimensions are STORED in feet; the form shows/accepts the base's unit.
   const dimIn = (ft: number | null | undefined) => (ft ? String(Math.round(ftToUnit(ft, rwyUnit))) : '')
   const elevIn = (ft: number | null | undefined) => (ft != null ? String(Math.round(ftToUnit(ft, rwyUnit) * 10) / 10) : '')
@@ -1195,8 +1200,8 @@ function RunwayTab({
     const supabase = createClient()
     if (!supabase) { setSaving(false); return }
 
-    // Dimensions are entered in the base's unit; convert to stored feet.
-    const u = baseDistanceUnit(currentInstallation)
+    // Dimensions are entered in the add form's frozen unit; convert to feet.
+    const u = addUnit
     const elevToFt = (s: string) => { const v = parseFloat(s); return Number.isFinite(v) ? unitToFt(v, u) : null }
 
     const insert = {
@@ -1355,6 +1360,9 @@ function RunwayTab({
   }
 
   const rwyUnit = baseDistanceUnit(currentInstallation)
+  // The add-runway form freezes its entry unit on open (same reason as the edit
+  // form) so a mid-entry ft/m toggle can't double-convert what the user typed.
+  const [addUnit, setAddUnit] = useState<'ft' | 'm'>('ft')
 
   const fieldStyle = {
     padding: '8px 10px',
@@ -1706,12 +1714,12 @@ function RunwayTab({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             <div>
-              <label style={labelStyle}>Length ({rwyUnit}) <FieldHint stepKey="runways" fieldId="length_ft" /></label>
-              <input type="number" value={newRunway.length_ft} onChange={e => setNewRunway(p => ({ ...p, length_ft: e.target.value }))} placeholder={rwyUnit === 'm' ? '2700' : '9000'} style={fieldStyle} />
+              <label style={labelStyle}>Length ({addUnit}) <FieldHint stepKey="runways" fieldId="length_ft" /></label>
+              <input type="number" value={newRunway.length_ft} onChange={e => setNewRunway(p => ({ ...p, length_ft: e.target.value }))} placeholder={addUnit === 'm' ? '2700' : '9000'} style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Width ({rwyUnit}) <FieldHint stepKey="runways" fieldId="width_ft" /></label>
-              <input type="number" value={newRunway.width_ft} onChange={e => setNewRunway(p => ({ ...p, width_ft: e.target.value }))} placeholder={rwyUnit === 'm' ? '46' : '150'} style={fieldStyle} />
+              <label style={labelStyle}>Width ({addUnit}) <FieldHint stepKey="runways" fieldId="width_ft" /></label>
+              <input type="number" value={newRunway.width_ft} onChange={e => setNewRunway(p => ({ ...p, width_ft: e.target.value }))} placeholder={addUnit === 'm' ? '46' : '150'} style={fieldStyle} />
             </div>
             <div>
               <label style={labelStyle}>True Heading (°) <FieldHint stepKey="runways" fieldId="true_heading" /></label>
@@ -1794,7 +1802,7 @@ function RunwayTab({
               <input type="number" step="0.00001" value={newRunway.end1_longitude} onChange={e => setNewRunway(p => ({ ...p, end1_longitude: e.target.value }))} placeholder="-82.83000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Elev ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label>
+              <label style={labelStyle}>Elev ({addUnit} MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label>
               <input type="number" step="0.1" value={newRunway.end1_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end1_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
@@ -1814,7 +1822,7 @@ function RunwayTab({
               <input type="number" step="0.00001" value={newRunway.end2_longitude} onChange={e => setNewRunway(p => ({ ...p, end2_longitude: e.target.value }))} placeholder="-82.84000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Elev ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label>
+              <label style={labelStyle}>Elev ({addUnit} MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label>
               <input type="number" step="0.1" value={newRunway.end2_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end2_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
@@ -1852,7 +1860,7 @@ function RunwayTab({
       ) : (
         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
           <button
-            onClick={() => setAdding(true)}
+            onClick={() => { setAddUnit(baseDistanceUnit(currentInstallation)); setAdding(true) }}
             style={{
               flex: 1,
               padding: '10px 14px',
