@@ -16,6 +16,7 @@ import {
   type IcaoCodeNumber,
 } from '@/lib/calculations/obstructions'
 import { icaoStripWidthDefaultM } from '@/lib/calculations/annex14-criteria'
+import { baseDistanceUnit, ftToUnit, unitToFt, fmtDistance } from '@/lib/distance-units'
 import {
   SURFACE_STANDARD_IDS,
   SURFACE_STANDARD_OPTIONS,
@@ -571,8 +572,14 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   const civilian = isCivilian(currentInstallation)
   const part77 = getSurfaceSet(currentInstallation) === 'faa_part77'
   const icao = getSurfaceSet(currentInstallation) === 'icao_annex14'
+  const rwyUnit = baseDistanceUnit(currentInstallation)
+  // Dimensions are STORED in feet; the form shows/accepts the base's unit.
+  const dimIn = (ft: number | null | undefined) => (ft ? String(Math.round(ftToUnit(ft, rwyUnit))) : '')
+  const elevIn = (ft: number | null | undefined) => (ft != null ? String(Math.round(ftToUnit(ft, rwyUnit) * 10) / 10) : '')
+  const dimToFt = (s: string) => Math.round(unitToFt(parseInt(s) || 0, rwyUnit))
+  const elevToFt = (s: string) => { const v = parseFloat(s); return Number.isFinite(v) ? unitToFt(v, rwyUnit) : null }
   const [f, setF] = useState({
-    runway_id: rwy.runway_id || '', length_ft: String(rwy.length_ft || ''), width_ft: String(rwy.width_ft || ''),
+    runway_id: rwy.runway_id || '', length_ft: dimIn(rwy.length_ft), width_ft: dimIn(rwy.width_ft),
     surface: rwy.surface || 'Asphalt', true_heading: String(rwy.true_heading ?? ''),
     runway_class: rwy.runway_class || (civilian ? '' : 'B'),
     faa_approach_type: rwy.faa_approach_type || '',
@@ -581,16 +588,16 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
     icao_approach_classification: rwy.icao_approach_classification || '',
     icao_strip_width_m: rwy.icao_strip_width_m != null ? String(rwy.icao_strip_width_m) : '',
     end1_designator: rwy.end1_designator || '', end1_latitude: String(rwy.end1_latitude ?? ''),
-    end1_longitude: String(rwy.end1_longitude ?? ''), end1_elevation_msl: String(rwy.end1_elevation_msl ?? ''),
+    end1_longitude: String(rwy.end1_longitude ?? ''), end1_elevation_msl: elevIn(rwy.end1_elevation_msl),
     end1_heading: String(rwy.end1_heading ?? ''), end1_approach_lighting: rwy.end1_approach_lighting || '',
     end2_designator: rwy.end2_designator || '', end2_latitude: String(rwy.end2_latitude ?? ''),
-    end2_longitude: String(rwy.end2_longitude ?? ''), end2_elevation_msl: String(rwy.end2_elevation_msl ?? ''),
+    end2_longitude: String(rwy.end2_longitude ?? ''), end2_elevation_msl: elevIn(rwy.end2_elevation_msl),
     end2_heading: String(rwy.end2_heading ?? ''), end2_approach_lighting: rwy.end2_approach_lighting || '',
   })
   const labelStyle = { fontSize: 'var(--fs-xs)', fontWeight: 600, color: 'var(--color-text-3)', marginBottom: 2, display: 'block' }
   const handleSave = () => {
     onSave({
-      runway_id: f.runway_id, length_ft: parseInt(f.length_ft) || 0, width_ft: parseInt(f.width_ft) || 0,
+      runway_id: f.runway_id, length_ft: dimToFt(f.length_ft), width_ft: dimToFt(f.width_ft),
       surface: f.surface, true_heading: parseFloat(f.true_heading) || null,
       // Civilian airports persist runway_class as null; FAA approach type is the civilian-correct driver.
       runway_class: civilian ? null : f.runway_class,
@@ -600,10 +607,10 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
       icao_approach_classification: f.icao_approach_classification || null,
       icao_strip_width_m: f.icao_strip_width_m ? parseFloat(f.icao_strip_width_m) : null,
       end1_designator: f.end1_designator, end1_latitude: parseFloat(f.end1_latitude) || null,
-      end1_longitude: parseFloat(f.end1_longitude) || null, end1_elevation_msl: parseFloat(f.end1_elevation_msl) || null,
+      end1_longitude: parseFloat(f.end1_longitude) || null, end1_elevation_msl: elevToFt(f.end1_elevation_msl),
       end1_heading: parseFloat(f.end1_heading) || null, end1_approach_lighting: f.end1_approach_lighting || null,
       end2_designator: f.end2_designator, end2_latitude: parseFloat(f.end2_latitude) || null,
-      end2_longitude: parseFloat(f.end2_longitude) || null, end2_elevation_msl: parseFloat(f.end2_elevation_msl) || null,
+      end2_longitude: parseFloat(f.end2_longitude) || null, end2_elevation_msl: elevToFt(f.end2_elevation_msl),
       end2_heading: parseFloat(f.end2_heading) || null, end2_approach_lighting: f.end2_approach_lighting || null,
     })
   }
@@ -613,8 +620,8 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
         <div><label style={labelStyle}>Runway ID <FieldHint stepKey="runways" fieldId="runway_id" /></label><input value={f.runway_id} onChange={e => setF(p => ({ ...p, runway_id: e.target.value }))} style={fieldStyle} /></div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
-        <div><label style={labelStyle}>Length (ft) <FieldHint stepKey="runways" fieldId="length_ft" /></label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Width (ft) <FieldHint stepKey="runways" fieldId="width_ft" /></label><input type="number" value={f.width_ft} onChange={e => setF(p => ({ ...p, width_ft: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Length ({rwyUnit}) <FieldHint stepKey="runways" fieldId="length_ft" /></label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Width ({rwyUnit}) <FieldHint stepKey="runways" fieldId="width_ft" /></label><input type="number" value={f.width_ft} onChange={e => setF(p => ({ ...p, width_ft: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Surface <FieldHint stepKey="runways" fieldId="surface" /></label>
           <select value={f.surface} onChange={e => setF(p => ({ ...p, surface: e.target.value }))} style={fieldStyle}>
             <option>Asphalt</option><option>Concrete</option><option>Asphalt/Concrete</option>
@@ -730,7 +737,7 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
         <div><label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end1_designator" /></label><input value={f.end1_designator} onChange={e => setF(p => ({ ...p, end1_designator: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Latitude <FieldHint stepKey="runways" fieldId="end1_latitude" /></label><input type="number" step="0.00001" value={f.end1_latitude} onChange={e => setF(p => ({ ...p, end1_latitude: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Longitude <FieldHint stepKey="runways" fieldId="end1_longitude" /></label><input type="number" step="0.00001" value={f.end1_longitude} onChange={e => setF(p => ({ ...p, end1_longitude: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label><input type="number" step="0.1" value={f.end1_elevation_msl} onChange={e => setF(p => ({ ...p, end1_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Elev ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label><input type="number" step="0.1" value={f.end1_elevation_msl} onChange={e => setF(p => ({ ...p, end1_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Heading (°) <FieldHint stepKey="runways" fieldId="end1_heading" /></label><input type="number" value={f.end1_heading} onChange={e => setF(p => ({ ...p, end1_heading: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Approach Lighting <FieldHint stepKey="runways" fieldId="end1_approach_lighting" /></label><input value={f.end1_approach_lighting} onChange={e => setF(p => ({ ...p, end1_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
       </div>
@@ -739,7 +746,7 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
         <div><label style={labelStyle}>Designator <FieldHint stepKey="runways" fieldId="end2_designator" /></label><input value={f.end2_designator} onChange={e => setF(p => ({ ...p, end2_designator: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Latitude <FieldHint stepKey="runways" fieldId="end2_latitude" /></label><input type="number" step="0.00001" value={f.end2_latitude} onChange={e => setF(p => ({ ...p, end2_latitude: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Longitude <FieldHint stepKey="runways" fieldId="end2_longitude" /></label><input type="number" step="0.00001" value={f.end2_longitude} onChange={e => setF(p => ({ ...p, end2_longitude: e.target.value }))} style={fieldStyle} /></div>
-        <div><label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label><input type="number" step="0.1" value={f.end2_elevation_msl} onChange={e => setF(p => ({ ...p, end2_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
+        <div><label style={labelStyle}>Elev ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label><input type="number" step="0.1" value={f.end2_elevation_msl} onChange={e => setF(p => ({ ...p, end2_elevation_msl: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Heading (°) <FieldHint stepKey="runways" fieldId="end2_heading" /></label><input type="number" value={f.end2_heading} onChange={e => setF(p => ({ ...p, end2_heading: e.target.value }))} style={fieldStyle} /></div>
         <div><label style={labelStyle}>Approach Lighting <FieldHint stepKey="runways" fieldId="end2_approach_lighting" /></label><input value={f.end2_approach_lighting} onChange={e => setF(p => ({ ...p, end2_approach_lighting: e.target.value }))} style={fieldStyle} /></div>
       </div>
@@ -1188,11 +1195,15 @@ function RunwayTab({
     const supabase = createClient()
     if (!supabase) { setSaving(false); return }
 
+    // Dimensions are entered in the base's unit; convert to stored feet.
+    const u = baseDistanceUnit(currentInstallation)
+    const elevToFt = (s: string) => { const v = parseFloat(s); return Number.isFinite(v) ? unitToFt(v, u) : null }
+
     const insert = {
       base_id: installationId,
       runway_id: newRunway.runway_id.trim(),
-      length_ft: parseInt(newRunway.length_ft) || 0,
-      width_ft: parseInt(newRunway.width_ft) || 0,
+      length_ft: Math.round(unitToFt(parseInt(newRunway.length_ft) || 0, u)),
+      width_ft: Math.round(unitToFt(parseInt(newRunway.width_ft) || 0, u)),
       surface: newRunway.surface,
       true_heading: parseFloat(newRunway.true_heading) || null,
       // Civilian airports leave runway_class null — FAA approach type drives Part 77 dimensions instead.
@@ -1205,13 +1216,13 @@ function RunwayTab({
       end1_longitude: parseFloat(newRunway.end1_longitude) || null,
       end1_heading: null,
       end1_approach_lighting: null,
-      end1_elevation_msl: parseFloat(newRunway.end1_elevation_msl) || null,
+      end1_elevation_msl: elevToFt(newRunway.end1_elevation_msl),
       end2_designator: newRunway.end2_designator.trim() || newRunway.runway_id.split('/')[1] || '',
       end2_latitude: parseFloat(newRunway.end2_latitude) || null,
       end2_longitude: parseFloat(newRunway.end2_longitude) || null,
       end2_heading: null,
       end2_approach_lighting: null,
-      end2_elevation_msl: parseFloat(newRunway.end2_elevation_msl) || null,
+      end2_elevation_msl: elevToFt(newRunway.end2_elevation_msl),
     }
 
     const { data, error } = await supabase
@@ -1325,6 +1336,23 @@ function RunwayTab({
     setStandardSaving(false)
   }
 
+  // Base-wide distance unit (feet vs metres) — display/input only; all stored
+  // dimensions stay in feet (lib/distance-units.ts converts at the boundary).
+  async function handleSetDistanceUnit(unit: 'ft' | 'm') {
+    if (!installationId || standardSaving || unit === baseDistanceUnit(currentInstallation)) return
+    const supabase = createClient()
+    if (!supabase) return
+    const { error } = await supabase
+      .from('bases')
+      .update({ distance_unit: unit, updated_at: new Date().toISOString() } as any)
+      .eq('id', installationId)
+    if (error) { toast.error(`Couldn't set units: ${friendlyError(error.message)}`); return }
+    toast.success(`Distance unit set to ${unit === 'm' ? 'metres' : 'feet'}`)
+    await refreshCurrentInstallation()
+  }
+
+  const rwyUnit = baseDistanceUnit(currentInstallation)
+
   const fieldStyle = {
     padding: '8px 10px',
     borderRadius: 'var(--radius-sm)',
@@ -1352,14 +1380,14 @@ function RunwayTab({
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
       }}>
         <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)', whiteSpace: 'nowrap' }}>
-          Established Airfield Elevation (ft MSL) <FieldHint stepKey="runways" fieldId="established_elevation" />
+          Established Airfield Elevation ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="established_elevation" />
         </label>
         <input
           type="number"
-          step="0.1"
-          value={baseElevation ?? ''}
-          onChange={e => setBaseElevation(e.target.value ? parseFloat(e.target.value) : null)}
-          placeholder="e.g. 580"
+          step={rwyUnit === 'm' ? '1' : '0.1'}
+          value={baseElevation != null ? String(rwyUnit === 'm' ? Math.round(ftToUnit(baseElevation, 'm')) : baseElevation) : ''}
+          onChange={e => setBaseElevation(e.target.value ? unitToFt(parseFloat(e.target.value), rwyUnit) : null)}
+          placeholder={rwyUnit === 'm' ? 'e.g. 177' : 'e.g. 580'}
           style={{ ...fieldStyle, width: 120, flex: '0 0 auto' }}
         />
         <button
@@ -1510,6 +1538,39 @@ function RunwayTab({
         )}
       </div>
 
+      <div style={{
+        padding: '10px 14px', marginBottom: 12,
+        background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)',
+        display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)' }}>Distance Units</div>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 2 }}>
+            Feet or metres for runway dimensions, elevations, and obstruction heights across this base.
+          </div>
+        </div>
+        <div style={{ display: 'inline-flex', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+          {(['ft', 'm'] as const).map(u => {
+            const active = baseDistanceUnit(currentInstallation) === u
+            return (
+              <button
+                key={u}
+                type="button"
+                onClick={() => handleSetDistanceUnit(u)}
+                style={{
+                  padding: '6px 16px', fontSize: 'var(--fs-sm)', fontWeight: 700, fontFamily: 'inherit',
+                  border: 'none', cursor: 'pointer',
+                  background: active ? 'color-mix(in srgb, var(--color-cyan) 18%, transparent)' : 'transparent',
+                  color: active ? 'var(--color-cyan)' : 'var(--color-text-3)',
+                }}
+              >
+                {u === 'ft' ? 'Feet (ft)' : 'Metres (m)'}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {getSurfaceSet(currentInstallation) === 'icao_annex14'
         && runways.some(r => !r.icao_approach_classification || r.icao_code_number == null) && (
         <div style={{
@@ -1570,13 +1631,13 @@ function RunwayTab({
                   })()}
                 </div>
                 <div style={{ fontSize: 'var(--fs-base)', color: 'var(--color-text-2)', marginTop: 4 }}>
-                  {rwy.length_ft} ft x {rwy.width_ft} ft | {rwy.surface} | Heading {rwy.true_heading}°
+                  {fmtDistance(rwy.length_ft, rwyUnit)} x {fmtDistance(rwy.width_ft, rwyUnit)} | {rwy.surface} | Heading {rwy.true_heading}°
                 </div>
                 <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 4, fontFamily: 'monospace' }}>
-                  {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(6)}°{(rwy.end1_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(6) : '—'}°{(rwy.end1_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end1_elevation_msl != null ? ` | ${rwy.end1_elevation_msl} ft MSL` : ''}
+                  {rwy.end1_designator}: {rwy.end1_latitude?.toFixed(6)}°{(rwy.end1_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end1_longitude ? Math.abs(rwy.end1_longitude).toFixed(6) : '—'}°{(rwy.end1_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end1_elevation_msl != null ? ` | ${fmtDistance(rwy.end1_elevation_msl, rwyUnit)} MSL` : ''}
                 </div>
                 <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginTop: 2, fontFamily: 'monospace' }}>
-                  {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(6)}°{(rwy.end2_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(6) : '—'}°{(rwy.end2_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end2_elevation_msl != null ? ` | ${rwy.end2_elevation_msl} ft MSL` : ''}
+                  {rwy.end2_designator}: {rwy.end2_latitude?.toFixed(6)}°{(rwy.end2_latitude ?? 0) >= 0 ? 'N' : 'S'}, {rwy.end2_longitude ? Math.abs(rwy.end2_longitude).toFixed(6) : '—'}°{(rwy.end2_longitude ?? 0) >= 0 ? 'E' : 'W'}{rwy.end2_elevation_msl != null ? ` | ${fmtDistance(rwy.end2_elevation_msl, rwyUnit)} MSL` : ''}
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                   <button
@@ -1637,12 +1698,12 @@ function RunwayTab({
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             <div>
-              <label style={labelStyle}>Length (ft) <FieldHint stepKey="runways" fieldId="length_ft" /></label>
-              <input type="number" value={newRunway.length_ft} onChange={e => setNewRunway(p => ({ ...p, length_ft: e.target.value }))} placeholder="9000" style={fieldStyle} />
+              <label style={labelStyle}>Length ({rwyUnit}) <FieldHint stepKey="runways" fieldId="length_ft" /></label>
+              <input type="number" value={newRunway.length_ft} onChange={e => setNewRunway(p => ({ ...p, length_ft: e.target.value }))} placeholder={rwyUnit === 'm' ? '2700' : '9000'} style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Width (ft) <FieldHint stepKey="runways" fieldId="width_ft" /></label>
-              <input type="number" value={newRunway.width_ft} onChange={e => setNewRunway(p => ({ ...p, width_ft: e.target.value }))} placeholder="150" style={fieldStyle} />
+              <label style={labelStyle}>Width ({rwyUnit}) <FieldHint stepKey="runways" fieldId="width_ft" /></label>
+              <input type="number" value={newRunway.width_ft} onChange={e => setNewRunway(p => ({ ...p, width_ft: e.target.value }))} placeholder={rwyUnit === 'm' ? '46' : '150'} style={fieldStyle} />
             </div>
             <div>
               <label style={labelStyle}>True Heading (°) <FieldHint stepKey="runways" fieldId="true_heading" /></label>
@@ -1725,7 +1786,7 @@ function RunwayTab({
               <input type="number" step="0.00001" value={newRunway.end1_longitude} onChange={e => setNewRunway(p => ({ ...p, end1_longitude: e.target.value }))} placeholder="-82.83000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label>
+              <label style={labelStyle}>Elev ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="end1_elevation_msl" /></label>
               <input type="number" step="0.1" value={newRunway.end1_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end1_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
@@ -1745,7 +1806,7 @@ function RunwayTab({
               <input type="number" step="0.00001" value={newRunway.end2_longitude} onChange={e => setNewRunway(p => ({ ...p, end2_longitude: e.target.value }))} placeholder="-82.84000" style={fieldStyle} />
             </div>
             <div>
-              <label style={labelStyle}>Elev (ft MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label>
+              <label style={labelStyle}>Elev ({rwyUnit} MSL) <FieldHint stepKey="runways" fieldId="end2_elevation_msl" /></label>
               <input type="number" step="0.1" value={newRunway.end2_elevation_msl} onChange={e => setNewRunway(p => ({ ...p, end2_elevation_msl: e.target.value }))} placeholder="—" style={fieldStyle} />
             </div>
           </div>
@@ -1936,7 +1997,7 @@ function RunwayTab({
                               Runway {rwy.runway_id}
                             </div>
                             <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', marginTop: 2 }}>
-                              {rwy.length_ft} x {rwy.width_ft} ft | {rwy.surface}{rwy.lighted ? ' | Lighted' : ''}
+                              {fmtDistance(rwy.length_ft, rwyUnit)} x {fmtDistance(rwy.width_ft, rwyUnit)} | {rwy.surface}{rwy.lighted ? ' | Lighted' : ''}
                             </div>
                           </div>
                           <button
@@ -1964,7 +2025,7 @@ function RunwayTab({
                               {rwy.end1_latitude?.toFixed(5)}, {rwy.end1_longitude?.toFixed(5)}
                             </div>
                             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                              Elev {rwy.end1_elevation_msl ?? '—'} ft | Hdg {rwy.end1_heading ?? '—'}°
+                              Elev {fmtDistance(rwy.end1_elevation_msl, rwyUnit)} | Hdg {rwy.end1_heading ?? '—'}°
                             </div>
                             {rwy.end1_approach_lighting && (
                               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', marginTop: 2 }}>
@@ -1980,7 +2041,7 @@ function RunwayTab({
                               {rwy.end2_latitude?.toFixed(5)}, {rwy.end2_longitude?.toFixed(5)}
                             </div>
                             <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>
-                              Elev {rwy.end2_elevation_msl ?? '—'} ft | Hdg {rwy.end2_heading ?? '—'}°
+                              Elev {fmtDistance(rwy.end2_elevation_msl, rwyUnit)} | Hdg {rwy.end2_heading ?? '—'}°
                             </div>
                             {rwy.end2_approach_lighting && (
                               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-cyan)', marginTop: 2 }}>

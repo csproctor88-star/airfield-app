@@ -39,6 +39,7 @@ import {
 } from '@/lib/calculations/surface-standards'
 import { fetchTaxiways } from '@/lib/supabase/taxiways'
 import { fetchElevation } from '@/lib/calculations/geometry'
+import { baseDistanceUnit } from '@/lib/distance-units'
 import {
   createObstructionEvaluation,
   updateObstructionEvaluation,
@@ -225,8 +226,8 @@ function ObstructionsContent() {
   const FT_PER_M = 3.28084
   useEffect(() => {
     if (height.trim() !== '') return
-    setHeightUnit(surfaceSet === 'icao_annex14' ? 'm' : 'ft')
-  }, [surfaceSet, height])
+    setHeightUnit(baseDistanceUnit(currentInstallation) === 'm' || surfaceSet === 'icao_annex14' ? 'm' : 'ft')
+  }, [surfaceSet, height, currentInstallation])
   const heightInFt = (): number => {
     const n = parseFloat(height)
     return isNaN(n) ? NaN : heightUnit === 'm' ? n * FT_PER_M : n
