@@ -1030,7 +1030,7 @@ function ObstructionsContent() {
               border: '1px solid color-mix(in srgb, var(--color-warning) 35%, transparent)',
               color: 'var(--color-warning)', fontSize: 'var(--fs-xs)', lineHeight: 1.4,
             }}>
-              Inner approach and balked landing surfaces (code 3/4) are evaluated. The inner transitional surface is not yet evaluated — its geometry follows the inner-approach and balked-landing edges (Phase 2b).
+              Inner approach, inner transitional, and balked landing surfaces are evaluated for precision runways. The inner transitional is modeled along the strip; its exact edge-following geometry near the ends is a refinement.
             </div>
           )}
         </div>

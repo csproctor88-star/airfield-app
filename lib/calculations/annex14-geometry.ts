@@ -223,6 +223,46 @@ export function generateAnnex14TransitionalPolygons(
 }
 
 // ---------------------------------------------------------------------------
+// §4.1.17–4.1.20 Inner transitional surface (precision approach only)
+// ---------------------------------------------------------------------------
+
+/** §4.1.17: a steeper transitional surface closer to the runway, rising from the
+ *  strip edge (or runway edge when the strip width isn't configured) to the inner
+ *  horizontal at the inner-transitional slope — a narrower band than the regular
+ *  transitional. Precision approach only (null otherwise). Simplification: drawn
+ *  along the strip; the §4.1.18 lower edge that steps in to the inner-approach /
+ *  balked-landing widths near the ends is a documented further refinement. */
+export function generateAnnex14InnerTransitionalPolygons(
+  rwy: RunwayGeometry,
+  criteria: Annex14SurfaceCriteria,
+  stripWidthM?: number | null,
+): { left: [number, number][]; right: [number, number][] } | null {
+  if (!criteria.innerTransitional) return null
+  const perpL = normalizeBearing(rwy.bearingDeg - 90)
+  const perpR = normalizeBearing(rwy.bearingDeg + 90)
+
+  const lowerHalfFt = stripWidthM != null ? (stripWidthM / 2) * M_TO_FT : rwy.widthFt / 2
+  const runFt = (criteria.innerHorizontal.heightM / (criteria.innerTransitional.slopePct / 100)) * M_TO_FT
+  const outerHalfFt = lowerHalfFt + runFt
+
+  function buildSide(perpBearing: number): [number, number][] {
+    const inner1 = offsetPoint(rwy.end1, perpBearing, lowerHalfFt)
+    const inner2 = offsetPoint(rwy.end2, perpBearing, lowerHalfFt)
+    const outer2 = offsetPoint(rwy.end2, perpBearing, outerHalfFt)
+    const outer1 = offsetPoint(rwy.end1, perpBearing, outerHalfFt)
+    return [
+      [inner1.lon, inner1.lat],
+      [inner2.lon, inner2.lat],
+      [outer2.lon, outer2.lat],
+      [outer1.lon, outer1.lat],
+      [inner1.lon, inner1.lat],
+    ]
+  }
+
+  return { left: buildSide(perpL), right: buildSide(perpR) }
+}
+
+// ---------------------------------------------------------------------------
 // §4.1.11–4.1.12 Inner approach surface (precision approach only)
 // ---------------------------------------------------------------------------
 
@@ -331,6 +371,12 @@ export function buildAnnex14SurfacePolygons(runways: Annex14RunwayInput[]): Surf
     const trans = generateAnnex14TransitionalPolygons(rwy, criteria, stripWidthM)
     features.push({ id: 'a14-transitional-left', coords: trans.left, rwyIndex: ri })
     features.push({ id: 'a14-transitional-right', coords: trans.right, rwyIndex: ri })
+
+    const innerTrans = generateAnnex14InnerTransitionalPolygons(rwy, criteria, stripWidthM)
+    if (innerTrans) {
+      features.push({ id: 'a14-inner-transitional-left', coords: innerTrans.left, rwyIndex: ri })
+      features.push({ id: 'a14-inner-transitional-right', coords: innerTrans.right, rwyIndex: ri })
+    }
 
     const approach = generateAnnex14ApproachPolygons(rwy, criteria)
     features.push({ id: 'a14-approach-end1', coords: approach.end1, rwyIndex: ri })

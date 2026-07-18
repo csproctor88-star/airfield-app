@@ -616,6 +616,7 @@ export type Annex14SurfaceKey =
   | 'inner_horizontal'
   | 'conical'
   | 'transitional'
+  | 'inner_transitional'
   | 'balked_landing'
   | 'takeoff_climb'
 
@@ -624,8 +625,9 @@ export const ANNEX14_SURFACE_META: Record<Annex14SurfaceKey, { name: string; col
   inner_approach:   { name: 'Inner Approach Surface',   color: '#FB7185', icaoRef: 'ICAO Annex 14 Vol I §4.1.11–4.1.12; Table 4-1' },
   inner_horizontal: { name: 'Inner Horizontal Surface', color: '#22C55E', icaoRef: 'ICAO Annex 14 Vol I §4.1.4–4.1.6; Table 4-1' },
   conical:          { name: 'Conical Surface',          color: '#3B82F6', icaoRef: 'ICAO Annex 14 Vol I §4.1.1–4.1.3; Table 4-1' },
-  transitional:     { name: 'Transitional Surface',     color: '#EAB308', icaoRef: 'ICAO Annex 14 Vol I §4.1.13–4.1.16; Table 4-1' },
-  balked_landing:   { name: 'Balked Landing Surface',   color: '#2DD4BF', icaoRef: 'ICAO Annex 14 Vol I §4.1.21–4.1.24; Table 4-1' },
+  transitional:      { name: 'Transitional Surface',       color: '#EAB308', icaoRef: 'ICAO Annex 14 Vol I §4.1.13–4.1.16; Table 4-1' },
+  inner_transitional:{ name: 'Inner Transitional Surface', color: '#F59E0B', icaoRef: 'ICAO Annex 14 Vol I §4.1.17–4.1.20; Table 4-1' },
+  balked_landing:    { name: 'Balked Landing Surface',     color: '#2DD4BF', icaoRef: 'ICAO Annex 14 Vol I §4.1.21–4.1.24; Table 4-1' },
   takeoff_climb:    { name: 'Take-Off Climb Surface',   color: '#8B5CF6', icaoRef: 'ICAO Annex 14 Vol I §4.1.25–4.1.27; Table 4-2' },
 }
 
@@ -642,6 +644,7 @@ const ANNEX14_SURFACE_DESCRIPTIONS: Record<Annex14SurfaceKey, string> = {
   inner_horizontal: 'Horizontal plane 45 m above the established aerodrome elevation, within the code-number radius.',
   conical:          'Slopes up and outward at 5% from the periphery of the inner horizontal surface.',
   transitional:     'Slopes up from the strip edge (or runway edge when the strip width isn’t configured) to the inner horizontal surface.',
+  inner_transitional: 'Precision-approach only: a steeper transitional surface closer to the runway (the controlling surface for near-runway objects such as navaids); modeled along the strip.',
   balked_landing:   'Precision-approach only: a go-around surface after the threshold (code 3/4 at 1 800 m), diverging and rising in the departure direction.',
   takeoff_climb:    'Inclined plane rising up and outward from beyond the runway end for departures (Table 4-2 by code number).',
 }
@@ -653,7 +656,7 @@ const ANNEX14_SURFACE_DESCRIPTIONS: Record<Annex14SurfaceKey, string> = {
  * SurfaceSetLegend's set-dispatch gains an ICAO branch with the same row shape.
  */
 export function getAnnex14SurfaceInfo(): { name: string; description: string; ufcRef: string; color: string }[] {
-  const order: Annex14SurfaceKey[] = ['approach', 'inner_approach', 'inner_horizontal', 'conical', 'transitional', 'balked_landing', 'takeoff_climb']
+  const order: Annex14SurfaceKey[] = ['approach', 'inner_approach', 'inner_horizontal', 'conical', 'transitional', 'inner_transitional', 'balked_landing', 'takeoff_climb']
   return order.map((key) => ({
     name: ANNEX14_SURFACE_META[key].name,
     description: ANNEX14_SURFACE_DESCRIPTIONS[key],
@@ -1740,6 +1743,45 @@ export function evaluateObstructionAnnex14(
       baselineLabel: airfieldBaselineLabel,
       calculationBreakdown: isWithin
         ? `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(cappedRiseFt)} ft (${trans.slopePct}% slope from strip edge, capped at ${ih.heightM} m) = ${fmt(maxMSL)} ft MSL`
+        : undefined,
+    })
+  }
+
+  // --- 2b. Inner Transitional Surface (precision approach only) ---
+  // A steeper transitional closer to the runway, from the strip edge (or runway
+  // edge) up to the inner horizontal. Precision only. Simplification: modeled
+  // along the strip like the transitional — its §4.1.18 lower edge steps in to the
+  // inner-approach / balked-landing widths near the ends (a documented refinement),
+  // so along the strip it reads above the (lower) regular transitional.
+  if (criteria.innerTransitional) {
+    const it = criteria.innerTransitional
+    const ih = criteria.innerHorizontal
+    const slope = it.slopePct / 100
+    const lowerHalfFt = variant?.stripWidthM != null ? (variant.stripWidthM / 2) * M : rwy.widthFt / 2
+    const runFt = (ih.heightM / slope) * M
+    const distFromEdge = Math.max(0, relation.distanceFromCenterline - lowerHalfFt)
+    const abeam = Math.abs(relation.alongTrackFromMidpoint) <= halfLength
+    const isWithin = abeam && distFromEdge > 0 && distFromEdge <= runFt
+    const cappedRiseFt = Math.min(distFromEdge * slope, ih.heightM * M)
+    const maxMSL = airfieldElev + cappedRiseFt
+    const maxAGL = maxMSL - groundElev
+    const violated = isWithin && obstructionTopMSL > maxMSL
+    surfaces.push({
+      surfaceKey: 'inner_transitional',
+      surfaceName: ANNEX14_SURFACE_META.inner_transitional.name,
+      isWithinBounds: isWithin,
+      maxAllowableHeightAGL: Math.max(0, maxAGL),
+      maxAllowableHeightMSL: maxMSL,
+      obstructionTopMSL,
+      violated,
+      penetrationFt: violated ? obstructionTopMSL - maxMSL : 0,
+      ufcReference: ANNEX14_SURFACE_META.inner_transitional.icaoRef,
+      ufcCriteria: `Annex 14 inner transitional surface — ${it.slopePct}% slope from the strip edge up to the inner horizontal surface (${ih.heightM} m); modeled along the strip.`,
+      color: ANNEX14_SURFACE_META.inner_transitional.color,
+      baselineElevation: airfieldElev,
+      baselineLabel: airfieldBaselineLabel,
+      calculationBreakdown: isWithin
+        ? `${fmt(airfieldElev)} ft (airfield elev) + ${fmt(cappedRiseFt)} ft (${it.slopePct}% from strip edge, capped at ${ih.heightM} m) = ${fmt(maxMSL)} ft MSL`
         : undefined,
     })
   }

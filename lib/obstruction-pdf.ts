@@ -243,7 +243,7 @@ export async function generateObstructionPdf(input: ObstructionPdfInput) {
     doc.setFontSize(7)
     doc.setTextColor(180, 120, 20)
     const caveat =
-      'ICAO Annex 14: inner approach and balked landing surfaces (precision code 3/4) are evaluated. The inner transitional surface is not yet evaluated (Phase 2b).'
+      'ICAO Annex 14: inner approach, inner transitional, and balked landing surfaces are evaluated for precision runways (inner transitional modeled along the strip).'
     const caveatLines = doc.splitTextToSize(caveat, contentWidth)
     doc.text(caveatLines, margin, y)
     y += caveatLines.length * 3.2 + 4
