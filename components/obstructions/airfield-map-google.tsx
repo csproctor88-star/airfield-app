@@ -90,13 +90,18 @@ type Part77ToggleKey =
   | 'p77-approach'
   | 'p77-primary'
 
-// ICAO Annex 14 toggle keys — one per phase-1 legend row. The legend/layer
-// constants + colors live in lib/calculations/surface-standards.ts.
+// ICAO Annex 14 toggle keys — one per legend row. The legend/layer constants +
+// colors live in lib/calculations/surface-standards.ts. Keep this union in sync
+// with ANNEX14_LEGEND_ITEMS there and with getAnnex14ToggleKeyForLayer below —
+// a surface layer whose id maps to no key here is stuck permanently visible.
 type Annex14ToggleKey =
   | 'a14-conical'
   | 'a14-inner-horizontal'
   | 'a14-transitional'
+  | 'a14-inner-transitional'
   | 'a14-approach'
+  | 'a14-inner-approach'
+  | 'a14-balked-landing'
   | 'a14-takeoff-climb'
 
 type AnyToggleKey = ToggleKey | Part77ToggleKey | Annex14ToggleKey
@@ -120,8 +125,13 @@ function getPart77ToggleKeyForLayer(layerId: string): Part77ToggleKey | null {
 function getAnnex14ToggleKeyForLayer(layerId: string): Annex14ToggleKey | null {
   if (layerId === 'a14-conical') return 'a14-conical'
   if (layerId === 'a14-inner-horizontal') return 'a14-inner-horizontal'
+  // Inner variants BEFORE the base surfaces — 'a14-inner-transitional' / -approach
+  // share a stem with 'a14-transitional' / -approach; test the specific ones first.
+  if (layerId.startsWith('a14-inner-transitional')) return 'a14-inner-transitional'
+  if (layerId.startsWith('a14-inner-approach')) return 'a14-inner-approach'
   if (layerId.startsWith('a14-transitional')) return 'a14-transitional'
   if (layerId.startsWith('a14-approach')) return 'a14-approach'
+  if (layerId.startsWith('a14-balked-landing')) return 'a14-balked-landing'
   if (layerId.startsWith('a14-takeoff-climb')) return 'a14-takeoff-climb'
   return null
 }
