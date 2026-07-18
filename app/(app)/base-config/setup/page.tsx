@@ -609,15 +609,8 @@ function RunwayEditForm({ rwy, fieldStyle, saving, onSave, onCancel }: {
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: civilian ? '1fr' : '1fr 1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
         <div><label style={labelStyle}>Runway ID <FieldHint stepKey="runways" fieldId="runway_id" /></label><input value={f.runway_id} onChange={e => setF(p => ({ ...p, runway_id: e.target.value }))} style={fieldStyle} /></div>
-        {!civilian && (
-          <div><label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
-            <select value={f.runway_class} onChange={e => setF(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
-              <option value="A">Class A</option><option value="B">Class B</option><option value="Army_B">Army Class B</option>
-            </select>
-          </div>
-        )}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8 }}>
         <div><label style={labelStyle}>Length (ft) <FieldHint stepKey="runways" fieldId="length_ft" /></label><input type="number" value={f.length_ft} onChange={e => setF(p => ({ ...p, length_ft: e.target.value }))} style={fieldStyle} /></div>
@@ -1442,7 +1435,7 @@ function RunwayTab({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
           <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, color: 'var(--color-text-2)' }}>
-            Surface Evaluation Standard
+            Runway Class
           </label>
           <FieldHint stepKey="runways" fieldId="obstruction_surface_set" />
         </div>
@@ -1516,6 +1509,22 @@ function RunwayTab({
           </div>
         )}
       </div>
+
+      {getSurfaceSet(currentInstallation) === 'icao_annex14'
+        && runways.some(r => !r.icao_approach_classification || r.icao_code_number == null) && (
+        <div style={{
+          padding: '8px 12px', marginBottom: 12, borderRadius: 'var(--radius-sm)',
+          background: 'color-mix(in srgb, var(--color-warning) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--color-warning) 40%, transparent)',
+          fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)', lineHeight: 1.4,
+        }}>
+          <strong style={{ color: 'var(--color-warning)' }}>ICAO Annex 14 — manual runway data needed.</strong>{' '}
+          {runways.filter(r => !r.icao_approach_classification || r.icao_code_number == null).length} runway(s) are
+          missing their ICAO code number and/or approach classification. Click <strong>Edit</strong> on each runway
+          below and set the code number, approach classification, and strip width — these drive the obstacle
+          limitation surface dimensions on the Obstructions map.
+        </div>
+      )}
 
       {runways.length === 0 && !adding && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 12 }}>No runways configured yet.</p>
@@ -1619,21 +1628,11 @@ function RunwayTab({
         }}>
           <div style={{ fontSize: 'var(--fs-md)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 4 }}>Add Runway</div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: civilian ? '1fr' : '1fr 1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
             <div>
               <label style={labelStyle}>Runway ID (e.g. 01/19) <FieldHint stepKey="runways" fieldId="runway_id" /></label>
               <input value={newRunway.runway_id} onChange={e => setNewRunway(p => ({ ...p, runway_id: e.target.value }))} placeholder="01/19" style={fieldStyle} />
             </div>
-            {!civilian && (
-              <div>
-                <label style={labelStyle}>Runway Class <FieldHint stepKey="runways" fieldId="runway_class" /></label>
-                <select value={newRunway.runway_class} onChange={e => setNewRunway(p => ({ ...p, runway_class: e.target.value }))} style={fieldStyle}>
-                  <option value="A">Class A</option>
-                  <option value="B">Class B</option>
-                  <option value="Army_B">Army Class B</option>
-                </select>
-              </div>
-            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>

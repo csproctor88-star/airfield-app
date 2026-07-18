@@ -70,7 +70,7 @@ export const SURFACE_STANDARD_OPTIONS: Record<SurfaceStandardId, {
   af_class_a:   { set: 'ufc_3_260_01', runwayClass: 'A',      label: 'Air Force Class A', citation: 'UFC 3-260-01 Table 3-7' },
   af_class_b:   { set: 'ufc_3_260_01', runwayClass: 'B',      label: 'Air Force Class B', citation: 'UFC 3-260-01 Table 3-7' },
   army_class_b: { set: 'ufc_3_260_01', runwayClass: 'Army_B', label: 'Army Class B',      citation: 'UFC 3-260-01 Table 3-7' },
-  icao_annex14: { set: 'icao_annex14', runwayClass: null,     label: 'ICAO Annex 14',     citation: 'ICAO Annex 14 Vol I Table 4-1' },
+  icao_annex14: { set: 'icao_annex14', runwayClass: null,     label: 'ICAO Annex 14 (NATO)', citation: 'ICAO Annex 14 Vol I Table 4-1' },
   faa_part77:   { set: 'faa_part77',   runwayClass: null,     label: 'FAA Part 77',       citation: '14 CFR §77.19' },
 }
 
