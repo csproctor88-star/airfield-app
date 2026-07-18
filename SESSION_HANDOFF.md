@@ -1,5 +1,50 @@
 # Session Handoff
 
+> **2026-07-18 — units + multi-standard parking (session 7).** Owner-driven,
+> interactive. **10 commits** (`bf842e19`..`de99f7cc`), **all PUSHED**, tree
+> clean and level with origin. Build green throughout: tsc ✓ · vitest **1713
+> passed** · `npm run build` ✓. **2 migrations APPLIED to the linked DB**
+> (`2026071772_bases_distance_unit`, `2026071773_usafe_32_1007_surface_set`).
+> **Current HEAD: `de99f7cc`.**
+>
+> Shipped:
+> - **Base ft/m preference** — `bases.distance_unit` (default `'ft'`); new
+>   `lib/distance-units.ts` is the single feet↔unit boundary. Dimensions stay
+>   STORED in feet everywhere; only display/input convert (feet is the identity
+>   case, so US bases are unchanged bar thousands separators). Toggle on Base
+>   Config › Runways. Applied across runway config (dims/elevations/import
+>   preview), the obstruction tool + saved detail + history + PDF, and parking.
+> - **Multi-standard parking clearance** — the engine now follows the base's
+>   obstruction standard instead of always UFC: UFC wingtip (unchanged) · ICAO
+>   Annex 14 §3.13.6 code-letter stand clearance · USAFE 32-1007 (UFC values in
+>   metric + 32-1007 refs) · FAA AC 150/5300-13B Table 4-1 ADG wingtip
+>   (taxilane vs taxiway). `getClearanceDetail()` is the single injection point;
+>   `parkingStandardForBase()` resolves the standard. Apron-context selector,
+>   sidebar reference, and PDF are all standard-aware (ICAO hides the context
+>   selector; FAA relabels it). Values transcribed from the owner's source PDFs
+>   and locked in `tests/parking-clearance.test.ts` (17 tests).
+> - **USAFE-AFAFRICA 32-1007** added as a 4th selectable base standard
+>   (`bases.obstruction_surface_set`). `getSurfaceSet` normalizes it →
+>   `icao_annex14` for OBSTRUCTION (saved evals never store it; that CHECK is
+>   intentionally unchanged); only parking reads the raw value to stay distinct
+>   from civil ICAO.
+> - Fixes: parking touch long-press "adjust" (12 px jitter threshold so the
+>   aircraft context menu survives finger micro-movement — **owner to verify on
+>   a device**); **runway-dimension corruption** when toggling ft/m with an
+>   add/edit form open (both forms now FREEZE their unit at open, so load + save
+>   round-trip in one unit).
+>
+> **⚠️ Owner action:** a runway was corrupted by the pre-fix toggle bug
+> (screenshot 022653 — "01/19" showed 29,528 × 492 ft, i.e. 9,000 × 150 m). The
+> fix prevents recurrence but can't recover originals — re-enter that runway's
+> dims/elevations by hand (base set to feet) and spot-check any others.
+>
+> Source PDFs (ICAO Annex 14, USAFE 32-1007, FAA AC 150/5300-13B) live in
+> `OneDrive/Claude Code - Reference Documents`; extraction trick saved in the
+> `regulatory-reference-pdfs` memory. Deferred (owner OK'd / not requested):
+> parking manual presets stay UFC feet values shown in metric; the FAA sidebar
+> reference rows show published feet even on a metric base.
+
 > **2026-07-17 — maintenance follow-up (post session 6).** Machine re-sync,
 > not app development. The home clone was fast-forwarded `a97d9171` → v2.32.0
 > tree, `glidepath-site` was cloned fresh into `~/glidepath-site`, and the
