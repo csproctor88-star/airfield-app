@@ -321,8 +321,12 @@ function ObstructionsContent() {
         toast.error('Evaluation not found')
         return
       }
+      // object_height_agl is stored in feet; show it in the base's unit and set
+      // the height-input toggle to match so heightInFt() round-trips correctly.
       const h = Number(existing.object_height_agl)
-      setHeight(String(h))
+      const hu = baseDistanceUnit(currentInstallation)
+      setHeightUnit(hu)
+      setHeight(String(hu === 'm' ? Math.round((h / FT_PER_M) * 10) / 10 : h))
       setDescription(existing.notes || existing.description || '')
       const existingPhotos = parsePhotoPaths(existing.photo_storage_path)
       if (existingPhotos.length) {
