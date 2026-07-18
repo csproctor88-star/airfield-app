@@ -4,6 +4,7 @@
 
 import { offsetPoint, distanceFt, bearing, normalizeBearing, pointToSegmentDistanceFt, type LatLon } from './geometry'
 import type { ParkingSpot, ParkingObstacle } from '../supabase/parking'
+import { getSurfaceSet } from '../airport-mode'
 
 // ── ADG Classification (UFC 3-260-01 Table 3-1) ──
 
@@ -138,7 +139,7 @@ export function getWingtipClearance(
 // ── Parking clearance standard (follows the base's obstruction standard) ──
 
 /** The regulatory framework a base's parking clearances follow. */
-export type ParkingStandard = 'ufc' | 'icao' | 'usafe_32_1007'
+export type ParkingStandard = 'ufc' | 'icao' | 'usafe_32_1007' | 'faa'
 
 /** ICAO Annex 14 Vol I aerodrome reference code letter (Table 1-1). */
 export type IcaoCodeLetter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
@@ -163,6 +164,18 @@ const ICAO_STAND_CLEARANCE_M: Record<IcaoCodeLetter, number> = {
   A: 3, B: 3, C: 4.5, D: 7.5, E: 7.5, F: 7.5,
 }
 
+// FAA AC 150/5300-13B Table 4-1 (Change 1) — wingtip clearance by Airplane
+// Design Group (ADG). Apron parking + interior taxilanes take the taxilane
+// value; taxiway-adjacent (peripheral) positions take the larger taxiway value.
+// Feet figures are verbatim from the table (its metric column derives from them;
+// note the values are non-monotonic across groups, as published in the errata).
+const FAA_TAXILANE_WINGTIP_FT: Record<ADGGroup, number> = {
+  I: 15, II: 15.5, III: 20, IV: 26.5, V: 28, VI: 30,
+}
+const FAA_TAXIWAY_WINGTIP_FT: Record<ADGGroup, number> = {
+  I: 20, II: 22.5, III: 26.5, IV: 36, V: 35.5, VI: 36.5,
+}
+
 /**
  * Standard-aware clearance detail. UFC and USAFE 32-1007 share the wingtip
  * model — 32-1007's clearances are direct SI conversions of the UFC values, so
@@ -183,6 +196,15 @@ export function getClearanceDetail(
       clearance_ft: ICAO_STAND_CLEARANCE_M[letter] / M_PER_FT,
       ufc_item: `Annex 14 §3.13.6 (Code ${letter})`,
       description: `Aircraft stand clearance — ICAO code letter ${letter}`,
+    }
+  }
+  if (standard === 'faa') {
+    const adg = getADGFromWingspan(wingspanFt)
+    const peripheral = context === 'peripheral_taxilane' || context === 'peripheral_transient'
+    return {
+      clearance_ft: peripheral ? FAA_TAXIWAY_WINGTIP_FT[adg] : FAA_TAXILANE_WINGTIP_FT[adg],
+      ufc_item: `AC 150/5300-13B Table 4-1 (ADG ${adg})`,
+      description: `${peripheral ? 'Taxiway' : 'Taxilane'} wingtip clearance — FAA ADG ${adg}`,
     }
   }
   const detail = getWingtipClearanceDetail(wingspanFt, context, aircraftName)
@@ -207,7 +229,11 @@ export function getClearanceDetail(
 export function parkingStandardForBase(base: unknown): ParkingStandard {
   const raw = (base as { obstruction_surface_set?: string | null } | null)?.obstruction_surface_set
   if (raw === 'usafe_32_1007') return 'usafe_32_1007'
-  if (raw === 'icao_annex14') return 'icao'
+  // getSurfaceSet applies the civilian default (faa_part77) + ICAO normalization,
+  // so an unset civilian base still resolves to the FAA parking model.
+  const set = getSurfaceSet(base as Parameters<typeof getSurfaceSet>[0])
+  if (set === 'icao_annex14') return 'icao'
+  if (set === 'faa_part77') return 'faa'
   return 'ufc'
 }
 
@@ -219,6 +245,33 @@ export const APRON_CONTEXT_LABELS: Record<ApronContext, string> = {
   interior_taxilane: 'Item 5(I) — Interior Taxilane',
   peripheral_taxilane: 'Item 6(T) — Peripheral Taxilane',
   peripheral_transient: 'Item 6(T) — Peripheral Taxilane (Transient)',
+}
+
+// FAA (AC 150/5300-13B) nomenclature for the same apron contexts. FAA aprons are
+// served by taxilanes, so parking/interior take the taxilane wingtip clearance;
+// the peripheral contexts map to the taxiway (taxiway-adjacent) value.
+const FAA_APRON_CONTEXT_LABELS: Record<ApronContext, string> = {
+  parking: 'Apron / Parking Position',
+  parking_transient: 'Transient Apron',
+  parking_kc_refuel: 'Fuel Servicing Apron',
+  interior_taxilane: 'Apron Taxilane',
+  peripheral_taxilane: 'Taxiway-Adjacent Taxilane',
+  peripheral_transient: 'Taxiway-Adjacent (Transient)',
+}
+
+/** Apron-context label for the active standard. UFC + USAFE 32-1007 share the
+ *  UFC item labels (32-1007's clearances are the UFC values); FAA uses its own. */
+export function apronContextLabel(context: ApronContext, standard: ParkingStandard): string {
+  return standard === 'faa' ? FAA_APRON_CONTEXT_LABELS[context] : APRON_CONTEXT_LABELS[context]
+}
+
+/** Which apron contexts to offer for the active standard. ICAO returns none —
+ *  its §3.13.6 stand clearance is by code letter and context-independent, so the
+ *  selector is hidden. FAA drops the USAF-only transient/KC-refuel contexts. */
+export function apronContextsForStandard(standard: ParkingStandard): ApronContext[] {
+  if (standard === 'icao') return []
+  if (standard === 'faa') return ['parking', 'parking_transient', 'interior_taxilane', 'peripheral_taxilane']
+  return ['parking', 'parking_transient', 'parking_kc_refuel', 'interior_taxilane', 'peripheral_taxilane', 'peripheral_transient']
 }
 
 // Keep old function signature for compatibility

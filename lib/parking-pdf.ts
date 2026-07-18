@@ -11,7 +11,7 @@ import {
 import {
   getADGFromWingspan,
   getClearanceDetail,
-  APRON_CONTEXT_LABELS,
+  apronContextLabel,
   type ADGGroup,
   type ApronContext,
   type ParkingStandard,
@@ -71,7 +71,7 @@ export async function generateParkingPdf(input: ParkingPdfInput): Promise<{ doc:
   const totalAircraft = sections.reduce((acc, s) => acc + s.spots.length, 0)
   y = drawStatBox(ctx, y, [
     { label: 'Plan Status', value: plan.is_active ? 'ACTIVE' : 'DRAFT' },
-    { label: 'Clearance Context', value: APRON_CONTEXT_LABELS[apronContext] || apronContext },
+    { label: 'Clearance Context', value: standard === 'icao' ? 'Aircraft stand — ICAO §3.13.6 (code letter)' : apronContextLabel(apronContext, standard) },
     { label: isMulti ? `Total Aircraft (${sections.length} Aprons)` : 'Total Aircraft', value: String(totalAircraft) },
     { label: 'Generated', value: formatZuluDateTime(new Date().toISOString()) },
   ])

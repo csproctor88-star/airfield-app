@@ -51,7 +51,8 @@ import {
   getClearanceDetail,
   parkingStandardForBase,
   generateClearanceZonePolygon,
-  APRON_CONTEXT_LABELS,
+  apronContextLabel,
+  apronContextsForStandard,
   TABLE_6_1A_ITEMS,
   getTaxilaneEnvelopeHalfWidth,
   generateTaxilaneEnvelopePolygon,
@@ -4332,22 +4333,26 @@ export default function ParkingPage() {
           {sidebarTab === 'settings' && (
             <div>
             <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 8, borderBottom: '1px solid var(--color-border)' }}>
-              <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
-                UFC 3-260-01 Table 6-1a Context
-                <select
-                  value={apronContext}
-                  onChange={e => setApronContext(e.target.value as ApronContext)}
-                  style={{
-                    width: '100%', padding: '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', marginTop: 2,
-                    border: '1px solid var(--color-border)', background: 'var(--color-bg)',
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  {(Object.entries(APRON_CONTEXT_LABELS) as [ApronContext, string][]).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
-              </label>
+              {apronContextsForStandard(parkingStandard).length > 0 && (
+                <label style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-secondary)' }}>
+                  {parkingStandard === 'faa' ? 'AC 150/5300-13B Apron Context'
+                    : parkingStandard === 'usafe_32_1007' ? 'USAFE 32-1007 Context'
+                    : 'UFC 3-260-01 Table 6-1a Context'}
+                  <select
+                    value={apronContext}
+                    onChange={e => setApronContext(e.target.value as ApronContext)}
+                    style={{
+                      width: '100%', padding: '6px 8px', borderRadius: 4, fontSize: 'var(--fs-xs)', marginTop: 2,
+                      border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                      color: 'var(--color-text-primary)',
+                    }}
+                  >
+                    {apronContextsForStandard(parkingStandard).map(val => (
+                      <option key={val} value={val}>{apronContextLabel(val, parkingStandard)}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
               <div style={{ display: 'flex', gap: 6 }}>
                 <button
                   onClick={() => setPlanLocked(l => !l)}
