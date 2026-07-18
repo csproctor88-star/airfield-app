@@ -1,0 +1,28 @@
+# Normalize all text files to LF in the repository and on checkout.
+# Windows clones default to core.autocrlf=true, which rewrites checked-out
+# files to CRLF — that breaks the migration-SQL-parsing tests
+# (tests/permission-matrix-roles.test.ts reads the working-tree .sql files)
+# and produces noisy whole-file diffs. eol=lf here overrides autocrlf for
+# everyone, so the working tree matches the LF-stored blobs.
+* text=auto eol=lf
+
+# Binary assets — never normalize or diff as text.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.webp binary
+*.svg  text eol=lf
+*.pdf  binary
+*.woff  binary
+*.woff2 binary
+*.ttf  binary
+*.eot  binary
+*.otf  binary
+*.mp4  binary
+*.webm binary
+*.zip  binary
+*.xlsx binary
+*.xls  binary
+*.docx binary
