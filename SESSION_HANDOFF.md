@@ -1,5 +1,45 @@
 # Session Handoff
 
+> **2026-07-18 — twin-bug fix waves + site H1 pass (session 8).** Interactive.
+> **2 app commits** (`ae55b046`, `cb074af1`) + **1 glidepath-site commit**
+> (`381c3cb`), **all PUSHED**, both trees clean and level with origin. Build
+> green on the final tree: tsc ✓ · lint 0 errors · vitest **1755 passed**
+> (174 files) · build ✓ (/scn 10.8 kB · 195 kB First Load; /read-file 9.8 kB
+> · 190 kB; middleware 80.8 kB unchanged). **Zero migrations.** Clears queued
+> items 2, 4, and 5 from the session-6 task list below.
+>
+> Shipped:
+> - **SCN twin-bug fix wave** (`ae55b046`) — the FPR fix wave (`83890e54`)
+>   ported back to the template it was cloned from. History Edit no longer
+>   rewrites TODAY's check (date threads through a pure `buildScnSavePayload`
+>   and renders in the modal); edit drafts preserve removed-agency snapshot
+>   rows (`buildScnAgencyDrafts` appends unconsumed prior results); quick-fill
+>   clears stale OOS notes; "Cancel OOS" restores the pre-dialog status;
+>   history sorts newest-first (`sortScnHistory`); `scn-pdf` em-dash
+>   sanitization, and its "Controller OI" heading/column now reads "OI" /
+>   "Logged by" (terminology: never "controller"). 14 new tests.
+> - **Read File archived-report fix** (`cb074af1`) — mirror of `17c1ade9`:
+>   the review report gains an "Archived (history)" section via a shared
+>   per-file renderer, excluded from the stat box, with an explicit count
+>   line; the page now passes the archived list; generator text sanitized.
+>   4 new tests including a raw-PDF content assertion.
+> - **glidepath-site module H1 pass** (`381c3cb`, owner-approved with no
+>   edits) — optional `h1` on `ModuleEntry`, rendered as `h1 ?? name` on the
+>   module detail page only; 30 keyworded headlines (18 military / 12
+>   civilian, every bare acronym spelled out), 20 pages keep their name.
+>   Breadcrumb/pager/track index keep short names; metaTitles + OG images
+>   untouched (no OG regen). Guards: civilian h1 never "Airfield", h1 ≠
+>   name, render + fallback tests. Site gates green (tsc ✓ · 158 tests ·
+>   ESLint 0 · build ✓). Review doc: `OneDrive/Claude Code - Reference
+>   Documents/Module H1 Pass Review 2026-07-18.{md,html}`.
+>
+> Cleared: session 7's corrupted-runway owner action (owner ruling: it was
+> test data on a demo base — nothing to restore). Still open from session 7:
+> parking touch long-press verify on a real device. Noticed on the site:
+> `lib/modules/civilian/modifications-exemptions.ts` is fully authored but
+> registered nowhere (never renders) — looks deliberately unshipped; owner
+> decision queued, no action taken.
+
 > **2026-07-18 — units + multi-standard parking (session 7).** Owner-driven,
 > interactive. **10 commits** (`bf842e19`..`de99f7cc`), **all PUSHED**, tree
 > clean and level with origin. Build green throughout: tsc ✓ · vitest **1713
@@ -33,11 +73,6 @@
 >   a device**); **runway-dimension corruption** when toggling ft/m with an
 >   add/edit form open (both forms now FREEZE their unit at open, so load + save
 >   round-trip in one unit).
->
-> **⚠️ Owner action:** a runway was corrupted by the pre-fix toggle bug
-> (screenshot 022653 — "01/19" showed 29,528 × 492 ft, i.e. 9,000 × 150 m). The
-> fix prevents recurrence but can't recover originals — re-enter that runway's
-> dims/elevations by hand (base set to feet) and spot-check any others.
 >
 > Source PDFs (ICAO Annex 14, USAFE 32-1007, FAA AC 150/5300-13B) live in
 > `OneDrive/Claude Code - Reference Documents`; extraction trick saved in the
@@ -314,9 +349,7 @@ New this session (details in the module ledgers):
 
 | Item | Severity | Notes |
 |---|---|---|
-| **SCN twin-bug fix wave** | **high** | SCN shares FPR's history-edit Critical, snapshot-drop, and quick-fill-notes bugs verbatim. First code task next session. |
 | Graded-area (clear zone) widths unverified | med | Army graded half-width clamped to 500 as a consistency bound; map polygon still draws legacy 500 ft for all classes (default-off layer). Owner supplies Table 3-5 → one pass closes criteria + evaluator + map. |
-| read-file archived-docs report gap | med | Same contradiction Local Regs fixed; read-file's report is still active-only vs its copy. |
 | Platform read-RLS posture | info | Domain tables' SELECT policies are base-access-only (the 2026042203-06 matrix swap converted writes); per-domain :view gating is UI-level. Pre-existing, not a regression — worth a deliberate read-policy pass someday. |
 | FPR/LR queued-save UI gaps | low | No "pending sync" card state (FPR); Base Regs tab has the WRITE_COMMITTED listener but FPR's today card doesn't mark queued saves. |
 | majcom_rfm x driving checks | decision | Sees driver-named Events Log lines via activity_log:view but lacks driving_checks:view — grant or accept. |
@@ -334,7 +367,9 @@ prep · proof band empty · NAVAID marker dials · QRC draft flow · demo seeds
 weather race · account-deactivation live sessions · Selfridge 1098 dedup ·
 2 unused exported types · reports "hgjhj" row · anonymous-submission gap.
 Resolved and dropped: picker-note copy (`970994ea`), §77.19 `ufcRef`
-lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`).
+lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`),
+SCN twin-bug fix wave (`ae55b046`, 2026-07-18), read-file archived-report
+gap (`cb074af1`, 2026-07-18).
 
 ## Next session tasks
 
@@ -351,9 +386,7 @@ lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`).
    3. Rulings when convenient: atc fpr:view grant, civilian grants in
       `2026071740`, civilian roster for local_regs, majcom_rfm ×
       driving checks, FPR pending-sync card state.
-2. **SCN twin-bug fix wave** — port `83890e54`'s three fixes to
-   `/scn` (history-edit date pinning, snapshot-preserving edit drafts,
-   quick-fill note clearing).
+2. **SCN twin-bug fix wave — DONE 2026-07-18** (`ae55b046`, session 8).
 3. **ICAO Annex 14 — DONE post-wrap** (`24f90355` + `7a01609c`). Remaining
    ICAO phase-2 (deferred by spec, unchanged): inner approach / inner
    transitional / balked landing surfaces, code-letter-F 155 m widths, the
@@ -361,10 +394,12 @@ lettering (`10381d8c`), encoded Class B criteria conflict (`90360dff`).
    QA for the new arm: wizard → set ICAO on a test base → configure code 4
    / precision CAT I → 5 a14 layers draw, caveat note renders, evaluation
    names Annex 14 surfaces, PDF Surface Standard row + caveat correct.
-4. **read-file archived-report pass** — mirror `17c1ade9`'s fix.
-5. **glidepath-site: module H1 pass** — deliberately skipped overnight
-   (taste-gated by the owner's gut-test standard); do with the owner
-   present. The rest of the site tier-2 list is unchanged.
+4. **read-file archived-report pass — DONE 2026-07-18** (`cb074af1`,
+   session 8).
+5. **glidepath-site: module H1 pass — DONE 2026-07-18** (`381c3cb`,
+   owner-approved, session 8). The rest of the site tier-2 list is
+   unchanged: /about expansion, clip compression, scoped DB credential,
+   demo-route tests, `regulation.cites` render-or-delete.
 6. **Part 139 cert-audit resume** — from `.superpowers/sdd/progress.md`
    Task 2.5c (owner decision recorded 2026-07-07: additive migration for
    civilian cover fields), then 2.6, then phases 3-6.
@@ -396,6 +431,8 @@ glidepath-site @ 9dd00ad: untouched this session.
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-07-18 (session 8) | SCN twin-bug fix wave (FPR fixes ported back to the template) · Read File archived-report fix (Local Regs mirror) · glidepath-site module H1 keyword pass (30 pages, owner-approved). 2 app commits + 1 site commit, zero migrations, pushed. |
+| **Unreleased** | 2026-07-18 (session 7) | Base ft/m distance-unit preference (`lib/distance-units.ts`) · multi-standard parking clearance (UFC / ICAO / USAFE 32-1007 / FAA ADG) · USAFE 32-1007 as 4th base standard · runway ft/m-toggle corruption fix. 10 commits, 2 migrations applied. |
 | **Unreleased** | 2026-07-17 (session 6, overnight + post-wrap) | Seven features, review-gated: surface-set expansion (Class A + corrected Class B/Army B + base standard selector) · **ICAO Annex 14 fifth standard** (owner-supplied PDF, dual-extraction-verified values, 5-standard picker) · FPR Check module · Airfield Driving Spot Check module (renamed per owner) · Local Regulations Review (Base Regs) · NAMO/NAMT attribution + Report Tool. 34 commits, all 14 migrations applied + types regenerated, +363 tests. Pushed. |
 | **Unreleased** | 2026-07-17 (session 5) | Obstruction manual coordinate entry · FAA Part 77 surface polygons · three §77.19 criteria corrections · UFC Table 3-7 verified + owner rulings — surface-set expansion unblocked. 20 commits, zero migrations. |
 | **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: fleet-wide airfield_status backfill + seed trigger (migration `2026071600`, applied) · setup-wizard import staleness fixed · autosave pill registers deletes/updates. |
