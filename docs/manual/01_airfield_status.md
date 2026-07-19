@@ -41,6 +41,16 @@ Default sections (these exist unless an admin has removed or renamed them):
 
 Custom Status Boards (if your admin has defined any) appear in whichever section they were assigned to.
 
+### Rearranging and resizing the board (base admins)
+
+Users with the base-admin level role see an **Edit layout** button above the sections. It opens a
+dashboard-style editor: drag a section card to move it, pull a corner handle to resize it, and click
+a section label to rename it. Nothing is written to the server while you work — the arrangement is
+held locally until you press **Save layout**, which publishes it base-wide (everyone then sees the
+board in your saved arrangement; phones show the same sections stacked in reading order).
+**Cancel** discards your changes; **Reset to default** returns the base to the built-in arrangement.
+A base that has never saved a layout keeps the built-in arrangement automatically.
+
 Beneath the sections, **Personnel on Airfield** lists who is currently on the airfield (see [20_personnel.md](20_personnel.md)).
 
 ---

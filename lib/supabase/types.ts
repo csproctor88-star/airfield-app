@@ -9082,19 +9082,22 @@ export type Database = {
       status_board_layouts: {
         Row: {
           base_id: string
-          section_order: string[]
+          layout: Json | null
+          section_order: string[] | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           base_id: string
-          section_order: string[]
+          layout?: Json | null
+          section_order?: string[] | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           base_id?: string
-          section_order?: string[]
+          layout?: Json | null
+          section_order?: string[] | null
           updated_at?: string
           updated_by?: string | null
         }

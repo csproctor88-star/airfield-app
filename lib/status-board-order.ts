@@ -1,5 +1,6 @@
-// Pure helpers for the Airfield Status board section layout (drag-to-reorder,
-// base-admin only — see 2026071901_status_board_layouts_table.sql).
+// Pure helper for the Airfield Status board's legacy section order — the
+// reorder-era fallback used when a base has a section_order row but no grid
+// layout yet (grid rects took over in 2026071902; see lib/status-board-grid.ts).
 
 /**
  * Resolve the render order of the board's section cards from a saved
@@ -18,25 +19,4 @@ export function applyBoardOrder(
   const seen = new Set(valid)
   const missing = defaultKeys.filter((k) => !seen.has(k))
   return [...valid, ...missing]
-}
-
-/**
- * Drop semantics shared with hooks/use-drag-reorder: the dragged section
- * lands BEFORE the drop target (takes the target's position; the target
- * shifts right). No-ops on self-drops and unknown keys.
- */
-export function moveSectionBefore(
-  order: readonly string[],
-  sourceKey: string,
-  targetKey: string,
-): string[] {
-  if (sourceKey === targetKey) return [...order]
-  const fromIdx = order.indexOf(sourceKey)
-  const toIdx = order.indexOf(targetKey)
-  if (fromIdx === -1 || toIdx === -1) return [...order]
-  const next = [...order]
-  next.splice(fromIdx, 1)
-  const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx
-  next.splice(insertIdx, 0, sourceKey)
-  return next
 }

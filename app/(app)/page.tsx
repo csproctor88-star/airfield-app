@@ -27,8 +27,18 @@ import {
   Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudFog, CloudLightning,
   Snowflake, HelpCircle, DoorOpen, AlertOctagon, Plus, GripVertical,
 } from 'lucide-react'
-import { applyBoardOrder, moveSectionBefore } from '@/lib/status-board-order'
+import dynamic from 'next/dynamic'
+import { applyBoardOrder } from '@/lib/status-board-order'
+import {
+  defaultStatusBoardGridLayout, syncLayoutSections, layoutStackOrder,
+  STATUS_GRID_COLS, STATUS_GRID_ROW_HEIGHT, STATUS_GRID_MARGIN,
+  type StatusBoardGridLayout,
+} from '@/lib/status-board-grid'
 import { fetchStatusBoardLayout, saveStatusBoardLayout, clearStatusBoardLayout } from '@/lib/supabase/status-board-layout'
+
+// react-grid-layout loads only when a base admin actually enters layout
+// edit mode — viewers never pay its bundle cost on the landing page.
+const StatusBoardGridEditor = dynamic(() => import('@/components/status-board/status-board-grid-editor'), { ssr: false })
 
 // The status change itself persists through its own checked path — these
 // audit-log rows feed the daily ops report, and a silent insert failure
@@ -128,23 +138,40 @@ export default function HomePage() {
   const [editingLabelValue, setEditingLabelValue] = useState('')
   const canEditLabels = canWriteAirfieldStatus
 
-  // Board-layout drag-to-reorder — base-admin tier only (owner ruling
+  // Board-layout drag + resize — base-admin tier only (owner rulings
   // 2026-07-19): airfield_status:manage_layout gates the Edit/Save buttons
   // AND the status_board_layouts writes (RLS). Everyone else just renders
-  // the saved order.
+  // the saved layout. While editing, every drag/resize updates ONLY the
+  // local pendingGrid buffer; the server sees exactly one write, on the
+  // explicit Save (the dashboard's while-you-drag writes were what made
+  // it feel choppy).
   const canManageLayout = has(PERM.AIRFIELD_STATUS_MANAGE_LAYOUT)
-  const [savedBoardOrder, setSavedBoardOrder] = useState<string[] | null>(null)
+  const [savedGrid, setSavedGrid] = useState<StatusBoardGridLayout | null>(null)
+  const [savedOrder, setSavedOrder] = useState<string[] | null>(null)
   const [layoutEdit, setLayoutEdit] = useState(false)
-  const [pendingOrder, setPendingOrder] = useState<string[]>([])
+  const [pendingGrid, setPendingGrid] = useState<StatusBoardGridLayout | null>(null)
   const [savingLayout, setSavingLayout] = useState(false)
-  const [draggedSection, setDraggedSection] = useState<string | null>(null)
-  const [dragOverSection, setDragOverSection] = useState<string | null>(null)
 
   useEffect(() => {
     if (!installationId) return
     setLayoutEdit(false)
-    fetchStatusBoardLayout(installationId).then(setSavedBoardOrder)
+    setPendingGrid(null)
+    fetchStatusBoardLayout(installationId).then(({ grid, sectionOrder }) => {
+      setSavedGrid(grid)
+      setSavedOrder(sectionOrder)
+    })
   }, [installationId])
+
+  // Phones render the saved layout stacked (single column, top-to-bottom
+  // reading order of the grid) — 24-column rects make no sense at 390px.
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 599px)')
+    const update = () => setIsNarrowViewport(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
   const [oooMinimized, setOooMinimized] = useState(false)
   const [showOooDeactivate, setShowOooDeactivate] = useState(false)
   const [showClosedDeactivate, setShowClosedDeactivate] = useState(false)
@@ -1769,6 +1796,7 @@ export default function HomePage() {
             return (
               <input
                 autoFocus
+                className="sb-rename"
                 value={editingLabelValue}
                 onChange={e => setEditingLabelValue(e.target.value)}
                 onBlur={() => saveStatusLabel(key, editingLabelValue.trim() || defaultText)}
@@ -1791,6 +1819,9 @@ export default function HomePage() {
           }
           return (
             <div
+              // .sb-rename keeps the click-to-rename working inside the
+              // layout editor (react-grid-layout's draggableCancel).
+              className="sb-rename"
               onClick={canEditLabels ? () => { setEditingLabel(key); setEditingLabelValue(displayText) } : undefined}
               style={{
                 ...style,
@@ -2408,8 +2439,13 @@ export default function HomePage() {
           })),
         ]
         const defaultKeys = sectionEntries.map(s => s.key)
-        const displayOrder = applyBoardOrder(defaultKeys, layoutEdit ? pendingOrder : savedBoardOrder)
         const elByKey = new Map(sectionEntries.map(s => [s.key, s.el]))
+        // Saved grid reconciled with the sections that exist right now
+        // (deleted custom boards drop; new ones append below).
+        const viewGrid = savedGrid ? syncLayoutSections(savedGrid, defaultKeys) : null
+        // Legacy fallback when the base has never customized: the built-in
+        // flex band, honoring a reorder-era section_order row if one exists.
+        const legacyOrder = applyBoardOrder(defaultKeys, savedOrder)
 
         const layoutBtnStyle = (color: string): React.CSSProperties => ({
           display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -2417,16 +2453,21 @@ export default function HomePage() {
           border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)',
           color, fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
         })
+        const enterLayoutEdit = () => {
+          setPendingGrid(syncLayoutSections(savedGrid ?? defaultStatusBoardGridLayout(defaultKeys), defaultKeys))
+          setLayoutEdit(true)
+        }
         const saveLayout = async () => {
-          if (!installationId) return
+          if (!installationId || !pendingGrid) return
           setSavingLayout(true)
-          const order = applyBoardOrder(defaultKeys, pendingOrder)
-          const { error } = await saveStatusBoardLayout(installationId, order)
+          const grid = syncLayoutSections(pendingGrid, defaultKeys)
+          const { error } = await saveStatusBoardLayout(installationId, grid)
           setSavingLayout(false)
           if (error) { toast.error(error); return }
-          setSavedBoardOrder(order)
+          setSavedGrid(grid)
+          setSavedOrder(layoutStackOrder(grid))
           setLayoutEdit(false)
-          setPendingOrder([])
+          setPendingGrid(null)
           toast.success('Board layout saved for this base.')
         }
         const resetLayout = async () => {
@@ -2435,32 +2476,33 @@ export default function HomePage() {
           const { error } = await clearStatusBoardLayout(installationId)
           setSavingLayout(false)
           if (error) { toast.error(error); return }
-          setSavedBoardOrder(null)
-          setPendingOrder([])
+          setSavedGrid(null)
+          setSavedOrder(null)
+          setPendingGrid(null)
           setLayoutEdit(false)
           toast.success('Board layout reset to default.')
         }
 
         return (<>
       {/* ── Board layout controls — airfield_status:manage_layout only
-          (base-admin tier). Everyone else renders the saved order with
+          (base-admin tier). Everyone else renders the saved layout with
           no chrome. ── */}
       {canManageLayout && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
           {layoutEdit ? (
             <>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginRight: 'auto' }}>
-                Drag the section cards into order, then save.
+                Drag cards to move them, pull a corner to resize, click a label to rename. Nothing saves until you hit Save.
               </span>
               <button onClick={resetLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Reset to default</button>
-              <button onClick={() => { setLayoutEdit(false); setPendingOrder([]) }} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Cancel</button>
+              <button onClick={() => { setLayoutEdit(false); setPendingGrid(null) }} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Cancel</button>
               <button onClick={saveLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-cyan)')}>{savingLayout ? 'Saving…' : 'Save layout'}</button>
             </>
           ) : (
             <button
-              onClick={() => { setPendingOrder(displayOrder); setLayoutEdit(true) }}
+              onClick={enterLayoutEdit}
               style={layoutBtnStyle('var(--color-text-3)')}
-              title="Reorder the status board sections (drag and drop)"
+              title="Rearrange and resize the status board sections"
             >
               <GripVertical size={12} /> Edit layout
             </button>
@@ -2468,59 +2510,45 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* ── Status Sections — side-by-side on desktop, stacked on mobile,
-          rendered in the saved per-base order ── */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        {displayOrder.map(key => {
-          const el = elByKey.get(key)
-          if (!el) return null
-          if (!layoutEdit) return el
-          const isDragged = draggedSection === key
-          const isOver = dragOverSection === key && draggedSection !== key
-          return (
-            <div
-              key={`drag_${key}`}
-              draggable
-              onDragStart={(e) => {
-                setDraggedSection(key)
-                e.dataTransfer.effectAllowed = 'move'
-                e.dataTransfer.setData('text/plain', key)
-              }}
-              onDragEnd={() => { setDraggedSection(null); setDragOverSection(null) }}
-              onDragOver={(e) => {
-                e.preventDefault()
-                e.dataTransfer.dropEffect = 'move'
-                if (draggedSection && key !== draggedSection) setDragOverSection(key)
-              }}
-              onDragLeave={() => setDragOverSection(null)}
-              onDrop={(e) => {
-                e.preventDefault()
-                const source = draggedSection
-                setDraggedSection(null)
-                setDragOverSection(null)
-                if (!source || source === key) return
-                setPendingOrder(prev => moveSectionBefore(applyBoardOrder(defaultKeys, prev), source, key))
-              }}
-              style={{
-                // Carries the section card's flex sizing; the wrapped card
-                // renders block-level inside (its own flex prop is inert here).
-                flex: '1 1 280px', minWidth: 0, position: 'relative',
-                cursor: 'grab', borderRadius: 'var(--radius-lg)',
-                opacity: isDragged ? 0.4 : 1,
-                outline: isOver
-                  ? '2px dashed var(--color-cyan)'
-                  : '2px dashed color-mix(in srgb, var(--color-cyan) 30%, transparent)',
-                outlineOffset: 2,
-              }}
-            >
-              <div style={{ position: 'absolute', top: 6, right: 8, zIndex: 2, color: 'var(--color-cyan)', pointerEvents: 'none' }}>
-                <GripVertical size={14} />
-              </div>
-              {el}
+      {layoutEdit && pendingGrid ? (
+        /* ── Edit mode: dashboard-style drag + resize. All changes buffer
+            in pendingGrid; the server sees one write on Save. ── */
+        <div style={{ marginBottom: 12 }}>
+          <StatusBoardGridEditor layout={pendingGrid} onChange={setPendingGrid} sectionsByKey={elByKey} />
+        </div>
+      ) : viewGrid && !isNarrowViewport ? (
+        /* ── Saved custom layout: pure CSS grid on the same 24-col / 40px
+            geometry — viewers never load react-grid-layout. ── */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${STATUS_GRID_COLS}, 1fr)`,
+          gridAutoRows: STATUS_GRID_ROW_HEIGHT,
+          gap: STATUS_GRID_MARGIN,
+          marginBottom: 12,
+        }}>
+          {viewGrid.sections.map(s => (
+            <div key={s.key} style={{
+              gridColumn: `${s.x + 1} / span ${s.w}`,
+              gridRow: `${s.y + 1} / span ${s.h}`,
+              minWidth: 0, overflow: 'auto',
+              // flex column so the section card stretches to fill its cell.
+              display: 'flex', flexDirection: 'column',
+            }}>
+              {elByKey.get(s.key) ?? null}
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      ) : viewGrid ? (
+        /* ── Saved layout on a phone: stack in the grid's reading order. ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          {layoutStackOrder(viewGrid).map(key => elByKey.get(key) ?? null)}
+        </div>
+      ) : (
+        /* ── No saved layout: the built-in band, exactly as before. ── */
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          {legacyOrder.map(key => elByKey.get(key) ?? null)}
+        </div>
+      )}
 
       </>)
       })()}

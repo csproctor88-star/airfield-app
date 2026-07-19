@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { applyBoardOrder, moveSectionBefore } from '@/lib/status-board-order'
+import { applyBoardOrder } from '@/lib/status-board-order'
 
 const DEFAULTS = ['runway', 'navaid', 'arff', 'board_a', 'board_b']
 
@@ -39,36 +39,5 @@ describe('applyBoardOrder', () => {
     applyBoardOrder(defaults, saved)
     expect(saved).toEqual(['arff', 'runway'])
     expect(defaults).toEqual(DEFAULTS)
-  })
-})
-
-describe('moveSectionBefore (use-drag-reorder drop semantics)', () => {
-  it('moving forward lands BEFORE the target', () => {
-    expect(moveSectionBefore(DEFAULTS, 'runway', 'arff')).toEqual(
-      ['navaid', 'runway', 'arff', 'board_a', 'board_b'],
-    )
-  })
-
-  it('moving backward lands BEFORE the target', () => {
-    expect(moveSectionBefore(DEFAULTS, 'board_b', 'navaid')).toEqual(
-      ['runway', 'board_b', 'navaid', 'arff', 'board_a'],
-    )
-  })
-
-  it('moving to the front works', () => {
-    expect(moveSectionBefore(DEFAULTS, 'arff', 'runway')).toEqual(
-      ['arff', 'runway', 'navaid', 'board_a', 'board_b'],
-    )
-  })
-
-  it('self-drops and unknown keys are no-ops', () => {
-    expect(moveSectionBefore(DEFAULTS, 'runway', 'runway')).toEqual(DEFAULTS)
-    expect(moveSectionBefore(DEFAULTS, 'ghost', 'arff')).toEqual(DEFAULTS)
-    expect(moveSectionBefore(DEFAULTS, 'runway', 'ghost')).toEqual(DEFAULTS)
-  })
-
-  it('round-trips with applyBoardOrder for persistence', () => {
-    const reordered = moveSectionBefore(DEFAULTS, 'arff', 'runway')
-    expect(applyBoardOrder(DEFAULTS, reordered)).toEqual(reordered)
   })
 })
