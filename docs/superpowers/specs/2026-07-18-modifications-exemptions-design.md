@@ -1,7 +1,12 @@
 # Modifications & Exemptions — civilian Part 139 record tracker
 
 **Date:** 2026-07-18
-**Status:** Design — awaiting owner review. No code started.
+**Status:** APPROVED 2026-07-18 — owner ruled "all recommended" on the six
+open questions: (1) §139.113 deviations included as third record type,
+minimal shape; (2) defaultEnabled: true on civilian bases; (3) permission
+matrix as proposed; (4) attachments PDF-only 25 MB; (5) plain CRUD, no
+offline queue; (6) naming as proposed. Owner also authorized running the
+migrations.
 **Module:** new civilian module at `/modifications-exemptions`,
 `appliesTo: ['faa_part139']`, default-on recommended (open question 2)
 **Site tie-in:** the authored-but-gated marketing page

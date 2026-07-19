@@ -187,7 +187,7 @@ describe('TYPICAL_BASE_PRESET', () => {
 // modules (hidden on USAF bases). These lists gate the Base Configuration
 // module selector — widening either silently re-clutters the other mode's UI.
 const USAF_ONLY: string[] = ['scn', 'amtr', 'fpr', 'driving_checks']
-const PART139_ONLY: string[] = ['sms', 'training_part139', 'aep', 'field_conditions', 'whmp']
+const PART139_ONLY: string[] = ['sms', 'training_part139', 'aep', 'field_conditions', 'whmp', 'mods_exemptions']
 const SHARED_SAMPLE: string[] = ['acsi', 'checks', 'discrepancies', 'qrc', 'wildlife']
 
 describe('moduleAppliesToAirport', () => {
@@ -267,6 +267,32 @@ describe('local_regs module registration (Base Regs tab)', () => {
 
   it('is included in TYPICAL_BASE_PRESET', () => {
     expect(TYPICAL_BASE_PRESET).toContain('local_regs')
+  })
+})
+
+describe('mods_exemptions module registration', () => {
+  it('is civilian-only (appliesTo faa_part139)', () => {
+    expect(moduleAppliesToAirport('mods_exemptions' as never, 'faa_part139')).toBe(true)
+    expect(moduleAppliesToAirport('mods_exemptions' as never, 'usaf')).toBe(false)
+  })
+
+  it('is a default-enabled compliance module with its own route and no wizard step', () => {
+    const mod = MODULES.find(m => m.key === 'mods_exemptions')!
+    expect(mod).toBeDefined()
+    expect(mod.category).toBe('compliance')
+    expect(mod.defaultEnabled).toBe(true)
+    expect(mod.hrefs).toEqual(['/modifications-exemptions'])
+    expect(mod.setupSteps).toEqual([])
+  })
+
+  it('gates /modifications-exemptions on the module key + airport type', () => {
+    expect(isModuleEnabled('/modifications-exemptions', ['mods_exemptions'], 'faa_part139')).toBe(true)
+    expect(isModuleEnabled('/modifications-exemptions', [], 'faa_part139')).toBe(false)
+    expect(isModuleEnabled('/modifications-exemptions', ['mods_exemptions'], 'usaf')).toBe(false)
+  })
+
+  it('is included in TYPICAL_BASE_PRESET (default-enabled)', () => {
+    expect(TYPICAL_BASE_PRESET).toContain('mods_exemptions')
   })
 })
 

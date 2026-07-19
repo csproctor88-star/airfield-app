@@ -75,6 +75,7 @@ import {
   CloudSnow,
   BookOpenCheck,
   Car,
+  FileCog,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -93,6 +94,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   BookOpenCheck,
   // Driving Spot Checks
   Car,
+  // Modifications & Exemptions
+  FileCog,
 }
 
 // Group icons
@@ -129,6 +132,7 @@ const HREF_TO_VIEW_PERM: Record<string, string> = {
   '/feedback':          'feedback:view',
   '/contractors':       'contractors:view',
   '/amtr':              'amtr:view',
+  '/modifications-exemptions': 'mods_exemptions:view',
   '/flip':              'flip:view',
   '/read-file':         'read_file:view',
   '/ces':               'ces:view',

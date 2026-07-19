@@ -13,7 +13,7 @@ import {
   BookOpen, BookMarked, Users, Award, Settings as SettingsIcon,
   Wrench, FolderOpen, Shield, SlidersHorizontal, MessageSquare,
   ShieldAlert, MessageSquareWarning, GitBranch, Siren, CloudSnow,
-  Search, X, BookOpenCheck, Car,
+  Search, X, BookOpenCheck, Car, FileCog,
   type LucideIcon,
 } from 'lucide-react'
 import { NAV_ITEM_MAP } from '@/lib/sidebar-config'
@@ -95,6 +95,9 @@ const training139Items: ModuleItem[] = [
   { name: 'Training Topics',     icon: BookOpen,      color: 'var(--color-accent)',  href: '/training/topics' },
   { name: 'Training Roster',     icon: Users,         color: 'var(--color-success)', href: '/training/roster' },
   { name: 'Training Compliance', icon: ClipboardCheck, color: 'var(--color-warning)', href: '/training/compliance' },
+  // Modifications & Exemptions — civilian Part 139 only (mods_exemptions
+  // module appliesTo); gated to mods_exemptions:view via HREF_PERMISSION.
+  { name: 'Modifications & Exemptions', icon: FileCog, color: 'var(--color-purple)', href: '/modifications-exemptions' },
 ]
 
 // Airport Emergency Plan (civilian Part 139 only — same gating via the
@@ -377,6 +380,7 @@ const HREF_PERMISSION: Partial<Record<string, string>> = {
   '/ces':            PERM.CES_VIEW,
   '/fpr':            PERM.FPR_VIEW,
   '/driving-checks': PERM.DRIVING_CHECKS_VIEW,
+  '/modifications-exemptions': PERM.MODS_EXEMPTIONS_VIEW,
 }
 
 export default function MorePage() {

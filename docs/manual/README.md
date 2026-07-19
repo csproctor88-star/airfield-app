@@ -37,6 +37,7 @@ This manual covers every module, tool, and workflow in Glidepath. Each file is s
 | 24 | Flight Planning Room Check | [24_flight_planning_room.md](24_flight_planning_room.md) |
 | 25 | Airfield Driving Spot Check | [25_driving_spot_check.md](25_driving_spot_check.md) |
 | 26 | Local Regulations | [26_local_regulations.md](26_local_regulations.md) |
+| 27 | Modifications & Exemptions | [27_modifications_exemptions.md](27_modifications_exemptions.md) |
 
 ---
 

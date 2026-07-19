@@ -116,6 +116,12 @@ export const PERM = {
   LOCAL_REGS_VIEW:                      'local_regs:view',
   LOCAL_REGS_MANAGE:                    'local_regs:manage',
 
+  // Modifications & Exemptions — FAA MOS (Order 5300.1G) + Part 139
+  // exemption petitions (§139.111 / 14 CFR Part 11) + §139.113 deviations
+  // (civilian Part 139 only)
+  MODS_EXEMPTIONS_VIEW:                 'mods_exemptions:view',
+  MODS_EXEMPTIONS_WRITE:                'mods_exemptions:write',
+
   // SMS — Safety Management System (Part 139 §139.401-415)
   SMS_READ:                             'sms:read',
   SMS_WRITE:                            'sms:write',

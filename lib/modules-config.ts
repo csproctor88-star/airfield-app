@@ -30,6 +30,7 @@ export type ModuleKey =
   | 'local_regs'
   | 'fpr'
   | 'driving_checks'
+  | 'mods_exemptions'
 
 export type ModuleCategory = 'core-ops' | 'emergency' | 'compliance' | 'optional'
 
@@ -369,6 +370,17 @@ export const MODULES: ModuleDef[] = [
     setupSteps: ['drivingcheckitems'],
     defaultEnabled: false,
     appliesTo: ['usaf'],
+  },
+  {
+    key: 'mods_exemptions',
+    label: 'Modifications & Exemptions',
+    category: 'compliance',
+    description: 'Track FAA Modification of Standards requests and Part 139 exemption petitions from submission to a documented decision — statuses, decision letters, expirations, annual justification reviews, and §139.113 emergency-deviation notifications.',
+    useCase: 'Part 139 airports keeping the modification and exemption record an FAA certification inspector asks to see, with the ACM exemptions list and the ALP modification table ready to print.',
+    hrefs: ['/modifications-exemptions'],
+    setupSteps: [],
+    defaultEnabled: true,
+    appliesTo: ['faa_part139'],
   },
 ]
 

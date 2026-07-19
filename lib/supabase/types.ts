@@ -5751,6 +5751,264 @@ export type Database = {
         }
         Relationships: []
       }
+      // MANUAL (2026-07-18): mods_exemption_attachments / _reviews /
+      // mods_exemptions hand-added ahead of applying 2026071802 — retire
+      // these three blocks at the next `gen types` regeneration.
+      mods_exemption_attachments: {
+        Row: {
+          base_id: string
+          caption: string | null
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size_bytes: number | null
+          id: string
+          kind: string
+          mime_type: string | null
+          record_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          base_id: string
+          caption?: string | null
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size_bytes?: number | null
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          record_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          caption?: string | null
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          id?: string
+          kind?: string
+          mime_type?: string | null
+          record_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mods_exemption_attachments_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mods_exemption_attachments_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "mods_exemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mods_exemption_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mods_exemption_reviews: {
+        Row: {
+          base_id: string
+          created_at: string
+          id: string
+          justification_still_valid: boolean
+          notes: string | null
+          recommendation: string | null
+          record_id: string
+          review_date: string
+          reviewed_by: string | null
+        }
+        Insert: {
+          base_id: string
+          created_at?: string
+          id?: string
+          justification_still_valid: boolean
+          notes?: string | null
+          recommendation?: string | null
+          record_id: string
+          review_date: string
+          reviewed_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          created_at?: string
+          id?: string
+          justification_still_valid?: boolean
+          notes?: string | null
+          recommendation?: string | null
+          record_id?: string
+          review_date?: string
+          reviewed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mods_exemption_reviews_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mods_exemption_reviews_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "mods_exemptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mods_exemption_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mods_exemptions: {
+        Row: {
+          agis_tracking: string | null
+          approval_authority: string | null
+          arff_small_airport: boolean
+          base_id: string
+          baseline_summary: string | null
+          created_at: string
+          created_by: string | null
+          date_decided: string | null
+          date_submitted: string | null
+          decision_conditions: string | null
+          decision_summary: string | null
+          deviation_date: string | null
+          docket_number: string | null
+          effective_date: string | null
+          expiration_date: string | null
+          id: string
+          justification: string | null
+          last_reviewed_date: string | null
+          mos_category: string | null
+          mos_subcategory: string | null
+          next_review_due: string | null
+          notes: string | null
+          notified_date: string | null
+          public_interest: string | null
+          record_type: string
+          relief_summary: string | null
+          safety_justification: string | null
+          standard_reference: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          written_notice_provided: boolean
+          written_notice_requested: boolean
+        }
+        Insert: {
+          agis_tracking?: string | null
+          approval_authority?: string | null
+          arff_small_airport?: boolean
+          base_id: string
+          baseline_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_decided?: string | null
+          date_submitted?: string | null
+          decision_conditions?: string | null
+          decision_summary?: string | null
+          deviation_date?: string | null
+          docket_number?: string | null
+          effective_date?: string | null
+          expiration_date?: string | null
+          id?: string
+          justification?: string | null
+          last_reviewed_date?: string | null
+          mos_category?: string | null
+          mos_subcategory?: string | null
+          next_review_due?: string | null
+          notes?: string | null
+          notified_date?: string | null
+          public_interest?: string | null
+          record_type: string
+          relief_summary?: string | null
+          safety_justification?: string | null
+          standard_reference: string
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          written_notice_provided?: boolean
+          written_notice_requested?: boolean
+        }
+        Update: {
+          agis_tracking?: string | null
+          approval_authority?: string | null
+          arff_small_airport?: boolean
+          base_id?: string
+          baseline_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          date_decided?: string | null
+          date_submitted?: string | null
+          decision_conditions?: string | null
+          decision_summary?: string | null
+          deviation_date?: string | null
+          docket_number?: string | null
+          effective_date?: string | null
+          expiration_date?: string | null
+          id?: string
+          justification?: string | null
+          last_reviewed_date?: string | null
+          mos_category?: string | null
+          mos_subcategory?: string | null
+          next_review_due?: string | null
+          notes?: string | null
+          notified_date?: string | null
+          public_interest?: string | null
+          record_type?: string
+          relief_summary?: string | null
+          safety_justification?: string | null
+          standard_reference?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          written_notice_provided?: boolean
+          written_notice_requested?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mods_exemptions_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mods_exemptions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mods_exemptions_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       navaid_statuses: {
         Row: {
           base_id: string | null

@@ -75,6 +75,10 @@ export const ALL_NAV_ITEMS: NavItemDef[] = [
   { name: 'Response Agencies',  href: '/aep/agencies',     iconName: 'Users', keywords: ['AEP', 'mutual aid'] },
   { name: 'AEP Comms Checks',   href: '/aep/comms-checks', iconName: 'Radio', keywords: ['AEP'] },
   { name: 'AEP Drills',         href: '/aep/drills',       iconName: 'Siren', keywords: ['AEP', 'exercise'] },
+  // Modifications & Exemptions — civilian Part 139 only (modules-config
+  // `appliesTo: ['faa_part139']` filters this from USAF sidebars). MOS
+  // requests, §139.111 exemption petitions, §139.113 deviations.
+  { name: 'Modifications & Exemptions', href: '/modifications-exemptions', iconName: 'FileCog', keywords: ['MOS', 'modification of standards', 'exemption', 'petition', '139.111', 'deviation', 'Order 5300.1G'] },
   // Training Records (AMTR) — USAF-only (modules-config `appliesTo: ['usaf']`
   // hides it on civilian bases) and gated by `amtr:view`, which is held only by
   // Airfield Manager / NAMO / Base Admin / AMOPS / sys_admin.
@@ -138,7 +142,9 @@ export const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
     {
       label: 'Training & Compliance',
       collapsed: true,
-      items: ['/training', '/training/topics', '/training/roster', '/training/compliance'],
+      // /modifications-exemptions is civilian-only (appliesTo filter hides
+      // it on USAF bases, where this whole section is civilian anyway).
+      items: ['/training', '/training/topics', '/training/roster', '/training/compliance', '/modifications-exemptions'],
     },
     {
       label: 'Airport Emergency Plan',
