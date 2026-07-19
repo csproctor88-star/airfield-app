@@ -173,10 +173,10 @@ type ReviewFormState = {
   notes: string
 }
 
-const inputCls = 'w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-2)] px-3 py-2 text-sm text-[var(--color-text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]'
+const inputCls = 'w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]'
 const labelCls = 'block text-xs font-medium text-[var(--color-text-3)] mb-1'
 const btnPrimary = 'inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50'
-const btnGhost = 'inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text-2)] hover:bg-[var(--color-bg-2)]'
+const btnGhost = 'inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text-2)] hover:bg-[var(--color-bg-inset)]'
 
 export default function ModificationsExemptionsPage() {
   const { installationId, currentInstallation } = useInstallation()
@@ -399,7 +399,7 @@ export default function ModificationsExemptionsPage() {
           { label: 'Reviews due', value: stats.reviewsDue },
           { label: 'Expired', value: stats.expired },
         ].map((sItem) => (
-          <div key={sItem.label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-1)] px-3 py-2">
+          <div key={sItem.label} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)] px-3 py-2">
             <div className="text-lg font-semibold text-[var(--color-text-1)]">{sItem.value}</div>
             <div className="text-xs text-[var(--color-text-3)]">{sItem.label}</div>
           </div>
@@ -434,13 +434,13 @@ export default function ModificationsExemptionsPage() {
             const recAttachments = attachments.filter((a) => a.record_id === r.id)
             const recReviews = reviews.filter((v) => v.record_id === r.id)
             return (
-              <div key={r.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-1)]">
+              <div key={r.id} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
                 <button
                   className="flex w-full items-center gap-3 px-4 py-3 text-left"
                   onClick={() => setExpandedId(expanded ? null : r.id)}
                 >
                   {expanded ? <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-text-3)]" /> : <ChevronRight className="h-4 w-4 shrink-0 text-[var(--color-text-3)]" />}
-                  <span className="rounded bg-[var(--color-bg-2)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-2)]">
+                  <span className="rounded bg-[var(--color-bg-inset)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-2)]">
                     {RECORD_TYPE_SHORT_LABELS[r.record_type]}
                   </span>
                   <span className="min-w-0 flex-1">
@@ -544,7 +544,7 @@ export default function ModificationsExemptionsPage() {
                         {canWrite && (
                           <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-[var(--color-accent)]">
                             <select
-                              className="rounded border border-[var(--color-border)] bg-[var(--color-bg-2)] px-1 py-0.5 text-xs"
+                              className="rounded border border-[var(--color-border)] bg-[var(--color-bg-inset)] px-1 py-0.5 text-xs"
                               value={uploadKind}
                               onChange={(e) => setUploadKind(e.target.value as ModsExemptionAttachmentKind)}
                               onClick={(e) => e.stopPropagation()}
@@ -636,7 +636,7 @@ export default function ModificationsExemptionsPage() {
 
             {/* MOS not-applicable hint (5300.1G ¶8.i) */}
             {form.record_type === 'mos' && !form.editId && (
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-2)] p-3 text-xs text-[var(--color-text-3)]">
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-inset)] p-3 text-xs text-[var(--color-text-3)]">
                 <div className="mb-1 flex items-center gap-1.5 font-medium text-[var(--color-text-2)]">
                   <Info className="h-3.5 w-3.5" /> A MOS is not applicable for (FAA Order 5300.1G &para;8.i):
                 </div>
@@ -751,7 +751,7 @@ export default function ModificationsExemptionsPage() {
                   </label>
                 </div>
                 {form.arff_small_airport && (
-                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-2)] p-3 text-xs text-[var(--color-text-3)]">
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-inset)] p-3 text-xs text-[var(--color-text-3)]">
                     <div className="mb-1 flex items-center gap-1.5 font-medium text-[var(--color-text-2)]">
                       <AlertTriangle className="h-3.5 w-3.5" />
                       File at least {ARFF_ADVANCE_FILING_DAYS} days before the proposed effective date. The petition must include (§139.111(b)(2)):
@@ -909,9 +909,9 @@ function Field({ label, value, wide, block }: { label: string; value: string | n
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/55 p-4" onClick={onClose}>
       <div
-        className="my-8 w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-1)] p-5 shadow-xl"
+        className="my-8 w-full max-w-2xl rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-surface-solid)] p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
