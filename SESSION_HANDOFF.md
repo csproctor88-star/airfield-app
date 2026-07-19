@@ -1,5 +1,81 @@
 # Session Handoff
 
+> **2026-07-19 — rulings, Modifications & Exemptions module, mobile polish,
+> status-board layout engine (session 9).** Interactive, home machine, spans
+> 2026-07-18 evening → 07-19. **9 commits** (`34797542`..`1615c9b9`), **all
+> PUSHED**, tree clean and level with origin. Build green on the final tree:
+> tsc ✓ · lint 0 errors · vitest **1784 passed | 24 skipped** (179 files) ·
+> build ✓ (`/` 28.7 kB · 241 kB First Load; `/modifications-exemptions`
+> 15.2 kB · 196 kB). **8 migrations (2026071800–2026071902) APPLIED to the
+> linked DB** and verified by their header queries; `types.ts` regenerated
+> twice via its documented splice procedure — the first regen also caught
+> silent session-7 drift (`airfield_driver_licenses`, `bases.distance_unit`,
+> `driving_checks.driver_483_number` were absent from generated types).
+>
+> Shipped:
+> - **Permission rulings** (`34797542`, applied + live-verified): `atc`
+>   loses `fpr:view`; civilian × FPR confirmed already-none (recorded in the
+>   migration header, no statement); `majcom_rfm` trued up to its full
+>   every-`:view` contract — owner picked "all six" including `fpr`/`amtr`.
+>   Root cause: the 2026042202 one-time `LIKE '%:view'` seed never covered
+>   later keys; a time-accurate replay audit found the drift the static
+>   matrix test structurally masks (full-catalogue SELECT resolution + two
+>   unparsed statement shapes — noted in the test's comments).
+> - **Modifications & Exemptions module** (`adb085a8` spec → `fb76f0eb`) —
+>   civilian Part 139 tracker at `/modifications-exemptions` for MOS
+>   (FAA Order 5300.1G, Appendix A category picker, 5-yr design expiry,
+>   ¶12.b ALP-table register), §139.111 exemption petitions (§11.81 field
+>   map, ARFF §139.111(b) path w/ 120-day rule, §11.101 60-day
+>   reconsideration, annual reviews answering Form 5280-4 "Justification
+>   Still Valid"), and §139.113 deviations (14-day RADM clock). Every
+>   regulatory value transcribed from the owner's four PDFs into gitignored
+>   `docs/references/part139-mos-exemptions-verified.md` (note: 5280.5D
+>   internally disagrees 3-vs-2-yr max exemption term — the module stores
+>   letter dates, never a hardcoded term). Owner ruled "all recommended" on
+>   the spec's six open questions. Default-on for civilian bases
+>   (backfilled); grants include explicit `majcom_rfm`/`read_only` per the
+>   drift lesson. Manual `27_modifications_exemptions.md`.
+> - **Modal token fix** (`ed528997`) — the new form styled panels with
+>   `--color-bg-1/-2`, names that don't exist in `globals.css`; invalid
+>   `var()` unsets background → transparent dialog over the page. Mapped to
+>   the real tokens (`bg-surface`, `bg-inset`, `bg-surface-solid`) and
+>   modal z to the house 1000.
+> - **Mobile form-overflow polish** (`c79828da`) — one bug class from five
+>   owner screenshots: controls inside fixed grids / non-wrapping flex rows
+>   can't shrink below intrinsic width (iOS date inputs worst). Fixed the
+>   five + two found proactively (ACSI cover fields, FLIP change-card) +
+>   a global ≤767px guard (`input/select/textarea { min-width:0;
+>   max-width:100% }`) beside the existing 16px iOS rule. AMTR untouched
+>   (desktop banner).
+> - **Status-board layout engine** (three steps in one day):
+>   `c6dace7d` NAVAID uniformity (labels ellipsize so badges align flush;
+>   section cards stretch equal-height) + the datetime-local dialog
+>   overflow fix + reorder-only layout v1. `cfc3c359` dashboard-style
+>   drag + resize on the dashboard's 24-col/40px geometry — react-grid-layout
+>   loads ONLY in edit mode (dynamic import; `/` stays 241 kB vs
+>   /dashboard's 454), viewers render a pure CSS grid, phones stack in
+>   reading order, and — owner's anti-choppiness rule — edits buffer in
+>   local state with exactly ONE server write on explicit Save (no
+>   breakpoint variants either; that reflow was part of the dashboard's
+>   original jank). `1615c9b9` every block movable: Personnel,
+>   Construction/Closures, Misc Info, and the PPR panel join the same grid
+>   as equal sections; the old two-zone look survives only as the
+>   never-saved default (pixel-identical). Gate: new
+>   `airfield_status:manage_layout` granted to exactly the admin tier
+>   (airfield_manager/namo/base_admin/sys_admin — deliberately not amops),
+>   enforced in RLS on `status_board_layouts` (rects JSONB + derived
+>   `section_order`).
+>
+> Cleared: session-7's parking touch long-press (owner verified on device).
+> **Owner QA on the promoted build:** Mods & Exemptions pass on a civilian
+> base (one record of each type, annual review, PDF attachment, register +
+> detail PDFs) · status board arrange/resize/save on desktop, amops sees no
+> Edit button, phone shows stacked order · re-check the five mobile-overflow
+> screenshots. Open next: **glidepath-site `modifications-exemptions` page
+> registration** (owner reviews site copy; its `regulation: null` can now
+> cite verified §139.111 / Order 5300.1G) · **Part 139 cert-audit resume**
+> (session-6 task 6, Task 2.5c) · long-running carryover unchanged.
+
 > **2026-07-18 — twin-bug fix waves + site H1 pass (session 8).** Interactive.
 > **2 app commits** (`ae55b046`, `cb074af1`) + **1 glidepath-site commit**
 > (`381c3cb`), **all PUSHED**, both trees clean and level with origin. Build
@@ -433,6 +509,7 @@ glidepath-site @ 9dd00ad: untouched this session.
 |---|---|---|
 | **Unreleased** | 2026-07-18 (session 8) | SCN twin-bug fix wave (FPR fixes ported back to the template) · Read File archived-report fix (Local Regs mirror) · glidepath-site module H1 keyword pass (30 pages, owner-approved). 2 app commits + 1 site commit, zero migrations, pushed. |
 | **Unreleased** | 2026-07-18 (session 7) | Base ft/m distance-unit preference (`lib/distance-units.ts`) · multi-standard parking clearance (UFC / ICAO / USAFE 32-1007 / FAA ADG) · USAFE 32-1007 as 4th base standard · runway ft/m-toggle corruption fix. 10 commits, 2 migrations applied. |
+| **Unreleased** | 2026-07-19 (session 9) | Permission rulings applied (atc/majcom) · Modifications & Exemptions civilian module (verified-PDF regulatory base, 4 migrations) · mobile form-overflow polish · status-board grid layout engine (drag + resize, every block movable, base-admin only, buffered saves). 9 commits, 8 migrations applied, +75 tests. Pushed. |
 | **Unreleased** | 2026-07-17 (session 6, overnight + post-wrap) | Seven features, review-gated: surface-set expansion (Class A + corrected Class B/Army B + base standard selector) · **ICAO Annex 14 fifth standard** (owner-supplied PDF, dual-extraction-verified values, 5-standard picker) · FPR Check module · Airfield Driving Spot Check module (renamed per owner) · Local Regulations Review (Base Regs) · NAMO/NAMT attribution + Report Tool. 34 commits, all 14 migrations applied + types regenerated, +363 tests. Pushed. |
 | **Unreleased** | 2026-07-17 (session 5) | Obstruction manual coordinate entry · FAA Part 77 surface polygons · three §77.19 criteria corrections · UFC Table 3-7 verified + owner rulings — surface-set expansion unblocked. 20 commits, zero migrations. |
 | **Unreleased** | 2026-07-16 (session 4) | KFAR status-board save bug: fleet-wide airfield_status backfill + seed trigger (migration `2026071600`, applied) · setup-wizard import staleness fixed · autosave pill registers deletes/updates. |
