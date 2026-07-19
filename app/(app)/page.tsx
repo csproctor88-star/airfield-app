@@ -2424,139 +2424,13 @@ export default function HomePage() {
       </div>
         )
 
-        // ── Assemble the section cards and resolve their render order ──
-        const sectionEntries: Array<{ key: string; el: React.ReactNode }> = [
-          { key: 'runway', el: runwaySection },
-          { key: 'navaid', el: navaidSection },
-          { key: 'arff', el: arffSection },
-          ...boardsBySection.standalone.map(b => ({
-            key: `board_${b.id}`,
-            el: (
-              <div key={`board_${b.id}`} style={sectionCardStyle}>
-                {renderBoardCard(b)}
-              </div>
-            ),
-          })),
-        ]
-        const defaultKeys = sectionEntries.map(s => s.key)
-        const elByKey = new Map(sectionEntries.map(s => [s.key, s.el]))
-        // Saved grid reconciled with the sections that exist right now
-        // (deleted custom boards drop; new ones append below).
-        const viewGrid = savedGrid ? syncLayoutSections(savedGrid, defaultKeys) : null
-        // Legacy fallback when the base has never customized: the built-in
-        // flex band, honoring a reorder-era section_order row if one exists.
-        const legacyOrder = applyBoardOrder(defaultKeys, savedOrder)
-
-        const layoutBtnStyle = (color: string): React.CSSProperties => ({
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          padding: '4px 10px', borderRadius: 'var(--radius-sm)',
-          border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)',
-          color, fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-        })
-        const enterLayoutEdit = () => {
-          setPendingGrid(syncLayoutSections(savedGrid ?? defaultStatusBoardGridLayout(defaultKeys), defaultKeys))
-          setLayoutEdit(true)
-        }
-        const saveLayout = async () => {
-          if (!installationId || !pendingGrid) return
-          setSavingLayout(true)
-          const grid = syncLayoutSections(pendingGrid, defaultKeys)
-          const { error } = await saveStatusBoardLayout(installationId, grid)
-          setSavingLayout(false)
-          if (error) { toast.error(error); return }
-          setSavedGrid(grid)
-          setSavedOrder(layoutStackOrder(grid))
-          setLayoutEdit(false)
-          setPendingGrid(null)
-          toast.success('Board layout saved for this base.')
-        }
-        const resetLayout = async () => {
-          if (!installationId) return
-          setSavingLayout(true)
-          const { error } = await clearStatusBoardLayout(installationId)
-          setSavingLayout(false)
-          if (error) { toast.error(error); return }
-          setSavedGrid(null)
-          setSavedOrder(null)
-          setPendingGrid(null)
-          setLayoutEdit(false)
-          toast.success('Board layout reset to default.')
-        }
-
-        return (<>
-      {/* ── Board layout controls — airfield_status:manage_layout only
-          (base-admin tier). Everyone else renders the saved layout with
-          no chrome. ── */}
-      {canManageLayout && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-          {layoutEdit ? (
-            <>
-              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginRight: 'auto' }}>
-                Drag cards to move them, pull a corner to resize, click a label to rename. Nothing saves until you hit Save.
-              </span>
-              <button onClick={resetLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Reset to default</button>
-              <button onClick={() => { setLayoutEdit(false); setPendingGrid(null) }} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Cancel</button>
-              <button onClick={saveLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-cyan)')}>{savingLayout ? 'Saving…' : 'Save layout'}</button>
-            </>
-          ) : (
-            <button
-              onClick={enterLayoutEdit}
-              style={layoutBtnStyle('var(--color-text-3)')}
-              title="Rearrange and resize the status board sections"
-            >
-              <GripVertical size={12} /> Edit layout
-            </button>
-          )}
-        </div>
-      )}
-
-      {layoutEdit && pendingGrid ? (
-        /* ── Edit mode: dashboard-style drag + resize. All changes buffer
-            in pendingGrid; the server sees one write on Save. ── */
-        <div style={{ marginBottom: 12 }}>
-          <StatusBoardGridEditor layout={pendingGrid} onChange={setPendingGrid} sectionsByKey={elByKey} />
-        </div>
-      ) : viewGrid && !isNarrowViewport ? (
-        /* ── Saved custom layout: pure CSS grid on the same 24-col / 40px
-            geometry — viewers never load react-grid-layout. ── */
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${STATUS_GRID_COLS}, 1fr)`,
-          gridAutoRows: STATUS_GRID_ROW_HEIGHT,
-          gap: STATUS_GRID_MARGIN,
-          marginBottom: 12,
-        }}>
-          {viewGrid.sections.map(s => (
-            <div key={s.key} style={{
-              gridColumn: `${s.x + 1} / span ${s.w}`,
-              gridRow: `${s.y + 1} / span ${s.h}`,
-              minWidth: 0, overflow: 'auto',
-              // flex column so the section card stretches to fill its cell.
-              display: 'flex', flexDirection: 'column',
-            }}>
-              {elByKey.get(s.key) ?? null}
-            </div>
-          ))}
-        </div>
-      ) : viewGrid ? (
-        /* ── Saved layout on a phone: stack in the grid's reading order. ── */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
-          {layoutStackOrder(viewGrid).map(key => elByKey.get(key) ?? null)}
-        </div>
-      ) : (
-        /* ── No saved layout: the built-in band, exactly as before. ── */
-        <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          {legacyOrder.map(key => elByKey.get(key) ?? null)}
-        </div>
-      )}
-
-      </>)
-      })()}
-
-      {/* ===== Personnel / Construction / Misc (inline row on desktop) ===== */}
-      <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
-
-      <div>
+        // PERSONNEL / CONSTRUCTION / MISC / PPR — the former fixed bottom
+        // zone, now movable sections like everything else (owner ruling
+        // 2026-07-19 #3: one board, no separate zones). Borderless like
+        // their bottom-row originals; flex so each fills its grid cell.
+        const bottomCardStyle: React.CSSProperties = { minWidth: 0, flex: '1 1 auto' }
+        const personnelSection = (
+      <div key="personnel" style={bottomCardStyle}>
       {/* ===== Personnel on Airfield ===== */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2711,8 +2585,11 @@ export default function HomePage() {
       )}
 
       </div>
+        )
 
-      <div>
+        // CONSTRUCTION / CLOSURES — movable section
+        const constructionSection = (
+      <div key="construction" style={bottomCardStyle}>
       {/* ===== Construction / Closures ===== */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2906,8 +2783,11 @@ export default function HomePage() {
       </div>
 
       </div>
+        )
 
-      <div>
+        // MISCELLANEOUS INFO — movable section
+        const miscSection = (
+      <div key="misc" style={bottomCardStyle}>
       {/* ===== Miscellaneous Info ===== */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -2937,14 +2817,15 @@ export default function HomePage() {
       </div>
 
       </div>
-      </div>{/* end bottom-info-row */}
+        )
 
-      {/* ===== Today's PPRs =====
-          Column set intentionally mirrors the slim PPR Log on /ppr:
-          PPR # / Status / Arrival Date / Callsign / Aircraft Type.
-          Anything else (requester, all admin columns, notes, coord,
-          remarks) lives in the detail view on /ppr. */}
-      {pprColumns.length > 0 && (() => {
+        // TODAY'S PPRS — movable section. Column set intentionally mirrors
+        // the slim PPR Log on /ppr: PPR # / Status / Arrival Date /
+        // Callsign / Aircraft Type; everything else (requester, admin
+        // columns, notes, coord, remarks) lives in the detail view on /ppr.
+        const pprSection = (
+      <div key="ppr" style={bottomCardStyle}>
+      {pprColumns.length > 0 ? (() => {
         // Custom columns the admin chose to surface on this panel.
         // info_only is excluded — it would render as a wall of text in
         // a row. The legacy isSummaryColumn() check has been retired
@@ -3088,6 +2969,157 @@ export default function HomePage() {
             )}
           </div>
         )
+      })() : null}
+      </div>
+        )
+
+        // ── Assemble every movable section and resolve the render order ──
+        // bandEntries = the classic top band; the four bottom blocks join
+        // them as equal citizens in the grid (one board, no fixed zones).
+        const bandEntries: Array<{ key: string; el: React.ReactNode }> = [
+          { key: 'runway', el: runwaySection },
+          { key: 'navaid', el: navaidSection },
+          { key: 'arff', el: arffSection },
+          ...boardsBySection.standalone.map(b => ({
+            key: `board_${b.id}`,
+            el: (
+              <div key={`board_${b.id}`} style={sectionCardStyle}>
+                {renderBoardCard(b)}
+              </div>
+            ),
+          })),
+        ]
+        const sectionEntries: Array<{ key: string; el: React.ReactNode }> = [
+          ...bandEntries,
+          { key: 'personnel', el: personnelSection },
+          { key: 'construction', el: constructionSection },
+          { key: 'misc', el: miscSection },
+          { key: 'ppr', el: pprSection },
+        ]
+        const defaultKeys = sectionEntries.map(s => s.key)
+        const elByKey = new Map(sectionEntries.map(s => [s.key, s.el]))
+        // Saved grid reconciled with the sections that exist right now
+        // (deleted custom boards drop; new sections — including these four
+        // on layouts saved before they became movable — append below).
+        const viewGrid = savedGrid ? syncLayoutSections(savedGrid, defaultKeys) : null
+        // Legacy fallback when the base has never saved a grid: the built-in
+        // two-zone look — band on top (honoring a reorder-era section_order
+        // row, which only ever held band keys), bottom row + PPR panel below.
+        const legacyBandOrder = applyBoardOrder(bandEntries.map(s => s.key), savedOrder)
+
+        const layoutBtnStyle = (color: string): React.CSSProperties => ({
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)',
+          color, fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+        })
+        const enterLayoutEdit = () => {
+          setPendingGrid(syncLayoutSections(savedGrid ?? defaultStatusBoardGridLayout(defaultKeys), defaultKeys))
+          setLayoutEdit(true)
+        }
+        const saveLayout = async () => {
+          if (!installationId || !pendingGrid) return
+          setSavingLayout(true)
+          const grid = syncLayoutSections(pendingGrid, defaultKeys)
+          const { error } = await saveStatusBoardLayout(installationId, grid)
+          setSavingLayout(false)
+          if (error) { toast.error(error); return }
+          setSavedGrid(grid)
+          setSavedOrder(layoutStackOrder(grid))
+          setLayoutEdit(false)
+          setPendingGrid(null)
+          toast.success('Board layout saved for this base.')
+        }
+        const resetLayout = async () => {
+          if (!installationId) return
+          setSavingLayout(true)
+          const { error } = await clearStatusBoardLayout(installationId)
+          setSavingLayout(false)
+          if (error) { toast.error(error); return }
+          setSavedGrid(null)
+          setSavedOrder(null)
+          setPendingGrid(null)
+          setLayoutEdit(false)
+          toast.success('Board layout reset to default.')
+        }
+
+        return (<>
+      {/* ── Board layout controls — airfield_status:manage_layout only
+          (base-admin tier). Everyone else renders the saved layout with
+          no chrome. ── */}
+      {canManageLayout && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+          {layoutEdit ? (
+            <>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginRight: 'auto' }}>
+                Drag cards to move them, pull a corner to resize, click a label to rename. Nothing saves until you hit Save.
+              </span>
+              <button onClick={resetLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Reset to default</button>
+              <button onClick={() => { setLayoutEdit(false); setPendingGrid(null) }} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Cancel</button>
+              <button onClick={saveLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-cyan)')}>{savingLayout ? 'Saving…' : 'Save layout'}</button>
+            </>
+          ) : (
+            <button
+              onClick={enterLayoutEdit}
+              style={layoutBtnStyle('var(--color-text-3)')}
+              title="Rearrange and resize the status board sections"
+            >
+              <GripVertical size={12} /> Edit layout
+            </button>
+          )}
+        </div>
+      )}
+
+      {layoutEdit && pendingGrid ? (
+        /* ── Edit mode: dashboard-style drag + resize over EVERY section.
+            All changes buffer in pendingGrid; one write on Save. ── */
+        <div style={{ marginBottom: 12 }}>
+          <StatusBoardGridEditor layout={pendingGrid} onChange={setPendingGrid} sectionsByKey={elByKey} />
+        </div>
+      ) : viewGrid && !isNarrowViewport ? (
+        /* ── Saved custom layout: pure CSS grid on the same 24-col / 40px
+            geometry — viewers never load react-grid-layout. ── */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${STATUS_GRID_COLS}, 1fr)`,
+          gridAutoRows: STATUS_GRID_ROW_HEIGHT,
+          gap: STATUS_GRID_MARGIN,
+          marginBottom: 12,
+        }}>
+          {viewGrid.sections.map(s => (
+            <div key={s.key} style={{
+              gridColumn: `${s.x + 1} / span ${s.w}`,
+              gridRow: `${s.y + 1} / span ${s.h}`,
+              minWidth: 0, overflow: 'auto',
+              // flex column so the section card stretches to fill its cell.
+              display: 'flex', flexDirection: 'column',
+            }}>
+              {elByKey.get(s.key) ?? null}
+            </div>
+          ))}
+        </div>
+      ) : viewGrid ? (
+        /* ── Saved layout on a phone: stack in the grid's reading order. ── */
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          {layoutStackOrder(viewGrid).map(key => elByKey.get(key) ?? null)}
+        </div>
+      ) : (
+        /* ── No saved layout: the built-in two-zone look, exactly as it
+            was before layouts existed. ── */
+        <>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {legacyBandOrder.map(key => elByKey.get(key) ?? null)}
+          </div>
+          <div className="bottom-info-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 12 }}>
+            {elByKey.get('personnel')}
+            {elByKey.get('construction')}
+            {elByKey.get('misc')}
+          </div>
+          {elByKey.get('ppr')}
+        </>
+      )}
+
+      </>)
       })()}
 
       {/* Construction/Closures edit dialog */}
