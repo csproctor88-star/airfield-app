@@ -271,11 +271,14 @@ describe('permission matrix — role preset contracts', () => {
   })
 
   it('atc — kiosk-equivalent (view only)', () => {
-    // fpr:view added by 2026071720 (staged): the FPR design spec's access
-    // control table grants atc read access to Flight Planning Room checks.
-    // Still strictly view-only — no write/manage keys.
+    // fpr:view was granted by 2026071720 per the FPR design spec, then
+    // revoked by 2026071800 (owner ruling 2026-07-18: ATC does not need
+    // the Flight Planning Room). Strictly view-only — no write/manage keys.
+    // NOTE: the live DB also holds atc flip:view (2026062304 grants it via
+    // a SELECT-from-VALUES form this file's parser doesn't recognize), so
+    // this exact-set assertion sees one key fewer than production.
     expect(keysOf('atc')).toEqual(
-      new Set([PERM.AIRFIELD_STATUS_VIEW, PERM.TRAINING_VIEW, PERM.SETTINGS_VIEW, PERM.FPR_VIEW]),
+      new Set([PERM.AIRFIELD_STATUS_VIEW, PERM.TRAINING_VIEW, PERM.SETTINGS_VIEW]),
     )
   })
 
@@ -296,6 +299,11 @@ describe('permission matrix — role preset contracts', () => {
   })
 
   it('majcom_rfm — multi-base read-only + reports:export + installations:switch', () => {
+    // The live DB drifted from this every-view contract between 2026-04-23
+    // and 2026-07-18: the 2026042202 seed was a one-time LIKE-'%:view'
+    // sweep, and this replay masks that by resolving SELECT grants against
+    // the full final catalogue. 2026071800 trued the live DB up to the
+    // contract (owner ruling 2026-07-18) with explicit VALUES grants.
     expect(has('majcom_rfm', PERM.INSTALLATIONS_SWITCH)).toBe(true)
     expect(has('majcom_rfm', PERM.REPORTS_EXPORT)).toBe(true)
     // Every :view key should be present
