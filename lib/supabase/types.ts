@@ -9079,6 +9079,42 @@ export type Database = {
           },
         ]
       }
+      status_board_layouts: {
+        Row: {
+          base_id: string
+          section_order: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          base_id: string
+          section_order: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          base_id?: string
+          section_order?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "status_board_layouts_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: true
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "status_board_layouts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       status_updates: {
         Row: {
           base_id: string | null

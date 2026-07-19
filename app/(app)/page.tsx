@@ -25,8 +25,10 @@ import LoginActivityDialog from '@/components/login-activity-dialog'
 import { subscribeWithErrorHandling } from '@/lib/realtime-subscribe'
 import {
   Sun, CloudSun, Cloud, CloudRain, CloudSnow, CloudFog, CloudLightning,
-  Snowflake, HelpCircle, DoorOpen, AlertOctagon, Plus,
+  Snowflake, HelpCircle, DoorOpen, AlertOctagon, Plus, GripVertical,
 } from 'lucide-react'
+import { applyBoardOrder, moveSectionBefore } from '@/lib/status-board-order'
+import { fetchStatusBoardLayout, saveStatusBoardLayout, clearStatusBoardLayout } from '@/lib/supabase/status-board-layout'
 
 // The status change itself persists through its own checked path — these
 // audit-log rows feed the daily ops report, and a silent insert failure
@@ -125,6 +127,24 @@ export default function HomePage() {
   const [editingLabel, setEditingLabel] = useState<string | null>(null)
   const [editingLabelValue, setEditingLabelValue] = useState('')
   const canEditLabels = canWriteAirfieldStatus
+
+  // Board-layout drag-to-reorder — base-admin tier only (owner ruling
+  // 2026-07-19): airfield_status:manage_layout gates the Edit/Save buttons
+  // AND the status_board_layouts writes (RLS). Everyone else just renders
+  // the saved order.
+  const canManageLayout = has(PERM.AIRFIELD_STATUS_MANAGE_LAYOUT)
+  const [savedBoardOrder, setSavedBoardOrder] = useState<string[] | null>(null)
+  const [layoutEdit, setLayoutEdit] = useState(false)
+  const [pendingOrder, setPendingOrder] = useState<string[]>([])
+  const [savingLayout, setSavingLayout] = useState(false)
+  const [draggedSection, setDraggedSection] = useState<string | null>(null)
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!installationId) return
+    setLayoutEdit(false)
+    fetchStatusBoardLayout(installationId).then(setSavedBoardOrder)
+  }, [installationId])
   const [oooMinimized, setOooMinimized] = useState(false)
   const [showOooDeactivate, setShowOooDeactivate] = useState(false)
   const [showClosedDeactivate, setShowClosedDeactivate] = useState(false)
@@ -1483,6 +1503,9 @@ export default function HomePage() {
                     background: 'var(--color-bg-inset)', border: '1px solid var(--color-border-mid)',
                     color: 'var(--color-text-1)', fontSize: 'var(--fs-lg)', outline: 'none',
                     fontFamily: 'inherit',
+                    // iOS enforces datetime-local's natural width over width:100%
+                    // and bled it past the dialog edge — pin it explicitly.
+                    minWidth: 0, maxWidth: '100%',
                   }}
                 />
               </div>
@@ -1694,11 +1717,16 @@ export default function HomePage() {
                   {boardItems.map(item => (
                     <div key={item.id} style={{ marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1 }}>{item.item_name}</span>
+                        <span
+                          title={item.item_name}
+                          style={{
+                            fontSize: 'var(--fs-base)', fontWeight: 500, color: 'var(--color-text-2)', flex: 1,
+                            minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{item.item_name}</span>
                         <button
                           onClick={() => setCustomItemDialog({ item, boardName: board.board_name, selectedStatus: item.status, notes: customItemNotes[item.id] || '' })}
                           style={{
-                            width: 36, height: 28, borderRadius: 'var(--radius-sm)',
+                            width: 36, height: 28, flexShrink: 0, borderRadius: 'var(--radius-sm)',
                             border: `2px solid ${STATUS_COLORS[item.status]}`,
                             background: `color-mix(in srgb, ${STATUS_COLORS[item.status]} 13%, transparent)`,
                             cursor: 'pointer', fontSize: 'var(--fs-base)', fontWeight: 700,
@@ -1776,12 +1804,14 @@ export default function HomePage() {
           )
         }
 
-        // Inner grid for cards within each section container
+        // Inner grid for cards within each section container. Cards stretch
+        // to the row height so sibling cards (RWY 01 / RWY 19 / OTHER, the
+        // ARFF tiles) share one uniform outline instead of ragged bottoms.
         const sectionRowStyle = {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
           gap: 8,
-          alignItems: 'start',
+          alignItems: 'stretch',
         }
 
         // Section container card style
@@ -1808,16 +1838,15 @@ export default function HomePage() {
           borderBottom: 'none',
         }
 
-        return (<>
-      {/* ── Status Sections — side-by-side on desktop, stacked on mobile ── */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        // ── Section cards, keyed for the saved per-base layout order.
+        // The drag-to-reorder edit mode re-renders them from pendingOrder.
 
-      {/* ── RUNWAY STATUS ──
-          Promoted with an accent left border + elevated background so
-          the operational vital signs (active runway / RSC / BWC) read
-          as the most weighty zone on the page. NAVAID + ARFF stay on
-          the calmer default sectionCardStyle. */}
-      <div style={{
+        // RUNWAY STATUS — promoted with an accent left border + elevated
+        // background so the operational vital signs (active runway / RSC /
+        // BWC) read as the most weighty zone on the page. NAVAID + ARFF
+        // stay on the calmer default sectionCardStyle.
+        const runwaySection = (
+      <div key="runway" style={{
         ...sectionCardStyle,
         background: 'var(--color-bg-elevated)',
         borderLeft: '3px solid var(--color-accent)',
@@ -2036,9 +2065,11 @@ export default function HomePage() {
       {boardsBySection.runway.map(b => renderBoardCard(b))}
         </div>
       </div>
+        )
 
-      {/* ── NAVAID STATUS ── */}
-      <div style={sectionCardStyle}>
+        // NAVAID STATUS
+        const navaidSection = (
+      <div key="navaid" style={sectionCardStyle}>
         {renderEditableLabel('section_navaid', 'NAVAID Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
 
@@ -2172,10 +2203,17 @@ export default function HomePage() {
             const renderNavaidItem = (n: NavaidStatus) => (
               <div key={n.id} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{
-                    fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-3)',
-                    letterSpacing: '0.04em', flex: 1,
-                  }}>
+                  {/* minWidth 0 + ellipsis: a long name ("Glideslope") used to
+                      push its badge past the card edge, so the badges sat at
+                      ragged x-positions. The label shrinks; every badge now
+                      right-aligns flush at the same edge. */}
+                  <span
+                    title={getNavaidDisplayName(n.navaid_name)}
+                    style={{
+                      fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-3)',
+                      letterSpacing: '0.04em', flex: 1, minWidth: 0,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
                     {getNavaidDisplayName(n.navaid_name)}
                   </span>
                   <button
@@ -2184,7 +2222,7 @@ export default function HomePage() {
                       setNavaidDialog({ navaid: n, selectedStatus: n.status as 'green' | 'yellow' | 'red', notes: navaidNotes[n.id] || '' })
                     } : undefined}
                     style={{
-                      width: 28, height: 28, borderRadius: 'var(--radius-sm)',
+                      width: 28, height: 28, flexShrink: 0, borderRadius: 'var(--radius-sm)',
                       border: `1.5px solid ${STATUS_COLORS[n.status]}`,
                       background: `color-mix(in srgb, ${STATUS_COLORS[n.status]} 13%, transparent)`,
                       cursor: canWriteAirfieldStatus ? 'pointer' : 'default', fontSize: 'var(--fs-base)', fontWeight: 800,
@@ -2248,9 +2286,11 @@ export default function HomePage() {
       {boardsBySection.navaid.map(b => renderBoardCard(b))}
         </div>
       </div>
+        )
 
-      {/* ── ARFF STATUS ── */}
-      <div style={sectionCardStyle}>
+        // ARFF STATUS
+        const arffSection = (
+      <div key="arff" style={sectionCardStyle}>
         {renderEditableLabel('section_arff', 'ARFF Status', sectionHeaderStyle)}
         <div style={sectionRowStyle}>
           {/* ARFF CAT card — hidden per Base Setup → ARFF → Show CAT toggle */}
@@ -2351,15 +2391,136 @@ export default function HomePage() {
       {boardsBySection.arff.map(b => renderBoardCard(b))}
         </div>
       </div>
+        )
 
-      {/* ── STANDALONE BOARDS ── */}
-      {boardsBySection.standalone.map(b => (
-        <div key={b.id} style={sectionCardStyle}>
-          {renderBoardCard(b)}
+        // ── Assemble the section cards and resolve their render order ──
+        const sectionEntries: Array<{ key: string; el: React.ReactNode }> = [
+          { key: 'runway', el: runwaySection },
+          { key: 'navaid', el: navaidSection },
+          { key: 'arff', el: arffSection },
+          ...boardsBySection.standalone.map(b => ({
+            key: `board_${b.id}`,
+            el: (
+              <div key={`board_${b.id}`} style={sectionCardStyle}>
+                {renderBoardCard(b)}
+              </div>
+            ),
+          })),
+        ]
+        const defaultKeys = sectionEntries.map(s => s.key)
+        const displayOrder = applyBoardOrder(defaultKeys, layoutEdit ? pendingOrder : savedBoardOrder)
+        const elByKey = new Map(sectionEntries.map(s => [s.key, s.el]))
+
+        const layoutBtnStyle = (color: string): React.CSSProperties => ({
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '4px 10px', borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--color-border-mid)', background: 'var(--color-bg-inset)',
+          color, fontSize: 'var(--fs-xs)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+        })
+        const saveLayout = async () => {
+          if (!installationId) return
+          setSavingLayout(true)
+          const order = applyBoardOrder(defaultKeys, pendingOrder)
+          const { error } = await saveStatusBoardLayout(installationId, order)
+          setSavingLayout(false)
+          if (error) { toast.error(error); return }
+          setSavedBoardOrder(order)
+          setLayoutEdit(false)
+          setPendingOrder([])
+          toast.success('Board layout saved for this base.')
+        }
+        const resetLayout = async () => {
+          if (!installationId) return
+          setSavingLayout(true)
+          const { error } = await clearStatusBoardLayout(installationId)
+          setSavingLayout(false)
+          if (error) { toast.error(error); return }
+          setSavedBoardOrder(null)
+          setPendingOrder([])
+          setLayoutEdit(false)
+          toast.success('Board layout reset to default.')
+        }
+
+        return (<>
+      {/* ── Board layout controls — airfield_status:manage_layout only
+          (base-admin tier). Everyone else renders the saved order with
+          no chrome. ── */}
+      {canManageLayout && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+          {layoutEdit ? (
+            <>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginRight: 'auto' }}>
+                Drag the section cards into order, then save.
+              </span>
+              <button onClick={resetLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Reset to default</button>
+              <button onClick={() => { setLayoutEdit(false); setPendingOrder([]) }} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Cancel</button>
+              <button onClick={saveLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-cyan)')}>{savingLayout ? 'Saving…' : 'Save layout'}</button>
+            </>
+          ) : (
+            <button
+              onClick={() => { setPendingOrder(displayOrder); setLayoutEdit(true) }}
+              style={layoutBtnStyle('var(--color-text-3)')}
+              title="Reorder the status board sections (drag and drop)"
+            >
+              <GripVertical size={12} /> Edit layout
+            </button>
+          )}
         </div>
-      ))}
+      )}
 
-      </div>{/* end sections flex row */}
+      {/* ── Status Sections — side-by-side on desktop, stacked on mobile,
+          rendered in the saved per-base order ── */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        {displayOrder.map(key => {
+          const el = elByKey.get(key)
+          if (!el) return null
+          if (!layoutEdit) return el
+          const isDragged = draggedSection === key
+          const isOver = dragOverSection === key && draggedSection !== key
+          return (
+            <div
+              key={`drag_${key}`}
+              draggable
+              onDragStart={(e) => {
+                setDraggedSection(key)
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.setData('text/plain', key)
+              }}
+              onDragEnd={() => { setDraggedSection(null); setDragOverSection(null) }}
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                if (draggedSection && key !== draggedSection) setDragOverSection(key)
+              }}
+              onDragLeave={() => setDragOverSection(null)}
+              onDrop={(e) => {
+                e.preventDefault()
+                const source = draggedSection
+                setDraggedSection(null)
+                setDragOverSection(null)
+                if (!source || source === key) return
+                setPendingOrder(prev => moveSectionBefore(applyBoardOrder(defaultKeys, prev), source, key))
+              }}
+              style={{
+                // Carries the section card's flex sizing; the wrapped card
+                // renders block-level inside (its own flex prop is inert here).
+                flex: '1 1 280px', minWidth: 0, position: 'relative',
+                cursor: 'grab', borderRadius: 'var(--radius-lg)',
+                opacity: isDragged ? 0.4 : 1,
+                outline: isOver
+                  ? '2px dashed var(--color-cyan)'
+                  : '2px dashed color-mix(in srgb, var(--color-cyan) 30%, transparent)',
+                outlineOffset: 2,
+              }}
+            >
+              <div style={{ position: 'absolute', top: 6, right: 8, zIndex: 2, color: 'var(--color-cyan)', pointerEvents: 'none' }}>
+                <GripVertical size={14} />
+              </div>
+              {el}
+            </div>
+          )
+        })}
+      </div>
 
       </>)
       })()}

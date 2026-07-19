@@ -13,6 +13,8 @@ export const PERM = {
   AIRFIELD_STATUS_VIEW:                 'airfield_status:view',
   AIRFIELD_STATUS_WRITE:                'airfield_status:write',
   AIRFIELD_STATUS_WRITE_RSC_BWC_ONLY:   'airfield_status:write:rsc_bwc_only',
+  // Board-layout drag-to-reorder — base-admin tier only (2026071900)
+  AIRFIELD_STATUS_MANAGE_LAYOUT:        'airfield_status:manage_layout',
 
   // Ops — view/write/delete
   CHECKS_VIEW:                          'checks:view',
