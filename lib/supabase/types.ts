@@ -688,6 +688,62 @@ export type Database = {
           },
         ]
       }
+      airfield_driver_licenses: {
+        Row: {
+          af_483_number: string | null
+          base_id: string
+          created_at: string
+          first_name: string | null
+          grade_rank: string | null
+          id: string
+          last_name: string
+          middle_name: string | null
+          office: string | null
+          refresher_due: string | null
+          restrictions: string | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          af_483_number?: string | null
+          base_id: string
+          created_at?: string
+          first_name?: string | null
+          grade_rank?: string | null
+          id?: string
+          last_name: string
+          middle_name?: string | null
+          office?: string | null
+          refresher_due?: string | null
+          restrictions?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          af_483_number?: string | null
+          base_id?: string
+          created_at?: string
+          first_name?: string | null
+          grade_rank?: string | null
+          id?: string
+          last_name?: string
+          middle_name?: string | null
+          office?: string | null
+          refresher_due?: string | null
+          restrictions?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "airfield_driver_licenses_base_id_fkey"
+            columns: ["base_id"]
+            isOneToOne: false
+            referencedRelation: "bases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       airfield_status: {
         Row: {
           active_runway: string
@@ -3331,6 +3387,7 @@ export type Database = {
           default_closed_message: string | null
           default_ooo_message: string | null
           discrepancy_type_shop_map: Json | null
+          distance_unit: string
           elevation_msl: number | null
           enabled_modules: string[]
           faa_site_number: string | null
@@ -3375,6 +3432,7 @@ export type Database = {
           default_closed_message?: string | null
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
+          distance_unit?: string
           elevation_msl?: number | null
           enabled_modules?: string[]
           faa_site_number?: string | null
@@ -3419,6 +3477,7 @@ export type Database = {
           default_closed_message?: string | null
           default_ooo_message?: string | null
           discrepancy_type_shop_map?: Json | null
+          distance_unit?: string
           elevation_msl?: number | null
           enabled_modules?: string[]
           faa_site_number?: string | null
@@ -4233,6 +4292,7 @@ export type Database = {
           completed_by_oi: string | null
           contractor_id: string | null
           created_at: string
+          driver_483_number: string | null
           driver_name: string
           driver_office_symbol: string | null
           driver_phone: string | null
@@ -4258,6 +4318,7 @@ export type Database = {
           completed_by_oi?: string | null
           contractor_id?: string | null
           created_at?: string
+          driver_483_number?: string | null
           driver_name: string
           driver_office_symbol?: string | null
           driver_phone?: string | null
@@ -4283,6 +4344,7 @@ export type Database = {
           completed_by_oi?: string | null
           contractor_id?: string | null
           created_at?: string
+          driver_483_number?: string | null
           driver_name?: string
           driver_office_symbol?: string | null
           driver_phone?: string | null
@@ -5751,9 +5813,6 @@ export type Database = {
         }
         Relationships: []
       }
-      // MANUAL (2026-07-18): mods_exemption_attachments / _reviews /
-      // mods_exemptions hand-added ahead of applying 2026071802 — retire
-      // these three blocks at the next `gen types` regeneration.
       mods_exemption_attachments: {
         Row: {
           base_id: string
