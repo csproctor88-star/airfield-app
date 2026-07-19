@@ -173,7 +173,7 @@ type ReviewFormState = {
   notes: string
 }
 
-const inputCls = 'w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]'
+const inputCls = 'w-full min-w-0 max-w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-inset)] px-3 py-2 text-sm text-[var(--color-text-1)] focus:outline-none focus:ring-1 focus:ring-[var(--color-accent)]'
 const labelCls = 'block text-xs font-medium text-[var(--color-text-3)] mb-1'
 const btnPrimary = 'inline-flex items-center gap-2 rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50'
 const btnGhost = 'inline-flex items-center gap-2 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-text-2)] hover:bg-[var(--color-bg-inset)]'
@@ -574,7 +574,7 @@ export default function ModificationsExemptionsPage() {
                           {recAttachments.map((a) => (
                             <li key={a.id} className="flex items-center gap-2 text-sm">
                               <Paperclip className="h-3.5 w-3.5 shrink-0 text-[var(--color-text-3)]" />
-                              <button className="truncate text-[var(--color-accent)] hover:underline" onClick={() => openAttachment(a)}>
+                              <button className="min-w-0 flex-1 truncate text-left text-[var(--color-accent)] hover:underline" onClick={() => openAttachment(a)}>
                                 {a.file_name}
                               </button>
                               <span className="shrink-0 text-xs text-[var(--color-text-3)]">{ATTACHMENT_KIND_LABELS[a.kind]}</span>
@@ -659,7 +659,7 @@ export default function ModificationsExemptionsPage() {
             </div>
 
             {/* Status — constrained to the record type's track */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
               <div>
                 <label className={labelCls}>Status</label>
                 <select className={inputCls} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ModsExemptionStatus })}>
@@ -688,7 +688,7 @@ export default function ModificationsExemptionsPage() {
 
             {/* MOS taxonomy */}
             {form.record_type === 'mos' && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
                 <div>
                   <label className={labelCls}>Category (Order 5300.1G App. A)</label>
                   <select className={inputCls} value={form.mos_category} onChange={(e) => setForm({ ...form, mos_category: e.target.value, mos_subcategory: '' })}>
@@ -740,7 +740,7 @@ export default function ModificationsExemptionsPage() {
             {/* Exemption specifics */}
             {form.record_type === 'exemption' && (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
                   <div>
                     <label className={labelCls}>FAA docket number (§11.91)</label>
                     <input className={inputCls} value={form.docket_number} onChange={(e) => setForm({ ...form, docket_number: e.target.value })} placeholder="e.g., FAA-2026-xxxx" />
@@ -774,7 +774,7 @@ export default function ModificationsExemptionsPage() {
             {/* Dates + decision */}
             {form.record_type !== 'deviation' ? (
               <>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 [&>div]:min-w-0">
                   <div><label className={labelCls}>Submitted</label><input type="date" className={inputCls} value={form.date_submitted} onChange={(e) => setForm({ ...form, date_submitted: e.target.value })} /></div>
                   <div><label className={labelCls}>Decided</label><input type="date" className={inputCls} value={form.date_decided} onChange={(e) => setForm({ ...form, date_decided: e.target.value })} /></div>
                   <div><label className={labelCls}>Effective</label><input type="date" className={inputCls} value={form.effective_date} onChange={(e) => setForm({ ...form, effective_date: e.target.value })} /></div>
@@ -796,7 +796,7 @@ export default function ModificationsExemptionsPage() {
                   <label className={labelCls}>Conditions in the decision letter (5300.1G &para;9)</label>
                   <textarea className={inputCls} rows={2} value={form.decision_conditions} onChange={(e) => setForm({ ...form, decision_conditions: e.target.value })} />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
                   <div>
                     <label className={labelCls}>Next annual review due</label>
                     <input type="date" className={inputCls} value={form.next_review_due} onChange={(e) => setForm({ ...form, next_review_due: e.target.value })} />
@@ -806,7 +806,7 @@ export default function ModificationsExemptionsPage() {
               </>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
                   <div><label className={labelCls}>Deviation date *</label><input type="date" className={inputCls} value={form.deviation_date} onChange={(e) => setForm({ ...form, deviation_date: e.target.value })} /></div>
                   <div><label className={labelCls}>RADM notified on</label><input type="date" className={inputCls} value={form.notified_date} onChange={(e) => setForm({ ...form, notified_date: e.target.value })} /></div>
                 </div>
@@ -857,7 +857,7 @@ export default function ModificationsExemptionsPage() {
               Each exemption must be reviewed annually for currency, extension, or renewal (FAA Order 5280.5D &sect;2.12.2).
               This answers the certification-inspection item &ldquo;Justification Still Valid&rdquo; (Form 5280-4, &sect;139.111).
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>div]:min-w-0">
               <div>
                 <label className={labelCls}>Review date</label>
                 <input type="date" className={inputCls} value={reviewForm.review_date} onChange={(e) => setReviewForm({ ...reviewForm, review_date: e.target.value })} />
@@ -900,7 +900,7 @@ export default function ModificationsExemptionsPage() {
 function Field({ label, value, wide, block }: { label: string; value: string | null; wide?: boolean; block?: boolean }) {
   if (!value) return null
   return (
-    <div className={wide ? 'col-span-2' : undefined}>
+    <div className={wide ? 'col-span-2 min-w-0' : 'min-w-0'}>
       <span className="text-xs text-[var(--color-text-3)]">{label}: </span>
       <span className={`text-[var(--color-text-1)] ${block ? 'block' : ''}`}>{value}</span>
     </div>

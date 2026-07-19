@@ -1967,6 +1967,10 @@ export default function HomePage() {
                       cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit', outline: 'none',
                       color: c.color, background: 'var(--color-bg-inset)',
                       border: `1px solid ${c.selectBorder}`,
+                      // The tile is a shrinkable flex item; without a width
+                      // cap the select's intrinsic option width pokes out of
+                      // the card on phones.
+                      width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box',
                     }}
                   >
                     <option value="open">Open</option>

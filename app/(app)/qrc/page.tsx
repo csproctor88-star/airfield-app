@@ -1122,7 +1122,9 @@ function QrcExecutionView({
           border: '1px solid var(--color-border)',
           borderLeft: '3px solid var(--color-cyan)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* flexWrap: on phones the label + pill + button exceed the row —
+              the button wraps below instead of bleeding off the card edge. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', rowGap: 8 }}>
             <div style={{
               fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)',
               textTransform: 'uppercase', letterSpacing: '0.08em',

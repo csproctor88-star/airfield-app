@@ -176,7 +176,7 @@ export function ChangeCard({ change, isAfm, isCustodian, isNamo, canWrite, baseI
           {c.stage === 'submitted' && !c.rejected && (
             <>
               {canPublishReject && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 10 }}>
                   {dateInput(c.creation_date, 'creation_date', 'Creation Date', false)}
                   {dateInput(c.processed_date, 'processed_date', 'Processed Date', !c.creation_date)}
                   {dateInput(c.published_date, 'published_date', 'Published Date', !c.processed_date)}

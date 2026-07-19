@@ -522,7 +522,7 @@ export default function AcsiFormPage() {
 
       {/* Cover fields */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 20,
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 20,
         padding: '18px 18px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-surface)',
       }}>
         <div>

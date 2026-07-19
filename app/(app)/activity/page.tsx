@@ -610,7 +610,7 @@ export default function ActivityPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           <textarea
             className="input-dark"
-            placeholder="What happened? e.g. FOD Check completed, runway sweep performed, VIP arrival coordination..."
+            placeholder="What happened? e.g. FOD Check completed, runway sweep performed..."
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
             onKeyDown={(e) => {

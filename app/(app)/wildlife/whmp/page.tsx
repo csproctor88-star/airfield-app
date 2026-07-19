@@ -686,7 +686,9 @@ function NewYearModal({
         </div>
 
         {/* Meta */}
-        <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr', gap: 10, marginBottom: 12 }}>
+        {/* auto-fit so the three fields stack on phones instead of crushing
+            the third column (fixed '100px 1fr 1fr' bled off-screen). */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 12 }}>
           <Field label="Year *">
             <input
               type="number"
@@ -714,7 +716,7 @@ function NewYearModal({
             />
           </Field>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr', gap: 10, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10, marginBottom: 12 }}>
           <Field label="FAA Acceptance Date">
             <input
               type="date"
@@ -946,7 +948,9 @@ function FindingEditor({ finding, onChange, onRemove }: {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
+    // minWidth 0: as a grid/flex item this wrapper must be allowed to shrink
+    // below its input's intrinsic width, or the input bleeds off the card.
+    <div style={{ minWidth: 0 }}>
       <label style={{
         display: 'block', fontSize: 'var(--fs-xs)',
         textTransform: 'uppercase', letterSpacing: 0.5,

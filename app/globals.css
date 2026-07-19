@@ -303,6 +303,21 @@ html, body {
   select {
     font-size: 16px !important;
   }
+
+  /* Companion guard: a form control may never force itself wider than its
+   * container on a phone. Fixed multi-column grids and non-wrapping flex
+   * rows squeeze on narrow viewports; without this, a control's intrinsic
+   * width (date inputs are the worst offenders) bleeds past the card edge
+   * instead of shrinking (the 2026-07-19 mobile-polish screenshots). Layout
+   * containers still need min-width:0 on their items where the wrapper div
+   * — not the control — is the flex/grid child. */
+  input,
+  textarea,
+  select {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 /*
