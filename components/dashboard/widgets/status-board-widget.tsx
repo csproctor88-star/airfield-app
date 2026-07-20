@@ -6,6 +6,8 @@ import { useInstallation } from '@/lib/installation-context'
 import { useDashboard } from '@/lib/dashboard-context'
 import { fetchCustomStatusBoards, fetchCustomStatusItems, type CustomStatusBoard } from '@/lib/supabase/custom-status'
 import { fetchNavaidStatuses } from '@/lib/supabase/navaids'
+import { fetchInstallationNavaids } from '@/lib/supabase/installations'
+import { groupNavaidsByEnd, navaidDisplayName } from '@/lib/status-board-navaids'
 import { statusBoardColor, statusBoardLabel, statusBoardChip, type StatusBoardKind } from '@/lib/dashboard/status-board'
 import type { WidgetProps, WidgetConfigProps } from '@/lib/dashboard/widget-registry'
 
@@ -88,7 +90,7 @@ const muted: React.CSSProperties = { color: 'var(--color-text-3)', fontSize: 'va
 export function StatusBoardWidget({ config }: WidgetProps) {
   const c = config as StatusBoardConfig
   const kind: StatusBoardKind = c.kind ?? 'custom'
-  const { installationId, runways, arffAircraft } = useInstallation()
+  const { installationId, currentInstallation, runways, arffAircraft } = useInstallation()
   const { runwayStatuses, arffStatuses, arffCat } = useDashboard()
 
   const isFetchKind = kind === 'custom' || kind === 'navaid'
@@ -106,8 +108,18 @@ export function StatusBoardWidget({ config }: WidgetProps) {
     } else if (kind === 'navaid') {
       if (!installationId) return
       setLoading(true)
-      fetchNavaidStatuses(installationId).then((ns) => {
-        if (!cancelled) { setFetched(ns.map((n) => ({ name: n.navaid_name, value: n.status, detail: n.notes || undefined }))); setLoading(false) }
+      // Mirror the status page's loadNavaids: statuses intersect with the
+      // base_navaids config — deleted NAVAIDs linger in navaid_statuses and
+      // must not resurface here.
+      Promise.all([
+        fetchNavaidStatuses(installationId),
+        fetchInstallationNavaids(installationId),
+      ]).then(([ns, configured]) => {
+        if (cancelled) return
+        const configuredNames = new Set(configured.map((n) => n.navaid_name))
+        const resolved = ns.length > 0 ? ns.filter((n) => configuredNames.has(n.navaid_name)) : ns
+        setFetched(resolved.map((n) => ({ name: n.navaid_name, value: n.status, detail: n.notes || undefined })))
+        setLoading(false)
       })
     }
     return () => { cancelled = true }
@@ -133,12 +145,45 @@ export function StatusBoardWidget({ config }: WidgetProps) {
   const emptyMsg = kind === 'custom' && !c.boardId ? 'Pick a status board in settings.' : 'Nothing to show.'
   const isChipKind = kind === 'navaid' || kind === 'custom'
 
+  // NAVAIDs render grouped per runway end exactly like the status board:
+  // same matcher, same display-name stripping, same custom column labels
+  // (bases.status_labels) — never the raw DB rows.
+  const renderNavaidGroups = () => {
+    const statusLabels = (currentInstallation?.status_labels ?? {}) as Record<string, string>
+    const endDesignators = runways.flatMap((r) => [r.end1_designator, r.end2_designator])
+    const { groups, other } = groupNavaidsByEnd(
+      rows.map((r) => ({ ...r, navaid_name: r.name })),
+      endDesignators,
+    )
+    const blocks = [
+      ...groups.filter((g) => g.items.length > 0).map((g) => ({
+        key: `rwy_${g.designator}`,
+        label: statusLabels[`navaid_rwy_${g.designator}`] || `RWY ${g.designator}`,
+        items: g.items,
+      })),
+      ...(other.length > 0 ? [{ key: 'other', label: statusLabels['navaid_other'] || 'OTHER', items: other }] : []),
+    ]
+    return blocks.map((b, bi) => (
+      <div key={b.key}>
+        <div style={{
+          fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+          margin: bi === 0 ? '0 0 5px' : '8px 0 5px',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}>{b.label}</div>
+        {b.items.map((item) => (
+          <ChipRow key={item.navaid_name} kind={kind} row={{ ...item, name: navaidDisplayName(item.navaid_name, endDesignators) }} />
+        ))}
+      </div>
+    ))
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ flex: 1, overflow: 'auto' }}>
         {header && <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, color: 'var(--color-text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{header}</div>}
         {loading ? <div style={muted}>Loading…</div>
           : rows.length === 0 ? <div style={{ ...muted, fontStyle: 'italic' }}>{emptyMsg}</div>
+          : kind === 'navaid' ? renderNavaidGroups()
           : isChipKind ? rows.map((row, i) => <ChipRow key={i} kind={kind} row={row} />)
           : rows.map((row, i) => <TintRow key={i} kind={kind} row={row} />)}
       </div>
