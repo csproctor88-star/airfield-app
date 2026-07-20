@@ -29,12 +29,26 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 import { applyBoardOrder } from '@/lib/status-board-order'
+import { groupNavaidsByEnd, navaidDisplayName } from '@/lib/status-board-navaids'
 import {
   defaultStatusBoardGridLayout, syncLayoutSections, layoutStackOrder,
   STATUS_GRID_COLS, STATUS_GRID_ROW_HEIGHT, STATUS_GRID_MARGIN,
   type StatusBoardGridLayout,
 } from '@/lib/status-board-grid'
 import { fetchStatusBoardLayout, saveStatusBoardLayout, clearStatusBoardLayout } from '@/lib/supabase/status-board-layout'
+import { widgetTint } from '@/lib/dashboard/widget-colors'
+
+// Dashboard-widget tint applied to a status-board section wrapper; empty
+// object for uncolored sections so their wrappers stay byte-identical.
+function sectionTintStyle(color?: string): React.CSSProperties {
+  const tint = widgetTint(color)
+  return tint ? {
+    background: tint.background,
+    border: `1px solid ${tint.borderColor}`,
+    borderRadius: 'var(--radius-md)',
+    padding: '8px 10px',
+  } : {}
+}
 
 // react-grid-layout loads only when a base admin actually enters layout
 // edit mode — viewers never pay its bundle cost on the landing page.
@@ -151,6 +165,25 @@ export default function HomePage() {
   const [layoutEdit, setLayoutEdit] = useState(false)
   const [pendingGrid, setPendingGrid] = useState<StatusBoardGridLayout | null>(null)
   const [savingLayout, setSavingLayout] = useState(false)
+
+  // Buffered like drag/resize — only pendingGrid changes; persisted by the
+  // one Save write. Stable so the memoized grid editor isn't re-rendered by
+  // unrelated page state (weather ticks, polling refreshes).
+  const setSectionColor = useCallback((key: string, color: string) => {
+    setPendingGrid(g => g && ({
+      sections: g.sections.map(s => {
+        if (s.key !== key) return s
+        // 'default' clears the tint — color is omitted, never stored as
+        // 'default', so pre-color layouts and cleared sections serialize
+        // identically.
+        if (color === 'default') {
+          const { color: _cleared, ...rest } = s
+          return rest
+        }
+        return { ...s, color }
+      }),
+    }))
+  }, [])
 
   useEffect(() => {
     if (!installationId) return
@@ -2215,21 +2248,11 @@ export default function HomePage() {
             </div>
           ) : (() => {
             const allEndDesignators = runways.flatMap(r => [r.end1_designator, r.end2_designator])
-            const endGroups = allEndDesignators.map(des => ({
-              designator: des,
-              items: navaids
-                .filter(n => n.navaid_name === des || n.navaid_name.startsWith(des + ' '))
-                .sort((a, b) => (a.navaid_name.includes('ILS') ? -1 : b.navaid_name.includes('ILS') ? 1 : 0)),
-            }))
-            const otherNavaids = navaids
-              .filter(n => !allEndDesignators.some(des => n.navaid_name === des || n.navaid_name.startsWith(des + ' ')))
-              .sort((a, b) => a.navaid_name.localeCompare(b.navaid_name))
-            const getNavaidDisplayName = (name: string) => {
-              for (const des of allEndDesignators) {
-                if (name.startsWith(des + ' ')) return name.slice(des.length).trim()
-              }
-              return name
-            }
+            // Shared name→runway-end matcher (lib/status-board-navaids):
+            // forgiving about designator position, so "ILS 26" and the ICAO
+            // import's "MALSR RWY 26" group the same as canonical "26 ILS".
+            const { groups: endGroups, other: otherNavaids } = groupNavaidsByEnd(navaids, allEndDesignators)
+            const getNavaidDisplayName = (name: string) => navaidDisplayName(name, allEndDesignators)
             const NAVAID_LABELS: Record<string, string> = { green: 'G', yellow: 'Y', red: 'R' }
             const renderNavaidItem = (n: NavaidStatus) => (
               <div key={n.id} style={{ marginBottom: 10 }}>
@@ -3052,7 +3075,7 @@ export default function HomePage() {
           {layoutEdit ? (
             <>
               <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginRight: 'auto' }}>
-                Drag cards to move them, pull a corner to resize, click a label to rename. Nothing saves until you hit Save.
+                Drag cards to move them, pull a corner to resize, click a label to rename, click the corner dot to color a section. Nothing saves until you hit Save.
               </span>
               <button onClick={resetLayout} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Reset to default</button>
               <button onClick={() => { setLayoutEdit(false); setPendingGrid(null) }} disabled={savingLayout} style={layoutBtnStyle('var(--color-text-3)')}>Cancel</button>
@@ -3074,7 +3097,12 @@ export default function HomePage() {
         /* ── Edit mode: dashboard-style drag + resize over EVERY section.
             All changes buffer in pendingGrid; one write on Save. ── */
         <div style={{ marginBottom: 12 }}>
-          <StatusBoardGridEditor layout={pendingGrid} onChange={setPendingGrid} sectionsByKey={elByKey} />
+          <StatusBoardGridEditor
+            layout={pendingGrid}
+            onChange={setPendingGrid}
+            onSetSectionColor={setSectionColor}
+            sectionsByKey={elByKey}
+          />
         </div>
       ) : viewGrid && !isNarrowViewport ? (
         /* ── Saved custom layout: pure CSS grid on the same 24-col / 40px
@@ -3093,6 +3121,7 @@ export default function HomePage() {
               minWidth: 0, overflow: 'auto',
               // flex column so the section card stretches to fill its cell.
               display: 'flex', flexDirection: 'column',
+              ...sectionTintStyle(s.color),
             }}>
               {elByKey.get(s.key) ?? null}
             </div>
@@ -3101,7 +3130,14 @@ export default function HomePage() {
       ) : viewGrid ? (
         /* ── Saved layout on a phone: stack in the grid's reading order. ── */
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
-          {layoutStackOrder(viewGrid).map(key => elByKey.get(key) ?? null)}
+          {layoutStackOrder(viewGrid).map(key => {
+            const s = viewGrid.sections.find(sec => sec.key === key)
+            const tint = s ? sectionTintStyle(s.color) : undefined
+            const el = elByKey.get(key) ?? null
+            return tint && Object.keys(tint).length > 0
+              ? <div key={key} style={tint}>{el}</div>
+              : el
+          })}
         </div>
       ) : (
         /* ── No saved layout: the built-in two-zone look, exactly as it

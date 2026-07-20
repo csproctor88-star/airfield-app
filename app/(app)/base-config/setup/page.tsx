@@ -55,7 +55,9 @@ function icaoVariantLabel(
 }
 import { createDefaultTemplate, fetchInspectionTemplate } from '@/lib/supabase/inspection-templates'
 import QrcEditorDialog from '@/components/admin/qrc-editor-dialog'
-import { fetchInstallationNavaids } from '@/lib/supabase/installations'
+import { fetchInstallationNavaids, fetchInstallationRunways } from '@/lib/supabase/installations'
+import { navaidMatchesEnd, navaidDisplayName } from '@/lib/status-board-navaids'
+import type { InstallationRunway } from '@/lib/supabase/types'
 import {
   fetchChecklistItems,
   createChecklistItem,
@@ -135,7 +137,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'runways', number: 1, label: 'Runways', description: 'Define your runways with coordinates, dimensions, and approach lighting. Use Import from ICAO for automatic data population.', required: true },
   { key: 'areas', number: 2, label: 'Airfield Areas', description: 'Add the areas that inspectors reference when logging discrepancies and conducting inspections (e.g., RWY 01/19, TWY A, East Ramp).', required: true },
   { key: 'taxiways', number: 3, label: 'Taxiways', description: 'Define taxiway designators for clearance envelopes, parking analysis, and discrepancy location tracking.', required: true },
-  { key: 'navaids', number: 4, label: 'NAVAIDs', description: 'Add the NAVAIDs displayed on the Airfield Status page (e.g., ILS, TACAN, PAPI, MALSR). These appear as green/yellow/red toggles.', required: true },
+  { key: 'navaids', number: 4, label: 'NAVAIDs', description: 'Add the NAVAIDs displayed on the Airfield Status page (e.g., ILS, TACAN, PAPI, MALSR). These appear as green/yellow/red toggles. NAVAIDs tied to a runway group under that runway’s column on the status board; general NAVAIDs group under Other.', required: true },
   { key: 'shops', number: 5, label: 'CE Shops & Type Mapping', description: 'Define your CE shops and map each discrepancy type to a shop. This controls automatic shop assignment when discrepancies are created.', required: true },
   { key: 'arff', number: 6, label: 'ARFF Vehicles', description: 'Add your crash/rescue vehicles. These appear on the Airfield Status page ARFF readiness panel.', required: true },
   { key: 'facilities', number: 7, label: 'Facilities', description: 'Add facility numbers and descriptions referenced by discrepancies and inspections (e.g., Tower, Fire Station, Bldg 200).', required: true },
@@ -2214,7 +2216,12 @@ const labelStyle: React.CSSProperties = {
 function NavaidTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
   const [navaids, setNavaids] = useState<{ id: string; navaid_name: string; sort_order: number }[]>([])
   const [statuses, setStatuses] = useState<NavaidStatus[]>([])
-  const [newItem, setNewItem] = useState('')
+  const [runways, setRunways] = useState<InstallationRunway[]>([])
+  // Structured add: runway end ('' = general) + type compose the stored
+  // name ("26 ILS") so the status board's name-based runway grouping just
+  // works — users never need to know the naming convention.
+  const [newRunway, setNewRunway] = useState('')
+  const [newType, setNewType] = useState('')
   const [loading, setLoading] = useState(true)
 
   const loadNavaids = useCallback(async () => {
@@ -2231,8 +2238,20 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
 
   useEffect(() => { loadNavaids() }, [loadNavaids])
 
+  useEffect(() => {
+    if (!installationId) return
+    fetchInstallationRunways(installationId).then(setRunways)
+  }, [installationId])
+
+  const endDesignators = runways.flatMap(r => [r.end1_designator, r.end2_designator]).filter(Boolean)
+  const composedName = [newRunway, newType.trim()].filter(Boolean).join(' ')
+
   const handleAdd = async () => {
-    if (!newItem.trim() || !installationId) return
+    if (!composedName || !installationId) return
+    if (navaids.some(n => n.navaid_name.trim().toUpperCase() === composedName.toUpperCase())) {
+      toast.error(`"${composedName}" is already configured.`)
+      return
+    }
     const supabase = createClient()
     if (!supabase) return
 
@@ -2241,7 +2260,7 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
     // Add to base_navaids config table
     const { data: navaidRow, error: navaidErr } = await supabase
       .from('base_navaids')
-      .insert({ base_id: installationId, navaid_name: newItem.trim(), sort_order: maxSort })
+      .insert({ base_id: installationId, navaid_name: composedName, sort_order: maxSort })
       .select('*')
       .single()
 
@@ -2256,7 +2275,7 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
     const { error: statusErr } = await supabase
       .from('navaid_statuses')
       .insert({
-        navaid_name: newItem.trim(),
+        navaid_name: composedName,
         base_id: installationId,
         status: 'green',
         notes: null,
@@ -2264,10 +2283,10 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
       })
     if (statusErr) console.error('[base-setup] navaid_statuses insert failed:', statusErr.message)
 
-    toast.success(`Added "${newItem.trim()}"${statusErr ? ' (status-board sync pending)' : ''}`)
+    toast.success(`Added "${composedName}"${statusErr ? ' (status-board sync pending)' : ''}`)
     markSaved?.('navaids')
     setNavaids(prev => [...prev, navaidRow as typeof prev[number]])
-    setNewItem('')
+    setNewType('')
     // Reload to get updated statuses
     await loadNavaids()
   }
@@ -2326,7 +2345,9 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
     <div>
       <h3 style={{ fontSize: 'var(--fs-lg)', fontWeight: 700, color: 'var(--color-text-1)', marginBottom: 8 }}>NAVAIDs <FieldHint stepKey="navaids" fieldId="navaid_name" /></h3>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
-        NAVAIDs added here will appear on the dashboard for status tracking.
+        NAVAIDs added here appear on the Airfield Status board as green/yellow/red toggles.
+        Pick a runway to group a NAVAID under that runway&rsquo;s column; general NAVAIDs
+        (e.g. TACAN, ASR) group under Other. The chip on each row shows where it displays.
       </p>
 
       {navaids.length === 0 && (
@@ -2352,7 +2373,7 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
               fontSize: 'var(--fs-md)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
               {status && (
                 <span style={{
                   width: 8, height: 8, borderRadius: '50%',
@@ -2367,43 +2388,94 @@ function NavaidTab({ installationId, markSaved }: { installationId: string | nul
                 </span>
               )}
             </div>
-            <button
-              onClick={() => handleDelete(navaid)}
-              style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
-            >
-              &times;
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              {/* Which status-board column this name resolves to (shared
+                  matcher — same logic the board itself uses). */}
+              {(() => {
+                const des = endDesignators.find(d => navaidMatchesEnd(navaid.navaid_name, d))
+                return (
+                  <span style={{
+                    fontSize: 'var(--fs-2xs)', fontWeight: 700, color: 'var(--color-text-3)',
+                    border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)',
+                    padding: '1px 8px', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                  }}>
+                    {des ? `RWY ${des}` : 'OTHER'}
+                  </span>
+                )
+              })()}
+              <button
+                onClick={() => handleDelete(navaid)}
+                style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-3xl)', padding: '0 4px' }}
+              >
+                &times;
+              </button>
+            </div>
           </div>
         )
       })}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+        {endDesignators.length > 0 && (
+          <select
+            value={newRunway}
+            onChange={e => setNewRunway(e.target.value)}
+            aria-label="Runway for this NAVAID"
+            style={{
+              padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--color-border)',
+              background: 'var(--color-bg-inset)',
+              color: 'var(--color-text-1)', fontSize: 'var(--fs-md)', fontFamily: 'inherit',
+            }}
+          >
+            <option value="">General (no runway)</option>
+            {endDesignators.map(d => (
+              <option key={d} value={d}>RWY {d}</option>
+            ))}
+          </select>
+        )}
         <input
-          value={newItem}
-          onChange={e => setNewItem(e.target.value.toUpperCase())}
+          value={newType}
+          onChange={e => setNewType(e.target.value.toUpperCase())}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
-          placeholder="Add NAVAID (e.g. ILS 01, TACAN, ASR-9)..."
+          list="navaid-type-suggestions"
+          placeholder="NAVAID type (e.g. ILS, PAPI, TACAN)..."
           style={{
-            flex: 1, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+            flex: 1, minWidth: 160, padding: '8px 10px', borderRadius: 'var(--radius-sm)',
             border: '1px solid var(--color-border)',
             background: 'var(--color-bg-inset)',
             color: 'var(--color-text-1)', fontSize: 'var(--fs-md)',
           }}
         />
+        <datalist id="navaid-type-suggestions">
+          {['ILS', 'LOCALIZER', 'GLIDESLOPE', 'TACAN', 'VOR', 'VORTAC', 'NDB', 'PAPI', 'VASI', 'MALSR', 'ALSF-1', 'ALSF-2', 'SSALR', 'ODALS', 'REIL', 'PAR', 'ASR', 'GBAS'].map(t => (
+            <option key={t} value={t} />
+          ))}
+        </datalist>
         <button
           onClick={handleAdd}
-          disabled={!newItem.trim()}
+          disabled={!newType.trim()}
           style={{
             padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none',
             background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))',
             color: '#fff',
             cursor: 'pointer', fontSize: 'var(--fs-md)', fontWeight: 700, fontFamily: 'inherit',
-            opacity: !newItem.trim() ? 0.5 : 1,
+            opacity: !newType.trim() ? 0.5 : 1,
           }}
         >
           Save
         </button>
       </div>
+      {newType.trim() ? (
+        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 6 }}>
+          Will appear on the status board under{' '}
+          <strong style={{ color: 'var(--color-text-2)' }}>{newRunway ? `RWY ${newRunway}` : 'Other'}</strong>
+          {' '}as &ldquo;{navaidDisplayName(composedName, endDesignators)}&rdquo;.
+        </p>
+      ) : endDesignators.length === 0 ? (
+        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginTop: 6 }}>
+          Add runways in the Runways step to group NAVAIDs under a runway column.
+        </p>
+      ) : null}
     </div>
   )
 }

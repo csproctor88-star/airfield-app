@@ -46,6 +46,23 @@ describe('validateStatusBoardGridLayout', () => {
     })!
     expect(parsed.sections.map(s => s.key)).toEqual(['runway', 'arff'])
   })
+
+  it('passes a known palette color through', () => {
+    const raw = { sections: [{ key: 'runway', x: 0, y: 0, w: 12, h: 8, color: 'cyan' }] }
+    expect(validateStatusBoardGridLayout(raw)).toEqual(raw)
+  })
+
+  it('drops unknown, non-string, or "default" colors but keeps the rect', () => {
+    const parsed = validateStatusBoardGridLayout({
+      sections: [
+        { key: 'a', x: 0, y: 0, w: 8, h: 6, color: 'magenta' },
+        { key: 'b', x: 8, y: 0, w: 8, h: 6, color: 3 },
+        { key: 'c', x: 16, y: 0, w: 8, h: 6, color: 'default' },
+      ],
+    })!
+    expect(parsed.sections).toHaveLength(3)
+    expect(parsed.sections.every(s => !('color' in s))).toBe(true)
+  })
 })
 
 describe('defaultStatusBoardGridLayout', () => {
@@ -87,6 +104,15 @@ describe('syncLayoutSections', () => {
       sections: [{ key: 'runway', x: 0, y: 0, w: 24, h: 6 }],
     }
     expect(syncLayoutSections(exact, ['runway'])).toEqual(exact)
+  })
+
+  it('keeps section colors on kept rects; appended sections get none', () => {
+    const colored: StatusBoardGridLayout = {
+      sections: [{ key: 'runway', x: 0, y: 0, w: 8, h: 6, color: 'green' }],
+    }
+    const synced = syncLayoutSections(colored, ['runway', 'navaid'])
+    expect(synced.sections.find(s => s.key === 'runway')!.color).toBe('green')
+    expect(synced.sections.find(s => s.key === 'navaid')!.color).toBeUndefined()
   })
 })
 

@@ -3,12 +3,22 @@
 // grid's geometry (24 columns / 40px rows / 6px gaps) so the two features
 // feel identical, without widgets, breakpoint variants, or per-user boards.
 
+import { WIDGET_COLORS } from '@/lib/dashboard/widget-colors'
+
+// Sections share the dashboard widgets' color palette; 'default' is
+// represented by OMITTING color, so pre-color saved layouts parse unchanged.
+const SECTION_COLOR_KEYS = new Set(
+  WIDGET_COLORS.filter((c) => c.key !== 'default').map((c) => c.key),
+)
+
 export type StatusSectionRect = {
   key: string
   x: number
   y: number
   w: number
   h: number
+  /** Optional tint — a WIDGET_COLORS key (blue/cyan/green/amber/red/purple). */
+  color?: string
 }
 
 export type StatusBoardGridLayout = {
@@ -40,13 +50,16 @@ export function validateStatusBoardGridLayout(raw: unknown): StatusBoardGridLayo
     if (typeof key !== 'string' || !key || seen.has(key)) continue
     seen.add(key)
     const w = clampInt((s as { w?: unknown }).w, STATUS_SECTION_MIN_W, STATUS_GRID_COLS, 8)
-    out.push({
+    const rect: StatusSectionRect = {
       key,
       x: clampInt((s as { x?: unknown }).x, 0, STATUS_GRID_COLS - w, 0),
       y: clampInt((s as { y?: unknown }).y, 0, 999, 0),
       w,
       h: clampInt((s as { h?: unknown }).h, STATUS_SECTION_MIN_H, 200, 6),
-    })
+    }
+    const color = (s as { color?: unknown }).color
+    if (typeof color === 'string' && SECTION_COLOR_KEYS.has(color)) rect.color = color
+    out.push(rect)
   }
   return out.length > 0 ? { sections: out } : null
 }

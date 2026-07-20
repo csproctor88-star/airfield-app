@@ -1,8 +1,9 @@
 'use client'
-import { Settings2, X, Circle, Copy, ChevronDown, ChevronRight } from 'lucide-react'
+import { Settings2, X, Copy, ChevronDown, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { WIDGET_COLORS, widgetTint } from '@/lib/dashboard/widget-colors'
+import { widgetTint } from '@/lib/dashboard/widget-colors'
+import { ColorSwatchPicker } from '@/components/ui/color-swatch-picker'
 
 export function WidgetFrame({
   title, editing, onRemove, onConfigure, color, onSetColor, copyTargets, onCopyTo,
@@ -20,21 +21,6 @@ export function WidgetFrame({
   onToggleCollapse?: () => void
   children: ReactNode
 }) {
-  const [swatchOpen, setSwatchOpen] = useState(false)
-  const swatchRef = useRef<HTMLDivElement>(null)
-
-  // Close popover on outside mousedown
-  useEffect(() => {
-    if (!swatchOpen) return
-    function handleMouseDown(e: MouseEvent) {
-      if (swatchRef.current && !swatchRef.current.contains(e.target as Node)) {
-        setSwatchOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [swatchOpen])
-
   const [copyOpen, setCopyOpen] = useState(false)
   const [copyHover, setCopyHover] = useState(false)
   const [copyPos, setCopyPos] = useState<{ top: number; right: number } | null>(null)
@@ -70,7 +56,6 @@ export function WidgetFrame({
   }, [copyOpen])
 
   const tint = widgetTint(color)
-  const activeKey = color || 'default'
 
   return (
     <div style={{
@@ -145,77 +130,7 @@ export function WidgetFrame({
           {editing && (onSetColor || onConfigure || onRemove) && (
             <>
               {onSetColor && (
-                <div ref={swatchRef} style={{ position: 'relative' }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setSwatchOpen(o => !o) }}
-                    aria-label={`Set color for ${title}`}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: 'none', background: 'transparent',
-                      cursor: 'pointer', padding: 2,
-                    }}
-                  >
-                    {tint ? (
-                      <span style={{
-                        display: 'block', width: 12, height: 12, borderRadius: '50%',
-                        background: tint.swatch,
-                        border: `1.5px solid ${tint.borderColor}`,
-                        flexShrink: 0,
-                      }} />
-                    ) : (
-                      <Circle size={12} strokeWidth={2} color="var(--color-text-3)" />
-                    )}
-                  </button>
-                  {swatchOpen && (
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        position: 'absolute', top: '100%', right: 0, marginTop: 4,
-                        zIndex: 9999,
-                        background: 'var(--color-bg-surface)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-md)',
-                        padding: '8px',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-                        display: 'flex', gap: 6, flexWrap: 'nowrap',
-                      }}
-                    >
-                      {WIDGET_COLORS.map(wc => {
-                        const isActive = wc.key === activeKey
-                        const itemTint = wc.hue ? widgetTint(wc.key) : null
-                        return (
-                          <button
-                            key={wc.key}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onSetColor(wc.key)
-                              setSwatchOpen(false)
-                            }}
-                            aria-label={wc.label}
-                            title={wc.label}
-                            style={{
-                              width: 16, height: 16, borderRadius: '50%',
-                              border: isActive
-                                ? `2px solid var(--color-text-1)`
-                                : `1.5px solid var(--color-border)`,
-                              background: itemTint
-                                ? itemTint.swatch
-                                : 'transparent',
-                              cursor: 'pointer',
-                              padding: 0,
-                              flexShrink: 0,
-                              outline: 'none',
-                              // For the default 'no color' swatch show a diagonal slash via gradient
-                              ...(wc.key === 'default' ? {
-                                background: 'linear-gradient(135deg, var(--color-bg-surface) 45%, var(--color-border) 45%, var(--color-border) 55%, var(--color-bg-surface) 55%)',
-                              } : {}),
-                            }}
-                          />
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
+                <ColorSwatchPicker color={color} onSetColor={onSetColor} ariaLabel={`Set color for ${title}`} />
               )}
               {onConfigure && (
                 <button onClick={onConfigure} aria-label={`Configure ${title}`} style={{

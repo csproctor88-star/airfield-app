@@ -9,6 +9,8 @@ import {
   STATUS_SECTION_MIN_W, STATUS_SECTION_MIN_H,
   type StatusBoardGridLayout,
 } from '@/lib/status-board-grid'
+import { widgetTint } from '@/lib/dashboard/widget-colors'
+import { ColorSwatchPicker } from '@/components/ui/color-swatch-picker'
 
 const Grid = WidthProvider(GridLayoutBase)
 
@@ -19,6 +21,8 @@ type Props = {
    *  the page's explicit Save action runs (owner ruling — the dashboard's
    *  while-you-drag writes were what made it feel choppy). */
   onChange: (next: StatusBoardGridLayout) => void
+  /** Buffered like drag/resize: updates the caller's pending layout only. */
+  onSetSectionColor: (key: string, color: string) => void
   /** Section card content by key; keys missing from the map render nothing. */
   sectionsByKey: ReadonlyMap<string, React.ReactNode>
 }
@@ -28,10 +32,10 @@ type Props = {
  * Deliberately simpler than components/dashboard/widget-grid.tsx: one
  * fixed 24-column layout (no responsive breakpoint variants — crossing
  * reflows were another source of the dashboard's original jank), no
- * widget palette, no per-widget chrome. Dynamically imported by the
- * status page so viewers never load react-grid-layout.
+ * widget palette, no per-widget chrome beyond the color swatch. Dynamically
+ * imported by the status page so viewers never load react-grid-layout.
  */
-export const StatusBoardGridEditor = memo(function StatusBoardGridEditor({ layout, onChange, sectionsByKey }: Props) {
+export const StatusBoardGridEditor = memo(function StatusBoardGridEditor({ layout, onChange, onSetSectionColor, sectionsByKey }: Props) {
   const rglLayout: ReactGridLayout.Layout[] = layout.sections.map((s) => ({
     i: s.key, x: s.x, y: s.y, w: s.w, h: s.h,
     minW: STATUS_SECTION_MIN_W, minH: STATUS_SECTION_MIN_H,
@@ -62,16 +66,40 @@ export const StatusBoardGridEditor = memo(function StatusBoardGridEditor({ layou
       resizeHandles={['nw', 'ne', 'sw', 'se']}
       onLayoutChange={handleChange}
       // Interactive controls inside a section keep working mid-edit —
-      // including the inline label rename (.sb-rename).
-      draggableCancel="a,button,input,textarea,select,.sb-rename"
+      // including the inline label rename (.sb-rename) and the color
+      // swatch popover (.sb-color).
+      draggableCancel="a,button,input,textarea,select,.sb-rename,.sb-color"
     >
-      {layout.sections.map((s) => (
-        // flex column so the section card (flex-basis sized) stretches to
-        // fill its cell; overflow scrolls content that outgrows the rect.
-        <div key={s.key} style={{ overflow: 'auto', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          {sectionsByKey.get(s.key) ?? null}
-        </div>
-      ))}
+      {layout.sections.map((s) => {
+        const tint = widgetTint(s.color)
+        return (
+          // flex column: a scrolling content wrapper fills the cell while the
+          // color swatch overlays the top-right corner OUTSIDE the scroll
+          // container (so its popover never clips), inset past the ne resize
+          // handle. Tinted sections carry the dashboard widget tint inline —
+          // inline wins over the mid-drag solid-surface CSS class.
+          <div key={s.key} style={{
+            minWidth: 0, display: 'flex', flexDirection: 'column',
+            ...(tint ? {
+              background: tint.background,
+              border: `1px solid ${tint.borderColor}`,
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 10px',
+            } : {}),
+          }}>
+            <div className="sb-color" style={{ position: 'absolute', top: 4, right: 26, zIndex: 5 }}>
+              <ColorSwatchPicker
+                color={s.color}
+                onSetColor={(c) => onSetSectionColor(s.key, c)}
+                ariaLabel="Set section color"
+              />
+            </div>
+            <div style={{ overflow: 'auto', minWidth: 0, minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {sectionsByKey.get(s.key) ?? null}
+            </div>
+          </div>
+        )
+      })}
     </Grid>
   )
 })

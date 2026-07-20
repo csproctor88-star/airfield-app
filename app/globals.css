@@ -1531,3 +1531,24 @@ html, body {
   border-color: var(--color-accent);
   opacity: 0.85;
 }
+
+/* react-grid-layout's stock drop placeholder is background:red — a jarring
+   maroon flood on the dark theme. One calm accent-tinted rule covers both
+   grids (dashboard + status board), keeping the two features identical. */
+.react-grid-item.react-grid-placeholder {
+  background: var(--color-accent);
+  opacity: 0.12;
+  border-radius: var(--radius-md);
+}
+
+/* Status-board sections are transparent wrappers around floating cards —
+   while one is dragged or resized, give it a solid surface so the
+   placeholder and the page beneath don't bleed through its gaps. Sections
+   with a saved color tint set an inline background, which wins over this
+   class, so their tint stays visible mid-drag. */
+.status-board-grid .react-grid-item.react-draggable-dragging,
+.status-board-grid .react-grid-item.resizing {
+  background: var(--color-bg-surface-solid);
+  border: 1px solid var(--color-border-mid);
+  border-radius: var(--radius-md);
+}
