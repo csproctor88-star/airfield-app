@@ -1,5 +1,63 @@
 # Session Handoff
 
+> **2026-07-20 — status-board owner-QA fixes, dashboard widget mirror,
+> ARCWERX one-pager (session 10).** Interactive. **2 commits** (`2a53ee0f`,
+> `c695141f`), **all PUSHED**, tree clean and level with origin. Build green
+> on the final tree: tsc ✓ · lint 0 errors · vitest **1823 passed** (180
+> files, +39 tests) · build ✓ (`/` 29.5 kB · 242 kB First Load, from
+> 28.7/241; `/dashboard` unchanged 454 kB). **Zero migrations.**
+>
+> Shipped:
+> - **Status-board QA fix wave** (`2a53ee0f`) — three items from four owner
+>   screenshots of the session-9 layout engine. (1) The "extra red space"
+>   while arranging was react-grid-layout's STOCK placeholder (literally
+>   `background:red`) flooding the transparent sections during drag/resize —
+>   restyled to a soft accent tint in `globals.css` for BOTH grids (the
+>   dashboard's placeholder changed red→accent too, deliberate), and a
+>   dragged/resizing section now gets a solid surface so the page never
+>   bleeds through. (2) NAVAID→runway grouping no longer requires the secret
+>   designator-first naming: new pure `lib/status-board-navaids.ts`
+>   (`navaidMatchesEnd` / `groupNavaidsByEnd` / `navaidDisplayName`) matches
+>   the end anywhere in the name ("26 ILS" · "ILS 26" · "MALSR RWY 26"),
+>   token-bounded ("PAPI 18" never lands on RWY 8), at most one group per
+>   item; legacy names AND the ICAO import's `<TYPE> RWY <END>` format —
+>   which never matched the old prefix-only test (latent defect) — regroup
+>   with zero data changes. Base Config → NAVAIDs now composes canonical
+>   names from a runway picker + type datalist with a live "will appear
+>   under" preview, per-row group chips (same shared matcher), and a
+>   duplicate-name guard (`navaid_statuses` is name-keyed; dupes corrupt the
+>   status mapping). (3) Sections color-code like dashboard widgets: the
+>   swatch popover was EXTRACTED from `widget-frame` into shared
+>   `components/ui/color-swatch-picker.tsx` (not cloned), each section gets
+>   a corner dot in layout edit mode, and `color` rides the existing
+>   `status_board_layouts.layout` JSONB per rect — validated against the
+>   palette on read, `'default'` stored as omission, buffered into the one
+>   Save write, tinted for viewers incl. phone stacking via `widgetTint`.
+> - **Dashboard status-board widget mirror** (`c695141f`, owner-reported) —
+>   the widget's NAVAID kind dumped raw `navaid_statuses`: deleted rows
+>   lingered forever (an `&nbsp;` row, old frequency entries) and names kept
+>   their prefixes, ungrouped. Now mirrors the page's `loadNavaids` exactly:
+>   intersects with `base_navaids`, groups per runway end via the shared
+>   helpers, honors custom column labels from `bases.status_labels`.
+>   Lesson (memory'd): a widget that previews a page must consume the page's
+>   RESOLVED view, never re-query raw tables.
+> - **ARCWERX one-pager** (not repo work) — branded submission page at
+>   `OneDrive/Claude Code - Reference Documents/Glidepath ARCWERX One-Pager
+>   2026-07-20.{html,md}`, owner-revised (127 Wing POC), ask = Platform One
+>   IL4/IL5 pathway sponsorship. The HTML is click-to-edit in the browser
+>   (contenteditable + save/print toolbar). Gotcha for future deliverables:
+>   `contenteditable="plaintext-only"` makes Chrome render the element
+>   pre-wrap — source indentation becomes visible gaps; use plain
+>   `contenteditable` + a paste-as-plain-text handler instead.
+>
+> Owner QA on the promoted build now stacks session 9's list (Mods &
+> Exemptions pass · arrange/save · amops sees no Edit · phone stacking) plus
+> this session's: drag placeholder feel, section colors save/persist/phone,
+> KFSM NAVAIDs regrouped with clean labels + matching Base Config chips,
+> dashboard widget now agreeing with the board. Open next: unchanged —
+> glidepath-site `modifications-exemptions` page registration · Part 139
+> cert-audit resume (Task 2.5c) · long-running carryover.
+
 > **2026-07-19 — rulings, Modifications & Exemptions module, mobile polish,
 > status-board layout engine (session 9).** Interactive, home machine, spans
 > 2026-07-18 evening → 07-19. **9 commits** (`34797542`..`1615c9b9`), **all
@@ -507,6 +565,7 @@ glidepath-site @ 9dd00ad: untouched this session.
 ## Recent releases
 | Version | Date | Headline |
 |---|---|---|
+| **Unreleased** | 2026-07-20 (session 10) | Status-board QA fixes (accent drag placeholder on both grids · forgiving NAVAID runway grouping + structured Base Config add form · dashboard-style section color coding) · dashboard status-board widget mirrors the board's resolved NAVAID view · ARCWERX one-pager (OneDrive). 2 commits, zero migrations, pushed. |
 | **Unreleased** | 2026-07-18 (session 8) | SCN twin-bug fix wave (FPR fixes ported back to the template) · Read File archived-report fix (Local Regs mirror) · glidepath-site module H1 keyword pass (30 pages, owner-approved). 2 app commits + 1 site commit, zero migrations, pushed. |
 | **Unreleased** | 2026-07-18 (session 7) | Base ft/m distance-unit preference (`lib/distance-units.ts`) · multi-standard parking clearance (UFC / ICAO / USAFE 32-1007 / FAA ADG) · USAFE 32-1007 as 4th base standard · runway ft/m-toggle corruption fix. 10 commits, 2 migrations applied. |
 | **Unreleased** | 2026-07-19 (session 9) | Permission rulings applied (atc/majcom) · Modifications & Exemptions civilian module (verified-PDF regulatory base, 4 migrations) · mobile form-overflow polish · status-board grid layout engine (drag + resize, every block movable, base-admin only, buffered saves). 9 commits, 8 migrations applied, +75 tests. Pushed. |
