@@ -1,5 +1,54 @@
 # Session Handoff
 
+> **2026-07-20/21 — promo video wave 2 kickoff: concepts → scripts approved →
+> VO drafts (session 11).** Interactive, home machine. **ZERO app code
+> changes, zero migrations, zero app commits** — this entry is the only
+> repo change. All work product lives in
+> `OneDrive/Claude Code - Reference Documents/`.
+>
+> Done:
+> - **Video concepts brainstorm** (`Glidepath Video Concepts 2026-07-20.{md,html}`)
+>   — four concepts with beat structures, module lists, shot lists, and
+>   per-beat visual-treatment tags (T1–T9 glossary; owner rule: never repeat
+>   the old full-screen-then-zoom grammar consecutively). **Owner picked A
+>   ("One Platform, Every Standard", ~90s narrated flagship), C ("The Paper
+>   Stack", ~105s narrated), D ("Module Wall", 30–45s social cut).**
+> - **Capture spec** `glidepath-promo-assets/SHOT_LIST_V2.md` — one recording
+>   session covers all three; new takes → `raw-v2/`, music → `music-v2/`.
+>   Must-haves: a1/a2 surface-standards cycle + the civilian Part 139 takes
+>   (a4/a6/a7 — no civilian footage exists). Build trigger: "clips are in —
+>   ingest and build."
+> - **Scripts v3 FINAL, owner-approved** (`Glidepath Video Scripts
+>   2026-07-20.{md,html}` + artifact) — approved via phone-screenshot markup
+>   + follow-ups; voice = GENERATED; "thirty modules" claim OK. Key owner
+>   edits: C opens "This is the way an airfield runs today."; C close is
+>   "Streamlined Compliance." (VO + card); A parking line = "by most
+>   demanding aircraft or design group."
+> - **VO drafts generated + sent** (`glidepath-promo-assets/vo-v2/`):
+>   vo-a-michael.wav (62.2s), vo-c-michael.wav (61.2s), voice-sample-adam.wav
+>   — Kokoro local TTS (Apache; commercially safe) via `hyperframes tts`,
+>   voice am_michael, TTS-normalized numbers ("thirty-six sixteen"). Enabled
+>   by installing Python 3.12 (winget) + kokoro-onnx + soundfile on this
+>   machine. **Owner verdict pending** (Michael vs Adam, pacing).
+> - **Scripts review artifact** (claude.ai/code/artifact/69c5128c-8623-4c18-
+>   aee6-bbe0cc602c19) — mobile-editable, saves edits to the owner's Google
+>   Drive as "Glidepath Scripts Edits" docs (GPSV1 base64 token — Docs
+>   conversion mangles raw JSON backslashes, hence base64; a seed test doc in
+>   Drive is trashable). Per owner: ALL review docs ship as editable HTML or
+>   artifact from now on (memory'd).
+> - **Practice copy** of the previous promo composition at
+>   `~/glidepath-promo-practice/` (outside OneDrive; `npm run dev` →
+>   localhost:3002; OneDrive `project/` stays the archive).
+> - **Design rulings memory'd:** flyoverhead.com resemblance = era/genre
+>   convergence (shadcn-style dark dashboards), no action wanted; owner
+>   declined distinctiveness pass. **Brand accent is SKY BLUE #38BDF8/#0284C7;
+>   amber #FBBF24 is caution-ONLY — never call amber the brand** (owner
+>   correction; the old SHOT_LIST.md "amber-on-dark" line is wrong).
+>
+> Open next: owner VO verdict · owner recordings per SHOT_LIST_V2 + music →
+> then ingest and build A/C/D · glidepath-site modifications-exemptions page
+> registration · Part 139 cert-audit resume (Task 2.5c) · carryover unchanged.
+
 > **2026-07-20 — status-board owner-QA fixes, dashboard widget mirror,
 > ARCWERX one-pager (session 10).** Interactive. **2 commits** (`2a53ee0f`,
 > `c695141f`), **all PUSHED**, tree clean and level with origin. Build green
