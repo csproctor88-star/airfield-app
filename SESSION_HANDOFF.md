@@ -1,5 +1,48 @@
 # Session Handoff
 
+> **2026-07-22 — promo video wave 2: built end-to-end, then KILLED by owner
+> (session 13).** Interactive. **ZERO app code changes, zero site changes,
+> zero migrations** — this entry is the only repo change; tree stays at
+> `578daa67` (session-12 verified build state stands; no gates re-run on an
+> untouched tree).
+>
+> What happened:
+> - "Clips are in — ingest and build" executed in full: all 16 wave-2 takes
+>   ingested (32 trimmed segments), 18 per-beat VO lines generated (Kokoro
+>   `am_michael`, local), 3 MusicGen tracks generated locally (owner asked for
+>   generated music), three HyperFrames projects built at
+>   `~/glidepath-promo-v2/videos/` (A 87s, C 98s, D 34s + text-only variants
+>   of A/C via a `narrated` composition variable), five drafts rendered and
+>   delivered.
+> - **Owner rejected all five outright — do not resume them.** Verbatim: "The
+>   direction, the animation, everything is terrible. All you did was show my
+>   screen recordings and overlay text… no shaders, no GSAP, nothing
+>   polished." Root causes (memory'd as
+>   `feedback_promo_videos_no_footage_plus_text`): ~80% raw footage hosted
+>   top-level with hand-rolled opacity crossfades (which flash under the
+>   parallel-seek renderer) vs scenes-first designed compositions; dark
+>   3200px pages rendered unreadably small; static-still QA missed temporal
+>   artifacts. Owner ruling on process: **no per-frame approval ceremony —
+>   the fix is autonomous execution quality** (scenes-first, the shader
+>   transition system, real GSAP choreography, self-QA on rendered video
+>   against the heygen.com showcase bar). `~/glidepath-promo-v2/BRIEF.md` is
+>   marked KILLED.
+> - **Asset estate notes for any future reuse** (raw footage itself is fine):
+>   wave-1 `raw/b4.mp4` shows the owner's desktop + webcam in its final
+>   ~0.5s (trim to ≤21.6s if ever reused); `raw-v2/a7.mp4` recorded the M&E
+>   register EMPTY (no records staged on the civilian demo base); `raw-v2/
+>   a6.mp4`'s member record shows 0% training stats — re-stage both before
+>   any re-record. Video logo asset of record:
+>   `glidepath-site/public/brand/wordmark-dark.png`. The 1s `raw/2026-07-21
+>   23-26-43.mp4` is an accidental OBS start/stop (junk). VO lines + music
+>   live in `~/glidepath-promo-v2/assets/` if ever wanted.
+>
+> Open next: promo video work is direction-reset and owner-driven — nothing
+> queued. Everything else unchanged from session 12: civilian-capture
+> priority + Airfield Status 2560 still · glidepath-site
+> `modifications-exemptions` page registration · Part 139 cert-audit resume
+> (Task 2.5c) · long-running carryover.
+
 > **2026-07-21 — glidepath-site: marketability review + landing motion hero
 > (session 12).** Interactive, owner-driven. **ZERO app code changes, zero
 > migrations, zero app commits** — this entry is the only repo change. All
