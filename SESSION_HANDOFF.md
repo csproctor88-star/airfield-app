@@ -1,5 +1,38 @@
 # Session Handoff
 
+> **2026-07-21 — glidepath-site: marketability review + landing motion hero
+> (session 12).** Interactive, owner-driven. **ZERO app code changes, zero
+> migrations, zero app commits** — this entry is the only repo change. All
+> work landed in the `glidepath-site` repo (**1 commit `c29b354`, PUSHED**,
+> site gates green: tsc ✓ · 158 tests ✓ · lint 0 ✓ · build ✓); full detail
+> in `~/glidepath-site/SESSION_HANDOFF.md` (the site now keeps its own).
+>
+> Done:
+> - **Full-site marketability / bounce review** (owner ask: keep doing
+>   screenshots, recordings, or neither?). Ruling: military module media is
+>   done — recordings only where motion is the message, stills elsewhere.
+>   **#1 finding: the civilian side has ZERO imagery** (24 module pages +
+>   all three homepage cascade slots render nothing on the Civilian toggle)
+>   — fold the civilian capture into the SHOT_LIST_V2 recording session.
+>   Standing items: generic hero headline (redline territory), thin /about
+>   + 3-entry FAQ, no pricing signal, 10 MB module clips on gov networks.
+> - **Homepage hero rebuilt end-to-end** (site commit `c29b354`): banded
+>   photo → (board-as-hero experiment, dropped pre-commit) → owner-approved
+>   Higgsfield landing scene — transport in profile descending L→R onto the
+>   broadside runway light line, dramatic dusk sky (still job `a8fef45c`,
+>   nano_banana_2 4k) + 8 s Seedance clip (job `8a463585`, owner picked
+>   seedance over kling) playing ONCE at 0.8x and settling on touchdown.
+>   100svh section with the media layer at 112% height (sky-biased trim) so
+>   the scene keeps the tall-hero scale; dead zone closed (`-mt-[30vh]` →
+>   `-mt-[12vh]`); blur-up + priority still = instant first paint. 105 of
+>   618 Higgsfield credits used.
+>
+> Open next: unchanged from session 11 (owner VO verdict · recordings per
+> SHOT_LIST_V2 → "clips are in — ingest and build" · Part 139 cert-audit
+> Task 2.5c · carryover) **plus** the review's civilian-capture priority and
+> a SHOT_LIST_V2 addition: Airfield Status still at 2560 in both variants
+> (full window for /platform + board-only crop).
+
 > **2026-07-20/21 — promo video wave 2 kickoff: concepts → scripts approved →
 > VO drafts (session 11).** Interactive, home machine. **ZERO app code
 > changes, zero migrations, zero app commits** — this entry is the only
