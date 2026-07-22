@@ -1,5 +1,57 @@
 # Session Handoff
 
+> **2026-07-22 — promo video wave 3: 92s showcase built, revised across 3 waves,
+> DELIVERED ("absolutely perfect") + workspace/backup cleanup (session 14).**
+> Interactive, owner-driven. **ZERO app code changes, zero site changes, zero
+> migrations** — this handoff entry is the only repo change; the code tree stands
+> at session-12's verified state (no gates re-run on an untouched tree). All
+> video work lives OUTSIDE the repos (local project + OneDrive backup).
+>
+> Done:
+> - **Glidepath showcase promo v3 — DELIVERED.** A 92s unnarrated flagship
+>   (music + kinetic type, no VO), 16:9 1080p, 12 designed scenes each a distinct
+>   proven blueprint shape, built via `/product-launch-video` with per-frame
+>   subagents. Deliberately corrects the killed wave-2 grammar
+>   (`feedback_promo_videos_no_footage_plus_text`): scenes-first, real Glidepath
+>   UI staged INSIDE designed console/browser/device surfaces, framework-injected
+>   shader/registry transitions (never hand-rolled crossfades), rich GSAP
+>   choreography. Owner review ran on HyperFrames Studio board comments across
+>   three revision waves — (1) real-UI swaps replacing every synthetic replica
+>   screen, (2) 10 board comments, (3) 6 polish notes. Net result: real captures
+>   everywhere, type dropped to Barlow Condensed 600/700 with proper
+>   capitalization (never 800/900, no forced lowercase), a DIFFERENT text
+>   register per frame (owner: "everything in the lower thirds is terrible"),
+>   real portrait mobile clips in aspect-matched device renders, and a
+>   letters-lead-plane animated logo outro. Working project stays LOCAL at
+>   `C:\Users\cspro\glidepath-promo-v3\videos\glidepath-showcase\` (re-render:
+>   `npm run render`); final at `renders\video-final.mp4` (41.5 MB, 92s).
+> - **Production standard captured for reuse** (`project_promo_production_standard`
+>   memory) — the owner-approved quality BAR: ten non-negotiables (real-UI-only,
+>   per-frame text register, hoisted-video law, real device renders, the type/
+>   brand rules, framework transitions, no fabricated reg values, the outro
+>   recipe) + the process (autonomous build → Studio board review → per-frame
+>   revision subagents → draft preview → final on "go"; self-QA on rendered
+>   video). Replicate it for every future promo. Pipeline mechanics + the
+>   assembler/hoisted-video/worker guardrails are in `project_promo_v3_showcase`.
+> - **Workspace + backup cleanup.** Promo working material pulled OUT of the
+>   reference-docs top level. The asset backup + reproducible source now live at
+>   `OneDrive\Claude Code - Reference Documents\glidepath-promo-assets\` (owner
+>   placed it there): 820 files — 14 raw owner clips, an 81-screenshot reusable
+>   real-UI library, 13 named module clips, logos, music, and `v3-project-source/`
+>   (the v3 HyperFrames project minus node_modules, reproducible anywhere via
+>   `npm install` + `npm run render`). Local `glidepath-*` reduced to the current
+>   reference only: DELETED wave-1 (`glidepath-promo`, fully backed up), killed
+>   wave-2 (`glidepath-promo-v2`), and the abandoned June slop
+>   (`glidepath-intro` / `glidepath-explainer`, unbacked, owner-confirmed).
+>   Reference-docs folder now holds reference material + deliverable docs (+ the
+>   promo backup subfolder). Cross-boundary gotcha memory'd: a bash `mv` INTO
+>   OneDrive is denied — use PowerShell `robocopy`.
+>
+> Open next: unchanged from session 13 — promo direction is owner-driven, nothing
+> queued. Standing items: civilian-capture priority + Airfield Status 2560 stills
+> · glidepath-site `modifications-exemptions` page registration · Part 139
+> cert-audit resume (Task 2.5c) · long-running carryover.
+
 > **2026-07-22 — promo video wave 2: built end-to-end, then KILLED by owner
 > (session 13).** Interactive. **ZERO app code changes, zero site changes,
 > zero migrations** — this entry is the only repo change; tree stays at
