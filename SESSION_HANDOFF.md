@@ -1,5 +1,123 @@
 # Session Handoff
 
+> **2026-07-22 — PPR polish + FAA lighting-outage engine + KDRA civilian
+> demo seeding & activation (session 15).** Interactive, owner-driven, home
+> machine. **5 commits** (`858a8e77`..`1c9be9ff`), **all PUSHED**, tree clean
+> and level with origin. Build green on the final tree (`1c9be9ff`): tsc ✓ ·
+> lint 0 errors ✓ · vitest **1855 passed** (+7) ✓ · build ✓. **2 migrations
+> APPLIED to the linked DB** (`2026072200`, `2026072210`), both verified by
+> their header queries. Plus a large body of **DB-only demo seeding** to the
+> civilian demo base KDRA (`ea2b542e-72cc-4300-9037-bfe18c0bf7ae`) for
+> marketing captures — no repo footprint, applied directly with owner auth +
+> `dangerouslyDisableSandbox` per the capture-pipeline memory.
+>
+> **HEAD: `1c9be9ff`.**
+>
+> Shipped (code):
+> - **PPR editable/deletable own remarks + Zulu↔local time pairing**
+>   (`858a8e77`). Authors can edit/delete their OWN free-form remarks in the
+>   `/ppr` detail card (`updatePprRemark`/`deletePprRemark`, `.eq('created_by',
+>   uid)` guard; system-mirrored `[bracketed]` coordination/snapshot entries
+>   stay locked); an edited remark shows "(edited)" via migration
+>   `2026072200` (`ppr_remarks.updated_at` + a `BEFORE UPDATE` trigger that
+>   stamps it only on a real text change — write path never sets the column,
+>   so edits work with or without the migration). And **local time next to
+>   every Zulu time**: time columns render `1500Z (1000L)` (with `-1d/+1d`
+>   rollover), audit + remark timestamps gain the local equivalent, and the
+>   HHMM entry fields show a live `= 1000 local` hint. DST-accurate (anchored
+>   to the PPR's arrival date) and **gated on a `dateISO` opt so the PDF —
+>   which renders its own local sublines — is byte-unchanged**. New utils in
+>   `lib/utils.ts`: `zuluToLocalParts`, `formatDayDelta`,
+>   `formatZuluDateTimeWithLocal`, `localTimeToZulu`.
+> - **Header: dropped the duplicate sidebar expand button** (`e27b2fae`).
+>   When collapsed, two expand toggles showed (side-nav rail + a second in
+>   the header next to the installation name). Removed the header one; it was
+>   the only consumer of the header's `useSidebar` hook, `PanelLeftOpen`
+>   icon, and the `.sidebar-toggle` CSS, so those went too.
+> - **PPR: notify info-only recipients on EVERY approval** (`45b7ec3a`).
+>   Info-only recipient groups (`ppr_agencies.notify_only`) are blasted by
+>   `/api/send-ppr-approval`, but the three approval paths called it
+>   inconsistently — triage-pre-coordinated always, Decide→Approve only when
+>   the PPR had a public requester email, create-modal "pre-coordinated,
+>   approve now" never. So internal/pre-coordinated PPRs silently skipped
+>   info-only distribution. Dropped `approvePprEntry`'s `requester_email`
+>   gate and added the best-effort route call to `createPprEntry`'s
+>   `skipCoordination` branch. Info-only now fires on every transition to
+>   Approved.
+> - **FAA Part 139 lighting-outage engine (dual-mode)** (`ebef2f3a` +
+>   `1c9be9ff`). The `/infrastructure` Visual NAVAID outage engine was
+>   **DAFMAN 13-204v2 A3.1 only** — no civilian branch, so a `faa_part139`
+>   base surfaced military NOTAM/Q-code/CE-TERPS framing. Key realization:
+>   `calculateComponentOutage`/`calculateSystemHealth` are **data-driven** —
+>   thresholds, Q-codes, NOTAM text, and actions come from each
+>   `lighting_system_components` row, cloned at setup from the global
+>   `outage_rule_templates` table — so the FAA branch is mostly DATA + labels,
+>   not compute changes. Migration `2026072210` adds
+>   `outage_rule_templates.standard` (`'dafman'|'faa'`, default dafman) +
+>   **20 FAA template rows** (verified from **AC 150/5340-26C Appendix A**
+>   "Operating" tolerances, **NOTAM keywords from FAA Order JO 7930.2U
+>   §5-2-1**, mandate **14 CFR §139.311**; source-of-record
+>   `docs/references/faa-lighting-outage-verified.md`, gitignored). FAA rows
+>   carry NO q_code / CE / TERPS / shutoff / barrette-consecutive, so those
+>   DAFMAN-only UI branches self-hide for civilian data. `getLightingCompliance
+>   (base)` in `lib/airport-mode.ts` is the standard SoT;
+>   `fetchOutageRuleTemplates`/`cloneComponentsFromTemplates` filter by an
+>   `OutageStandard` (default dafman — an unfiltered fetch would double-clone);
+>   base-config lighting tab + the inspections lighting-alert label render
+>   mode-aware strings (`1c9be9ff` mopped up the button + section-description
+>   strings the first pass missed). types.ts hand-patched with the `standard`
+>   column. See `[[project_faa_lighting_outage_engine]]` memory.
+>
+> Shipped (DB-only demo seeding, no commits — see `[[project_marketing_
+> capture_pipeline]]`):
+> - **KDRA civilian demo base seeded for captures.** Every previously-empty
+>   enabled-module frame filled with FAA Part 139-voiced data: `airfield_checks`
+>   (11, §139.327), `obstruction_evaluations` (7, **FAA Part 77** — not UFC),
+>   `mods_exemptions` (5 + 2 reviews), `local_regulations` (4 + 3 reviews),
+>   `ppr_columns` (12) + the 3 existing `ppr_entries` backfilled with realistic
+>   corporate/GA traffic, `wildlife_strikes` (3), and `infrastructure_features`
+>   (**1387 Visual NAVAIDs** cloned wholesale from KDMO — KDRA shares KDMO's
+>   exact 01/19 geometry, so positions land correctly). Drafted via 6 parallel
+>   subagents (schema-verified), reviewed, applied. **`/waivers` deliberately
+>   NOT seeded** — that module's UI is AF Form 505 / UFC even for civilian
+>   bases; capture `/modifications-exemptions` instead.
+> - **KDRA Visual NAVAID lighting FAA-activated.** After the FAA engine
+>   deployed + `2026072210` applied, rebuilt KDRA's lighting topology from
+>   KDMO's proven feature→system mapping via deterministic
+>   `md5(kmdo_id||'kdra-*')::uuid` ids: **43 lighting_systems** (civilian
+>   names, KMTC→KDRA), **25 FAA `overall` components** (one per KDMO system
+>   whose system_type has an FAA template; **0 Q-codes**, no CE/TERPS),
+>   **1298 of 1387 features linked** by position-match (89 unlinked = signs /
+>   distance markers / stadium / taxiway-end types with no FAA template —
+>   render on map, no compliance component), all operational → clean "no
+>   NOTAMs / 14 CFR §139.311" civilian compliance panel. One-off SQL, not a
+>   repo migration (reset recipe in the memory).
+>
+> Bugs caught mid-session (each by a gate, before it shipped): mods_exemptions
+> seed row 4 had a mis-aligned VALUES list (Postgres 42601); `fetchOutage
+> RuleTemplates` dropped `.select('*')` before `.eq` (tsc TS2339); the FAA
+> lighting-tab had 5 DAFMAN strings and the first pass missed 2 (button +
+> section description — owner spotted on the live build, fixed in `1c9be9ff`).
+>
+> Migrations status: **both `2026072200` and `2026072210` APPLIED** to the
+> linked DB this session (verified). `2026072210` was applied AFTER the code
+> deployed — applying it against the old unfiltered clone would double-clone
+> dafman+faa components.
+>
+> Open next: **owner is verifying the promoted build manually** (this
+> session's work). **Re-promote to pick up `1c9be9ff`** (lighting-tab labels)
+> on the live app. Optional FAA-engine phase-2: FAA templates for
+> signage/rdr_signs/stadium_light/taxiway_end (would link the 89 orphan KDRA
+> features); edge-light CAT II/III 5% threshold isn't category-switched (uses
+> CAT I 15% default); demo an actual civilian outage by flipping a few KDRA
+> features to `inoperative` to show the NOTAM-recommendation flow.
+> **Civilian captures are unblocked** — KDRA is comprehensively seeded +
+> lighting-activated. Standing carryover unchanged: glidepath-site
+> `modifications-exemptions` page registration · Part 139 cert-audit resume
+> (Task 2.5c) · long-running carryover. Reminders for captures: skip
+> `/waivers` (military UI), and don't open Base Regs / Read File docs (no PDF
+> uploaded → download 404s).
+
 > **2026-07-22 — promo video wave 3: 92s showcase built, revised across 3 waves,
 > DELIVERED ("absolutely perfect") + workspace/backup cleanup (session 14).**
 > Interactive, owner-driven. **ZERO app code changes, zero site changes, zero
