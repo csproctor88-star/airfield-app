@@ -1,5 +1,53 @@
 # Session Handoff
 
+> **2026-07-23 — SMS status-label leak fix + glidepath-site audience gate
+> (session 16).** Interactive, owner-driven, home machine. **1 airfield-app
+> commit** (`5a5a5eb1`, PUSHED), tree clean and level with origin. Build green
+> on `5a5a5eb1`: tsc ✓ · lint 0 errors ✓ · vitest **1855 passed** ✓ · build ✓
+> (`/sms` 7.03 kB · 196 kB First Load; middleware 80.8 kB, both unchanged).
+> **Zero migrations.** Most of the session was in the sibling `glidepath-site`
+> repo (marketing site, keeps its own handoff — 2 commits `f2760ef` +
+> `f8c42d8`, pushed); summarized under "also this session" below.
+>
+> Shipped (airfield-app):
+> - **SMS status labels: fix the "closed no_action" leak** (`5a5a5eb1`). The
+>   Safety Reports triage toast rendered the raw enum — `closed_no_action` came
+>   out as "closed no_action" because `.replace('_', ' ')` only replaces the
+>   FIRST underscore. Owner has hit this class repeatedly. A full-app sweep
+>   found the fragile one-shot replace in ~10 SMS / civilian-training sites;
+>   `closed_no_action` is the ONLY current enum with two underscores (every
+>   other — `under_review`, `public_form`, `runway_incursion`,
+>   `self_assessment`, `some_cloud` — reads correctly by luck, but each is a
+>   latent time-bomb). Fix is a single source of truth in `lib/supabase/sms.ts`:
+>   `TRIAGE_STATUS_LABELS` / `HAZARD_STATUS_LABELS` (proper labels, e.g.
+>   "Closed — No Action") + a `humanizeToken()` helper that replaces ALL
+>   underscores, routed through the reports / hazards / audits displays, the two
+>   status toasts, and the Part 139 training PDF (`replace(/_/g, ' ')`).
+>
+> Also this session (glidepath-site, own handoff `f8c42d8`): **homepage
+> audience gate** — a hard-hold Military/Civilian fork band under the landing
+> hero. the hero plays for everyone, then the fork band; the rest of the
+> homepage is held until the visitor picks. choice → `glidepath-track` cookie →
+> the `/` route reads it server-side and renders in-dialect on the first byte
+> (no flash); only `/` goes dynamic, the rest stays static. new `middleware.ts`
+> turns `?track=` deep links into the cookie. verified end-to-end in the browser
+> (caught + fixed a stale-localStorage-over-cookie bug live). the fork band's
+> civilian reel still shows blank media — the standing civilian-imagery gap.
+>
+> Also delivered (no repo): a civilian-module video/screenshot shot list +
+> military reshoot list at `OneDrive/…/glidepath-promo-assets/
+> SHOT_LIST_CIVILIAN_SITE_2026-07-22.md`. It flags that ~8 civilian modules
+> (SMS, AEP, training, personnel, FICON, FLIP, feedback, cert-inspection) need
+> demo data staged on KDRA before capture.
+>
+> Open next: **civilian imagery is the gating marketing task** — stage KDRA
+> demo data for the ~8 empty civilian modules, then capture the shot list (24
+> stills + 3 cascade clips), which fills the now-visible blank civilian reel on
+> the gated homepage. Standing carryover unchanged: re-promote airfield-app to
+> pick up session-15's `1c9be9ff` lighting-tab labels · glidepath-site
+> `modifications-exemptions` page registration · Part 139 cert-audit resume
+> (Task 2.5c) · optional FAA-engine phase-2.
+
 > **2026-07-22 — PPR polish + FAA lighting-outage engine + KDRA civilian
 > demo seeding & activation (session 15).** Interactive, owner-driven, home
 > machine. **5 commits** (`858a8e77`..`1c9be9ff`), **all PUSHED**, tree clean
