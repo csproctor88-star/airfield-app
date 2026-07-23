@@ -527,6 +527,30 @@ export async function createPprEntry(input: {
     { details: `PPR ${entry.ppr_number} ${stateLabel} FOR ${input.arrival_date}` },
     input.base_id,
   )
+
+  // Pre-coordinated create lands directly at status='approved' with no
+  // agency coordination. Fire the approval route (best-effort) so the
+  // base's info-only recipient groups are notified — matching the triage
+  // pre-coordinated and Decide→Approve paths, which already do. Without
+  // this, an approve-now internal PPR silently skipped info-only
+  // distribution. Internal creates carry no requester email, so the
+  // route just skips the requester send. Failures don't block create.
+  if (skipCoordination) {
+    try {
+      const res = await fetch('/api/send-ppr-approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entryId: entry.id }),
+      })
+      if (!res.ok) {
+        const body = await res.text()
+        console.error('[createPprEntry] approval email API non-2xx', res.status, body)
+      }
+    } catch (e) {
+      console.error('[createPprEntry] approval email fetch threw:', e)
+    }
+  }
+
   return entry
 }
 
@@ -1113,21 +1137,25 @@ export async function approvePprEntry(input: {
     input.baseId,
   )
 
-  // Best-effort approval email; failures don't block the status flip.
-  if (entry.requester_email) {
-    try {
-      const res = await fetch('/api/send-ppr-approval', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entryId: entry.id }),
-      })
-      if (!res.ok) {
-        const body = await res.text()
-        console.error('[approvePprEntry] approval email API non-2xx', res.status, body)
-      }
-    } catch (e) {
-      console.error('[approvePprEntry] approval email fetch threw:', e)
+  // Best-effort approval notifications. The route emails the requester
+  // (when the PPR has one), the coordinating agencies, and the base's
+  // info-only recipient groups. Call it for EVERY approval — internal or
+  // public — so info-only distribution (and agency notification) fires
+  // regardless of whether a requester email exists. Internal PPRs simply
+  // skip the requester send inside the route. Failures don't block the
+  // status flip.
+  try {
+    const res = await fetch('/api/send-ppr-approval', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ entryId: entry.id }),
+    })
+    if (!res.ok) {
+      const body = await res.text()
+      console.error('[approvePprEntry] approval email API non-2xx', res.status, body)
     }
+  } catch (e) {
+    console.error('[approvePprEntry] approval email fetch threw:', e)
   }
 
   return { ok: true, entry }
