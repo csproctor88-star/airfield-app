@@ -23,10 +23,13 @@ export type AirportType = 'usaf' | 'faa_part139'
 export type SurfaceSet = 'ufc_3_260_01' | 'faa_part77' | 'icao_annex14'
 
 type BaseLike =
-  | { airport_type?: AirportType | null; obstruction_surface_set?: SurfaceSet | null }
+  | { airport_type?: AirportType | null; obstruction_surface_set?: SurfaceSet | null; lighting_standard?: LightingStandard | null }
   | AirportType
   | null
   | undefined
+
+/** Lighting-compliance standard for the Visual NAVAID outage engine. */
+export type LightingStandard = 'dafman' | 'faa' | 'icao'
 
 /** Resolve any input shape to an AirportType, defaulting to 'usaf'. */
 export function getAirportType(base: BaseLike): AirportType {
@@ -303,7 +306,7 @@ export function getSurfaceSet(base: BaseLike): SurfaceSet {
  * table's `standard` column.
  */
 export function getLightingCompliance(base: BaseLike): {
-  standard: 'dafman' | 'faa'
+  standard: LightingStandard
   /** Short standard label for headers/badges. */
   label: string
   /** Governing citation shown next to alerts. */
@@ -313,19 +316,40 @@ export function getLightingCompliance(base: BaseLike): {
   /** Noun for an alert row ("DAFMAN Alert" vs "Lighting NOTAM"). */
   alertLabel: string
 } {
-  return isCivilian(base)
-    ? {
+  // An explicit per-base bases.lighting_standard wins; otherwise derive the
+  // historical default from airport_type (usaf -> dafman, faa_part139 -> faa).
+  const explicit = base && typeof base === 'object' ? base.lighting_standard : null
+  const standard: LightingStandard =
+    explicit === 'dafman' || explicit === 'faa' || explicit === 'icao'
+      ? explicit
+      : isCivilian(base)
+        ? 'faa'
+        : 'dafman'
+
+  switch (standard) {
+    case 'icao':
+      return {
+        standard: 'icao',
+        label: 'ICAO Annex 14',
+        mandateRef: 'ICAO Annex 14 Vol I §10.5',
+        templateSource: 'ICAO Annex 14 Vol I §10.5 (Aerodrome Maintenance)',
+        alertLabel: 'Lighting Objective',
+      }
+    case 'faa':
+      return {
         standard: 'faa',
         label: 'FAA Part 139',
         mandateRef: '14 CFR §139.311',
         templateSource: 'AC 150/5340-26C · FAA JO 7930.2U',
         alertLabel: 'Lighting NOTAM',
       }
-    : {
+    default:
+      return {
         standard: 'dafman',
         label: 'DAFMAN 13-204v2',
         mandateRef: 'DAFMAN 13-204v2 Table A3.1',
         templateSource: 'DAFMAN 13-204v2 Table A3.1',
         alertLabel: 'DAFMAN Alert',
       }
+  }
 }

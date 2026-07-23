@@ -81,6 +81,7 @@ export async function createLightingSystem(input: {
   name: string
   runway_or_taxiway?: string
   is_precision?: boolean
+  is_cat_ii_iii?: boolean
   notes?: string
 }): Promise<LightingSystem | null> {
   const supabase = createClient()
@@ -94,6 +95,7 @@ export async function createLightingSystem(input: {
       name: input.name,
       runway_or_taxiway: input.runway_or_taxiway || null,
       is_precision: input.is_precision || false,
+      is_cat_ii_iii: input.is_cat_ii_iii || false,
       notes: input.notes || null,
     })
     .select('*')
@@ -107,7 +109,7 @@ export async function createLightingSystem(input: {
 
 export async function updateLightingSystem(
   id: string,
-  updates: Partial<Pick<LightingSystem, 'name' | 'runway_or_taxiway' | 'is_precision' | 'notes'>>
+  updates: Partial<Pick<LightingSystem, 'name' | 'runway_or_taxiway' | 'is_precision' | 'is_cat_ii_iii' | 'notes'>>
 ): Promise<boolean> {
   const supabase = createClient()
   if (!supabase) return false
@@ -221,7 +223,7 @@ export async function deleteSystemComponent(id: string): Promise<boolean> {
 
 // ── Fetch outage rule templates (for system setup cloning) ──
 
-export type OutageStandard = 'dafman' | 'faa'
+export type OutageStandard = 'dafman' | 'faa' | 'icao'
 
 export async function fetchOutageRuleTemplates(
   systemType?: string,

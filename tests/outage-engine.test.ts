@@ -4,6 +4,9 @@ import {
   calculateSystemHealth,
   detectAdjacentViolation,
   detectConsecutiveViolation,
+  resolveEdgeThreshold,
+  resolveComponentThreshold,
+  RUNWAY_EDGE_CAT_II_III_OUTAGE_PCT,
 } from '@/lib/outage-rules'
 import type { InfrastructureFeature, LightingSystem, LightingSystemComponent } from '@/lib/supabase/types'
 
@@ -209,5 +212,114 @@ describe('FAA-configured components (14 CFR §139.311 / AC 150/5340-26C)', () =>
     const reil = comp({ id: 'c1', component_type: 'overall', label: 'REIL', is_zero_tolerance: true, requires_notam: true })
     expect(calculateComponentOutage(reil, line(4, [0])).isExceeded).toBe(true)
     expect(calculateComponentOutage(reil, line(4, [])).isExceeded).toBe(false)
+  })
+})
+
+// ── CAT II/III runway edge lights (AC 150/5340-26C Table A-8) ──
+// CAT I runways tolerate 15% out (85% on); CAT II/III require 95% on (5% out).
+// The engine keys this off lighting_systems.is_cat_ii_iii, tightening the
+// runway_edge 'overall' component at calc time via resolveEdgeThreshold.
+describe('resolveEdgeThreshold — CAT II/III edge-light tightening', () => {
+  const edge15 = () => comp({ id: 'c1', component_type: 'overall', allowable_outage_pct: 15, allowable_outage_text: '15% out (85% must be on)' })
+
+  it('tightens the runway_edge overall component from 15% to 5% when CAT II/III', () => {
+    const r = resolveEdgeThreshold({ system_type: 'runway_edge', is_cat_ii_iii: true } as never, edge15())
+    expect(r.allowable_outage_pct).toBe(RUNWAY_EDGE_CAT_II_III_OUTAGE_PCT)
+    expect(r.allowable_outage_pct).toBe(5)
+    expect(r.allowable_outage_text).toContain('95%')
+  })
+
+  it('leaves the component unchanged when the system is not CAT II/III', () => {
+    const r = resolveEdgeThreshold({ system_type: 'runway_edge', is_cat_ii_iii: false } as never, edge15())
+    expect(r.allowable_outage_pct).toBe(15)
+  })
+
+  it('leaves non-runway_edge systems unchanged even when flagged CAT II/III', () => {
+    const twy = comp({ id: 'c1', component_type: 'overall', allowable_outage_pct: 15 })
+    const r = resolveEdgeThreshold({ system_type: 'taxiway_edge', is_cat_ii_iii: true } as never, twy)
+    expect(r.allowable_outage_pct).toBe(15)
+  })
+
+  it('is idempotent — a component already at 5% is not re-touched', () => {
+    const edge5 = comp({ id: 'c1', component_type: 'overall', allowable_outage_pct: 5 })
+    const r = resolveEdgeThreshold({ system_type: 'runway_edge', is_cat_ii_iii: true } as never, edge5)
+    expect(r.allowable_outage_pct).toBe(5)
+  })
+})
+
+describe('calculateSystemHealth — CAT II/III edge lights end-to-end', () => {
+  const edgeSystem = (catIIIII: boolean) => ({
+    id: 's1', name: 'RWY 09 Edge', system_type: 'runway_edge',
+    runway_or_taxiway: '09/27', is_precision: true, is_cat_ii_iii: catIIIII,
+  } as unknown as LightingSystem)
+  const overallEdge = () => comp({ id: 'c1', component_type: 'overall', allowable_outage_pct: 15 })
+
+  it('flags a CAT II/III runway U/S at 8% out (over the 5% tolerance)', () => {
+    const health = calculateSystemHealth(edgeSystem(true), [overallEdge()], line(25, [0, 1]), 'faa') // 8% out
+    expect(health.components[0].allowablePct).toBe(5)
+    expect(health.status).toBe('inoperative')
+  })
+
+  it('the SAME 8% out is within limits on a CAT I runway (15% tolerance)', () => {
+    const health = calculateSystemHealth(edgeSystem(false), [overallEdge()], line(25, [0, 1]), 'faa') // 8% out
+    expect(health.components[0].allowablePct).toBe(15)
+    expect(health.status).toBe('degraded')
+  })
+
+  it('a CAT II/III runway stays within limits at 4% out (under the 5% tolerance)', () => {
+    const health = calculateSystemHealth(edgeSystem(true), [overallEdge()], line(25, [0]), 'faa') // 4% out
+    expect(health.components[0].allowablePct).toBe(5)
+    expect(health.exceededComponents).toHaveLength(0)
+  })
+})
+
+// ── ICAO Annex 14 §10.5.7 CAT II/III resolution ──
+// ICAO baselines are the CAT I / general objective; §10.5.7 tightens edge &
+// threshold to 95% (5% out) and LOOSENS runway end lights to 75% (25% out) for
+// a CAT II/III runway. Only under the ICAO standard — the values differ from FAA.
+describe('resolveComponentThreshold — ICAO §10.5.7 vs FAA/DAFMAN', () => {
+  const sys = (type: string, cat: boolean) => ({ system_type: type, is_cat_ii_iii: cat }) as never
+  const overall = (pct: number | null) => comp({ id: 'c1', component_type: 'overall', allowable_outage_pct: pct })
+
+  it('ICAO CAT II/III tightens runway edge 15% -> 5%', () => {
+    expect(resolveComponentThreshold('icao', sys('runway_edge', true), overall(15)).allowable_outage_pct).toBe(5)
+  })
+  it('ICAO CAT II/III tightens threshold 15% -> 5% (95% serviceable)', () => {
+    expect(resolveComponentThreshold('icao', sys('threshold', true), overall(15)).allowable_outage_pct).toBe(5)
+  })
+  it('ICAO CAT II/III LOOSENS runway end lights 15% -> 25% (75% serviceable)', () => {
+    expect(resolveComponentThreshold('icao', sys('end_lights', true), overall(15)).allowable_outage_pct).toBe(25)
+  })
+  it('does NOT apply ICAO threshold/end adjustments under the FAA standard', () => {
+    expect(resolveComponentThreshold('faa', sys('threshold', true), overall(15)).allowable_outage_pct).toBe(15)
+    expect(resolveComponentThreshold('faa', sys('end_lights', true), overall(15)).allowable_outage_pct).toBe(15)
+  })
+  it('leaves CAT I (non-flagged) ICAO components unchanged', () => {
+    expect(resolveComponentThreshold('icao', sys('threshold', false), overall(15)).allowable_outage_pct).toBe(15)
+  })
+  it('leaves DAFMAN components untouched entirely', () => {
+    expect(resolveComponentThreshold('dafman', sys('runway_edge', true), overall(15)).allowable_outage_pct).toBe(15)
+  })
+})
+
+describe('calculateSystemHealth — ICAO CAT II/III end-to-end', () => {
+  const thlSys = (cat: boolean) => ({ id: 's1', name: 'RWY 27 THL', system_type: 'threshold', runway_or_taxiway: '27', is_precision: true, is_cat_ii_iii: cat }) as unknown as LightingSystem
+  const endSys = (cat: boolean) => ({ id: 's2', name: 'RWY 27 END', system_type: 'end_lights', runway_or_taxiway: '27', is_precision: true, is_cat_ii_iii: cat }) as unknown as LightingSystem
+  const overall = () => comp({ id: 'c1', component_type: 'overall', allowable_outage_pct: 15 })
+
+  it('flags a CAT II/III threshold U/S at 8% out (over the 5% objective)', () => {
+    const h = calculateSystemHealth(thlSys(true), [overall()], line(25, [0, 1]), 'icao') // 8%
+    expect(h.components[0].allowablePct).toBe(5)
+    expect(h.status).toBe('inoperative')
+  })
+  it('a CAT II/III runway end stays within limits at 20% out (75% objective)', () => {
+    const h = calculateSystemHealth(endSys(true), [overall()], line(25, [0, 1, 2, 3, 4]), 'icao') // 20%
+    expect(h.components[0].allowablePct).toBe(25)
+    expect(h.exceededComponents).toHaveLength(0)
+  })
+  it('the ICAO tightening does not apply under the FAA standard', () => {
+    const h = calculateSystemHealth(thlSys(true), [overall()], line(25, [0, 1]), 'faa') // 8%
+    expect(h.components[0].allowablePct).toBe(15)
+    expect(h.status).toBe('degraded')
   })
 })

@@ -38,6 +38,23 @@ describe('getLightingCompliance', () => {
   it('defaults an unknown base to DAFMAN (usaf)', () => {
     expect(getLightingCompliance(null).standard).toBe('dafman')
   })
+
+  it('an explicit lighting_standard overrides the airport_type default', () => {
+    const c = getLightingCompliance({ airport_type: 'usaf', lighting_standard: 'icao' })
+    expect(c.standard).toBe('icao')
+    expect(c.label).toBe('ICAO Annex 14')
+    expect(c.mandateRef).toContain('10.5')
+  })
+
+  it('an explicit override can force FAA on a USAF base and DAFMAN on a civilian base', () => {
+    expect(getLightingCompliance({ airport_type: 'usaf', lighting_standard: 'faa' }).standard).toBe('faa')
+    expect(getLightingCompliance({ airport_type: 'faa_part139', lighting_standard: 'dafman' }).standard).toBe('dafman')
+  })
+
+  it('a null lighting_standard falls back to the airport_type default', () => {
+    expect(getLightingCompliance({ airport_type: 'faa_part139', lighting_standard: null }).standard).toBe('faa')
+    expect(getLightingCompliance({ airport_type: 'usaf', lighting_standard: null }).standard).toBe('dafman')
+  })
 })
 
 describe('getAirportType', () => {

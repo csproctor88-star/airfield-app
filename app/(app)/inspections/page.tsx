@@ -1782,7 +1782,7 @@ export default function InspectionsPage() {
             if (!compMap.has(c.system_id)) compMap.set(c.system_id, [])
             compMap.get(c.system_id)!.push(c)
           }
-          const healths = calculateAllSystemHealth(systems, compMap, features)
+          const healths = calculateAllSystemHealth(systems, compMap, features, getLightingCompliance(currentInstallation).standard)
           for (const h of healths) {
             const tier = getAlertTier(h)
             if (tier === 'red' || tier === 'black') {

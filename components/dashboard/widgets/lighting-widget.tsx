@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useInstallation } from '@/lib/installation-context'
+import { getLightingCompliance } from '@/lib/airport-mode'
 import {
   fetchLightingSystems,
   fetchAllComponentsForBase,
@@ -75,7 +76,8 @@ function actionTags(c: OutageStatus): string[] {
 }
 
 export function LightingWidget(props: WidgetProps) {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
+  const lightingStandard = getLightingCompliance(currentInstallation).standard
   const { addLightingAreas } = useDashboardActions()
 
   const scope = (props.config.scope as LightingScope) ?? 'area'
@@ -128,10 +130,10 @@ export function LightingWidget(props: WidgetProps) {
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map(s => {
         const comps = components.filter(c => c.system_id === s.id)
-        const health = calculateSystemHealth(s, comps, features)
+        const health = calculateSystemHealth(s, comps, features, lightingStandard)
         return { system: s, health, tier: getAlertTier(health) }
       })
-  }, [selectedSystems, components, features])
+  }, [selectedSystems, components, features, lightingStandard])
 
   // Inoperative features across the selected systems' components.
   const inopFeatures = useMemo(() => {

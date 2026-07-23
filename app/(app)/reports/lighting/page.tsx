@@ -7,6 +7,7 @@ import { fetchLightingReportData, type LightingReportData } from '@/lib/reports/
 import { generateLightingReportPdf } from '@/lib/reports/lighting-report-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
+import { getLightingCompliance } from '@/lib/airport-mode'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
@@ -19,6 +20,7 @@ const TIER_ORDER: Record<string, number> = { black: 0, red: 1, yellow: 2, green:
 export default function LightingReportPage() {
   const router = useRouter()
   const { installationId, currentInstallation, defaultPdfEmail } = useInstallation()
+  const lightingStandard = getLightingCompliance(currentInstallation).standard
 
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<LightingReportData | null>(null)
@@ -38,7 +40,7 @@ export default function LightingReportPage() {
     let cancelled = false
     async function generate() {
       const [reportData, inspector] = await Promise.all([
-        fetchLightingReportData(installationId),
+        fetchLightingReportData(installationId, lightingStandard),
         getInspectorName(),
       ])
       if (cancelled) return
@@ -48,7 +50,7 @@ export default function LightingReportPage() {
     }
     generate()
     return () => { cancelled = true }
-  }, [installationId])
+  }, [installationId, lightingStandard])
 
   const toggleExpand = (systemId: string) => {
     setExpandedSystems(prev => {

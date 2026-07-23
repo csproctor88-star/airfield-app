@@ -3397,6 +3397,8 @@ export type Database = {
           installation_code: string | null
           is_active: boolean
           kiosk_enabled: boolean
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
+          lighting_standard: 'dafman' | 'faa' | 'icao' | null
           location: string | null
           majcom: string | null
           map_provider: string
@@ -3442,6 +3444,8 @@ export type Database = {
           installation_code?: string | null
           is_active?: boolean
           kiosk_enabled?: boolean
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
+          lighting_standard?: 'dafman' | 'faa' | 'icao' | null
           location?: string | null
           majcom?: string | null
           map_provider?: string
@@ -3487,6 +3491,8 @@ export type Database = {
           installation_code?: string | null
           is_active?: boolean
           kiosk_enabled?: boolean
+          // MANUAL after regen: DB column is text; narrowed to match lib/airport-mode.ts
+          lighting_standard?: 'dafman' | 'faa' | 'icao' | null
           location?: string | null
           majcom?: string | null
           map_provider?: string
@@ -5620,6 +5626,7 @@ export type Database = {
           base_id: string
           created_at: string
           id: string
+          is_cat_ii_iii: boolean
           is_precision: boolean | null
           name: string
           notes: string | null
@@ -5632,6 +5639,7 @@ export type Database = {
           base_id: string
           created_at?: string
           id?: string
+          is_cat_ii_iii?: boolean
           is_precision?: boolean | null
           name: string
           notes?: string | null
@@ -5644,6 +5652,7 @@ export type Database = {
           base_id?: string
           created_at?: string
           id?: string
+          is_cat_ii_iii?: boolean
           is_precision?: boolean | null
           name?: string
           notes?: string | null

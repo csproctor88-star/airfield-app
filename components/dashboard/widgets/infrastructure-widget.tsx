@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useInstallation } from '@/lib/installation-context'
+import { getLightingCompliance } from '@/lib/airport-mode'
 import { fetchLightingSystems, fetchLightingSystemWithComponents } from '@/lib/supabase/lighting-systems'
 import { fetchInfrastructureFeatures, formatFeatureType } from '@/lib/supabase/infrastructure-features'
 import { calculateSystemHealth, SYSTEM_TYPE_LABELS } from '@/lib/outage-rules'
@@ -10,7 +11,7 @@ import type { LightingSystem, LightingSystemComponent, InfrastructureFeature } f
 import type { WidgetProps } from '@/lib/dashboard/widget-registry'
 
 export function InfrastructureWidget({ config, onConfigChange }: WidgetProps) {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
 
   const [systems, setSystems] = useState<LightingSystem[]>([])
   const [components, setComponents] = useState<LightingSystemComponent[]>([])
@@ -73,7 +74,7 @@ export function InfrastructureWidget({ config, onConfigChange }: WidgetProps) {
   // Compute derived data
   const selectedSystem = systems.find(s => s.id === resolvedSystemId) ?? null
   const systemHealth = selectedSystem
-    ? calculateSystemHealth(selectedSystem, components, allFeatures)
+    ? calculateSystemHealth(selectedSystem, components, allFeatures, getLightingCompliance(currentInstallation).standard)
     : null
 
   // Filter features belonging to this system's component ids

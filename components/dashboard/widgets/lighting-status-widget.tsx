@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useInstallation } from '@/lib/installation-context'
+import { getLightingCompliance } from '@/lib/airport-mode'
 import SystemHealthPanel from '@/components/infrastructure/system-health-panel'
 import { fetchLightingSystems, fetchAllComponentsForBase } from '@/lib/supabase/lighting-systems'
 import { fetchInfrastructureFeatures } from '@/lib/supabase/infrastructure-features'
@@ -15,7 +16,8 @@ import type { WidgetProps } from '@/lib/dashboard/widget-registry'
 // for the top of a lighting dashboard. Reuses SystemHealthPanel so it always
 // matches the infrastructure page.
 export function LightingStatusWidget(_props: WidgetProps) {
-  const { installationId } = useInstallation()
+  const { installationId, currentInstallation } = useInstallation()
+  const lightingStandard = getLightingCompliance(currentInstallation).standard
   const [healths, setHealths] = useState<SystemHealth[]>([])
   const [events, setEvents] = useState<EnrichedOutageEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,12 +40,12 @@ export function LightingStatusWidget(_props: WidgetProps) {
           arr.push(c)
           bySystem.set(c.system_id, arr)
         }
-        setHealths(calculateAllSystemHealth(systems, bySystem, features))
+        setHealths(calculateAllSystemHealth(systems, bySystem, features, lightingStandard))
         setEvents(outageEvents)
       })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [installationId])
+  }, [installationId, lightingStandard])
 
   return (
     <div style={{ height: '100%', overflow: 'auto' }}>

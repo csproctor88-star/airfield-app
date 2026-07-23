@@ -12,7 +12,10 @@ export type LightingReportData = {
   recentOutageEvents: EnrichedOutageEvent[]
 }
 
-export async function fetchLightingReportData(installationId: string | null): Promise<LightingReportData> {
+export async function fetchLightingReportData(
+  installationId: string | null,
+  standard: 'dafman' | 'faa' | 'icao' = 'dafman',
+): Promise<LightingReportData> {
   if (!installationId) {
     return {
       totalFeatures: 0,
@@ -39,7 +42,7 @@ export async function fetchLightingReportData(installationId: string | null): Pr
     componentsBySystem.set(comp.system_id, list)
   }
 
-  const systemHealths = calculateAllSystemHealth(systems, componentsBySystem, features)
+  const systemHealths = calculateAllSystemHealth(systems, componentsBySystem, features, standard)
 
   // Build featuresByType
   const featuresByType: Record<string, { total: number; inop: number }> = {}

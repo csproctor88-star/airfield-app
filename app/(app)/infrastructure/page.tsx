@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
+import { getLightingCompliance } from '@/lib/airport-mode'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { formatZuluDateTime, escapeHtml } from '@/lib/utils'
 import {
@@ -562,7 +563,7 @@ export default function InfrastructureMapPage() {
     () => Object.fromEntries(LAYERS.map(l => [l.key, true]))
   )
   const [visibleSourceLayers, setVisibleSourceLayers] = useState<Record<string, boolean>>({})
-  const { runways, installationId, facilities, mapProvider, ceShops, typeShopMap } = useInstallation()
+  const { runways, installationId, facilities, mapProvider, ceShops, typeShopMap, currentInstallation } = useInstallation()
   const { has } = usePermissions()
 
   // Fullscreen
@@ -830,7 +831,7 @@ export default function InfrastructureMapPage() {
         arr.push(c)
         compsBySystem.set(c.system_id, arr)
       }
-      const healths = calculateAllSystemHealth(systems, compsBySystem, dbFeatures)
+      const healths = calculateAllSystemHealth(systems, compsBySystem, dbFeatures, getLightingCompliance(currentInstallation).standard)
       setSystemHealths(healths)
       setHealthLoading(false)
 

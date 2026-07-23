@@ -102,7 +102,7 @@ import {
   fetchOutageRuleTemplates,
   cloneComponentsFromTemplates,
 } from '@/lib/supabase/lighting-systems'
-import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES } from '@/lib/outage-rules'
+import { SYSTEM_TYPE_LABELS, SYSTEM_TYPES, resolveComponentThreshold } from '@/lib/outage-rules'
 import type { LightingSystem, LightingSystemComponent, OutageRuleTemplate, InfrastructureFeature } from '@/lib/supabase/types'
 import { WILDLIFE_SPECIES, type WildlifeSpecies, resolveWildlifeImage } from '@/lib/wildlife-species-data'
 import { fetchBaseSpecies, addBaseSpecies, addBaseSpeciesBulk, removeBaseSpeciesByName, toggleFavoriteSpecies, type BaseWildlifeSpeciesRow } from '@/lib/supabase/base-wildlife-species'
@@ -4454,12 +4454,49 @@ function SeedPickerDialog({
 // (DAFMAN A3.1 for USAF, FAA Part 139 for civilian; see getLightingCompliance)
 // ═══════════════════════════════════════════════════════════════
 
+const LIGHTING_STANDARD_LABELS: Record<'dafman' | 'faa' | 'icao', string> = {
+  dafman: 'DAFMAN 13-204v2',
+  faa: 'FAA Part 139',
+  icao: 'ICAO Annex 14',
+}
+
 function LightingSystemsTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
-  const { currentInstallation } = useInstallation()
-  // USAF clones DAFMAN A3.1 templates; civilian (faa_part139) clones the
-  // FAA Part 139 templates (14 CFR 139.311 / AC 150/5340-26C).
+  const { currentInstallation, refreshCurrentInstallation } = useInstallation()
+  // The lighting-compliance standard: an explicit bases.lighting_standard wins,
+  // else it derives from airport_type (usaf -> DAFMAN A3.1, faa_part139 -> FAA
+  // Part 139). ICAO Annex 14 §10.5 is a third, explicit-only option.
   const compliance = getLightingCompliance(currentInstallation)
   const outageStandard = compliance.standard
+  const [savingStandard, setSavingStandard] = useState(false)
+
+  // CAT II/III tightens runway edge lights under FAA (AC 150/5340-26C) and
+  // edge + threshold + end lights under ICAO (Annex 14 §10.5.7).
+  const catToggleApplies = (systemType: string) =>
+    outageStandard === 'faa'
+      ? systemType === 'runway_edge'
+      : outageStandard === 'icao'
+        ? ['runway_edge', 'threshold', 'end_lights'].includes(systemType)
+        : false
+
+  const handleSetLightingStandard = async (value: 'dafman' | 'faa' | 'icao') => {
+    if (!installationId || value === outageStandard) return
+    setSavingStandard(true)
+    const supabase = createClient()
+    const { error } = supabase
+      ? await supabase
+          .from('bases')
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .update({ lighting_standard: value, updated_at: new Date().toISOString() } as any)
+          .eq('id', installationId)
+      : { error: new Error('offline') }
+    if (!error) {
+      await refreshCurrentInstallation()
+      toast.success(`Lighting standard set to ${LIGHTING_STANDARD_LABELS[value]}. Re-clone components to apply its thresholds.`)
+    } else {
+      toast.error('Failed to update lighting standard')
+    }
+    setSavingStandard(false)
+  }
   const [systems, setSystems] = useState<LightingSystem[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
@@ -4473,6 +4510,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
   const [newName, setNewName] = useState('')
   const [newRunwayOrTaxiway, setNewRunwayOrTaxiway] = useState('')
   const [newIsPrecision, setNewIsPrecision] = useState(false)
+  const [newIsCatIIIII, setNewIsCatIIIII] = useState(false)
 
   // Clone from templates
   const [cloning, setCloning] = useState<string | null>(null)
@@ -4510,6 +4548,18 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
       toast.error('Failed to update')
     }
     setEditingRunway(null)
+  }
+
+  // Toggle CAT II/III on a runway-edge system (civilian only). Tightens the
+  // edge-light serviceability threshold 85% -> 95% per AC 150/5340-26C Table A-8.
+  const handleToggleCatIIIII = async (sysId: string, checked: boolean) => {
+    const ok = await updateLightingSystem(sysId, { is_cat_ii_iii: checked })
+    if (ok) {
+      setSystems(prev => prev.map(s => s.id === sysId ? { ...s, is_cat_ii_iii: checked } : s))
+      toast.success(checked ? 'Marked CAT II/III (edge lights now 95%)' : 'Cleared CAT II/III (edge lights back to 85%)')
+    } else {
+      toast.error('Failed to update CAT II/III')
+    }
   }
 
   const [assigning, setAssigning] = useState(false)
@@ -4612,12 +4662,13 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
     const result = await createLightingSystem({
       base_id: installationId, system_type: newSystemType, name: newName.trim(),
       runway_or_taxiway: newRunwayOrTaxiway.trim() || undefined, is_precision: newIsPrecision,
+      is_cat_ii_iii: catToggleApplies(newSystemType) ? newIsCatIIIII : false,
     })
     if (result) {
       toast.success(`Created "${result.name}"`)
       markSaved?.('lighting')
       setSystems((prev) => [...prev, result])
-      setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false); setAdding(false)
+      setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false); setNewIsCatIIIII(false); setAdding(false)
     } else { toast.error('Failed to create system') }
     setSaving(false)
   }
@@ -4677,6 +4728,24 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
         Components are cloned from {compliance.templateSource} templates with your installation&apos;s actual light counts.
       </p>
 
+      {/* Lighting-compliance standard selector — persists bases.lighting_standard */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '10px 12px', marginBottom: 12, borderRadius: 'var(--radius-base)', border: '1px solid var(--color-border)', background: 'var(--color-bg-inset)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <label style={{ fontSize: 'var(--fs-sm)', fontWeight: 600, color: 'var(--color-text-1)' }}>Lighting compliance standard</label>
+          <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)' }}>Governs outage thresholds &amp; alerts. Re-clone components after changing.</span>
+        </div>
+        <select
+          value={outageStandard}
+          disabled={savingStandard}
+          onChange={(e) => handleSetLightingStandard(e.target.value as 'dafman' | 'faa' | 'icao')}
+          style={{ marginLeft: 'auto', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'var(--color-surface-1)', color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit', opacity: savingStandard ? 0.5 : 1 }}
+        >
+          <option value="dafman">{LIGHTING_STANDARD_LABELS.dafman} (DAFMAN A3.1)</option>
+          <option value="faa">{LIGHTING_STANDARD_LABELS.faa} (14 CFR 139.311)</option>
+          <option value="icao">{LIGHTING_STANDARD_LABELS.icao} (§10.5)</option>
+        </select>
+      </div>
+
       {systems.length === 0 && (
         <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-md)', marginBottom: 8 }}>No lighting systems configured.</p>
       )}
@@ -4733,6 +4802,9 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
               {sys.is_precision && (
                 <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-warning)', background: 'rgba(245,158,11,0.12)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>PRECISION</span>
               )}
+              {sys.is_cat_ii_iii && (
+                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-accent)', background: 'color-mix(in srgb, var(--color-accent) 14%, transparent)', padding: '2px 6px', borderRadius: 'var(--radius-xs)' }}>CAT II/III</span>
+              )}
               <button onClick={(e) => { e.stopPropagation(); handleDeleteSystem(sys) }} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-xl)', padding: '0 4px' }}>&times;</button>
             </div>
 
@@ -4764,6 +4836,20 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
                     </span>
                   )}
                 </div>
+                {/* CAT II/III flag — FAA edge lights, or ICAO edge/threshold/end lights */}
+                {catToggleApplies(sys.system_type) && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
+                    <span style={{ color: 'var(--color-text-3)', minWidth: 100 }}>Approach category:</span>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', color: 'var(--color-text-2)' }}>
+                      <input
+                        type="checkbox"
+                        checked={!!sys.is_cat_ii_iii}
+                        onChange={(e) => handleToggleCatIIIII(sys.id, e.target.checked)}
+                      />
+                      CAT II/III runway &mdash; tightens serviceability ({outageStandard === 'icao' ? 'Annex 14 §10.5.7' : 'AC 150/5340-26C'})
+                    </label>
+                  </div>
+                )}
                 {isLoadingC ? (
                   <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>Loading components...</p>
                 ) : (
@@ -4785,7 +4871,10 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
                             </button>
                           )}
                           <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', minWidth: 60 }}>
-                            {comp.is_zero_tolerance ? 'None' : comp.allowable_outage_pct != null ? `${comp.allowable_outage_pct}%` : comp.allowable_outage_count != null ? `${comp.allowable_outage_count} max` : '—'}
+                            {(() => {
+                              const rc = resolveComponentThreshold(outageStandard, sys, comp)
+                              return rc.is_zero_tolerance ? 'None' : rc.allowable_outage_pct != null ? `${rc.allowable_outage_pct}%` : rc.allowable_outage_count != null ? `${rc.allowable_outage_count} max` : '—'
+                            })()}
                           </span>
                           <button onClick={() => handleDeleteComp(comp.id, sys.id)} style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontSize: 'var(--fs-lg)', padding: '0 2px' }}>&times;</button>
                         </div>
@@ -4858,12 +4947,18 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
               <input type="checkbox" id="is-precision-new" checked={newIsPrecision} onChange={(e) => setNewIsPrecision(e.target.checked)} />
               <label htmlFor="is-precision-new" style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>Precision approach (affects threshold light allowable: 10% vs 25%)</label>
             </div>
+            {catToggleApplies(newSystemType) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input type="checkbox" id="is-cat23-new" checked={newIsCatIIIII} onChange={(e) => setNewIsCatIIIII(e.target.checked)} />
+                <label htmlFor="is-cat23-new" style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-2)' }}>CAT II/III runway — tightens serviceability ({outageStandard === 'icao' ? 'Annex 14 §10.5.7' : 'AC 150/5340-26C'})</label>
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button onClick={handleAddSystem} disabled={saving || !newSystemType || !newName.trim()}
                 style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: 'none', background: 'linear-gradient(135deg, var(--color-accent-dark), var(--color-accent-secondary))', color: '#fff', fontWeight: 700, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit', opacity: saving || !newSystemType || !newName.trim() ? 0.5 : 1 }}>
                 {saving ? 'Creating...' : 'Create System'}
               </button>
-              <button onClick={() => { setAdding(false); setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false) }}
+              <button onClick={() => { setAdding(false); setNewSystemType(''); setNewName(''); setNewRunwayOrTaxiway(''); setNewIsPrecision(false); setNewIsCatIIIII(false) }}
                 style={{ padding: '8px 16px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', background: 'transparent', color: 'var(--color-text-2)', fontWeight: 600, fontSize: 'var(--fs-md)', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Cancel
               </button>

@@ -275,6 +275,95 @@ function analyzeBarOutages(features: InfrastructureFeature[]): {
   }
 }
 
+// ── CAT II/III runway edge-light threshold ──
+//
+// AC 150/5340-26C Appendix A, Table A-8: runway edge lights (REDL) are
+// serviceable at 85% on (15% allowable out) for CAT I runways, but at 95% on
+// (5% allowable out) for CAT II/III runways. The runway_edge 'overall'
+// component is templated at the CAT I value (15%); when the lighting system is
+// flagged CAT II/III we tighten that single component to 5% at calc time. The
+// flag is only ever set on civilian (FAA) runway_edge systems (Base Config
+// UI-gated), so this never applies the FAA-sourced tolerance to a DAFMAN base.
+
+export const RUNWAY_EDGE_CAT_I_OUTAGE_PCT = 15    // 85% serviceable
+export const RUNWAY_EDGE_CAT_II_III_OUTAGE_PCT = 5 // 95% serviceable
+export const RUNWAY_EDGE_CAT_II_III_TEXT = '5% out (95% serviceable — CAT II/III)'
+
+/**
+ * Return the component with its edge-light threshold resolved for the system's
+ * approach category. Tightens the runway_edge 'overall' component from the CAT I
+ * 15% to the CAT II/III 5% when the system is flagged CAT II/III; every other
+ * component, and every non-CAT-II/III system, is returned unchanged. Guarded on
+ * the current pct being the CAT I value so a hand-customized threshold is never
+ * clobbered and the switch is idempotent.
+ */
+export function resolveEdgeThreshold(
+  system: Pick<LightingSystem, 'system_type' | 'is_cat_ii_iii'>,
+  component: LightingSystemComponent,
+): LightingSystemComponent {
+  if (
+    system.is_cat_ii_iii &&
+    system.system_type === 'runway_edge' &&
+    component.component_type === 'overall' &&
+    component.allowable_outage_pct === RUNWAY_EDGE_CAT_I_OUTAGE_PCT
+  ) {
+    return {
+      ...component,
+      allowable_outage_pct: RUNWAY_EDGE_CAT_II_III_OUTAGE_PCT,
+      allowable_outage_text: RUNWAY_EDGE_CAT_II_III_TEXT,
+    }
+  }
+  return component
+}
+
+// ── ICAO Annex 14 §10.5.7 CAT II/III adjustments ──
+//
+// Annex 14 §10.5 baselines are the CAT I / general objective; for a CAT II/III
+// runway (lighting_systems.is_cat_ii_iii) §10.5.7 tightens runway threshold to
+// 95% serviceable (5% out) and LOOSENS runway end lights to 75% (25% out).
+// Runway edge (also 95%) is handled by resolveEdgeThreshold; centre line (95%)
+// and TDZ (90%) already carry their §10.5.7 value in the baseline template; the
+// approach system stays at the beyond-450 m 85% (inner-450 m 95% is a v1
+// caveat). ICAO-only — the values differ from FAA/DAFMAN, so this never fires
+// for those standards even if the flag were set.
+const ICAO_CAT_II_III_OUT_PCT: Record<string, number> = {
+  threshold: 5,   // 95% serviceable (§10.5.7 a3)
+  end_lights: 25, // 75% serviceable (§10.5.7 d) — looser than CAT I's 85%
+}
+
+export function resolveIcaoThreshold(
+  standard: 'dafman' | 'faa' | 'icao',
+  system: Pick<LightingSystem, 'system_type' | 'is_cat_ii_iii'>,
+  component: LightingSystemComponent,
+): LightingSystemComponent {
+  if (standard !== 'icao' || !system.is_cat_ii_iii || component.component_type !== 'overall') {
+    return component
+  }
+  const pct = ICAO_CAT_II_III_OUT_PCT[system.system_type]
+  if (pct === undefined || component.allowable_outage_pct === null) return component
+  return {
+    ...component,
+    allowable_outage_pct: pct,
+    allowable_outage_text: `${pct}% out — CAT II/III (Annex 14 §10.5.7)`,
+  }
+}
+
+/**
+ * Resolve a component's threshold for the base's lighting standard and the
+ * system's approach category — the single entry point used by the engine and
+ * the Base Config preview. Composes the FAA/ICAO edge tightening with the ICAO
+ * §10.5.7 multi-type adjustments.
+ */
+export function resolveComponentThreshold(
+  standard: 'dafman' | 'faa' | 'icao',
+  system: Pick<LightingSystem, 'system_type' | 'is_cat_ii_iii'>,
+  component: LightingSystemComponent,
+): LightingSystemComponent {
+  // DAFMAN A3.1 has no sourced CAT II/III edge tolerance — pure pass-through.
+  if (standard === 'dafman') return component
+  return resolveIcaoThreshold(standard, system, resolveEdgeThreshold(system, component))
+}
+
 // ── Component Outage Calculation ──
 
 export function calculateComponentOutage(
@@ -365,14 +454,21 @@ export function calculateSystemHealth(
   system: LightingSystem,
   components: LightingSystemComponent[],
   allFeatures: InfrastructureFeature[],
+  standard: 'dafman' | 'faa' | 'icao' = 'dafman',
 ): SystemHealth {
+  // Resolve standard/category-dependent thresholds up front so every consumer of
+  // calculateSystemHealth (page, widgets, reports, inspections) applies them
+  // uniformly: FAA/ICAO CAT II/III edge tightening and the ICAO §10.5.7
+  // multi-type adjustments. Non-CAT-II/III systems come back unchanged.
+  const resolvedComponents = components.map((c) => resolveComponentThreshold(standard, system, c))
+
   // Filter features belonging to this system's components
-  const componentIds = new Set(components.map((c) => c.id))
+  const componentIds = new Set(resolvedComponents.map((c) => c.id))
   const systemFeatures = allFeatures.filter(
     (f) => f.system_component_id && componentIds.has(f.system_component_id),
   )
 
-  const componentStatuses = components.map((c) => {
+  const componentStatuses = resolvedComponents.map((c) => {
     if (c.component_type === 'overall') {
       // "Overall" aggregates ALL features in the system, not just those directly assigned to it
       return calculateComponentOutage(c, allFeatures, systemFeatures)
@@ -425,10 +521,11 @@ export function calculateAllSystemHealth(
   systems: LightingSystem[],
   componentsBySystem: Map<string, LightingSystemComponent[]>,
   allFeatures: InfrastructureFeature[],
+  standard: 'dafman' | 'faa' | 'icao' = 'dafman',
 ): SystemHealth[] {
   return systems.map((system) => {
     const components = componentsBySystem.get(system.id) || []
-    return calculateSystemHealth(system, components, allFeatures)
+    return calculateSystemHealth(system, components, allFeatures, standard)
   })
 }
 
