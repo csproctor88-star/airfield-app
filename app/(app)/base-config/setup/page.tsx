@@ -4450,7 +4450,8 @@ function SeedPickerDialog({
 // QRC editor dialog (create + edit) lives in components/admin/qrc-editor-dialog.tsx.
 
 // ═══════════════════════════════════════════════════════════════
-// Lighting Systems Tab — define systems + clone from DAFMAN templates
+// Lighting Systems Tab — define systems + clone outage-rule templates
+// (DAFMAN A3.1 for USAF, FAA Part 139 for civilian; see getLightingCompliance)
 // ═══════════════════════════════════════════════════════════════
 
 function LightingSystemsTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
@@ -4672,8 +4673,8 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
         Lighting Systems
       </h3>
       <p style={{ fontSize: 'var(--fs-sm)', color: 'var(--color-text-3)', marginBottom: 12 }}>
-        Define lighting systems per DAFMAN 13-204v2. Each runway/taxiway is its own system instance.
-        Components are cloned from DAFMAN Table A3.1 templates with your installation&apos;s actual light counts.
+        Define lighting systems per {compliance.mandateRef}. Each runway/taxiway is its own system instance.
+        Components are cloned from {compliance.templateSource} templates with your installation&apos;s actual light counts.
       </p>
 
       {systems.length === 0 && (
@@ -4820,7 +4821,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
                     ) : (
                       <button onClick={() => handleStartClone(sys.id, sys.system_type)}
                         style={{ marginTop: 8, padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)', background: 'transparent', color: 'var(--color-accent)', fontSize: 'var(--fs-sm)', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        + Clone from DAFMAN Templates
+                        + Clone from {compliance.label} Templates
                       </button>
                     )}
                   </>
