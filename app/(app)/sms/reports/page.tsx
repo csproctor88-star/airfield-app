@@ -8,6 +8,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import {
   fetchSafetyReports, updateSafetyReportTriage, promoteSafetyReportToHazard,
+  TRIAGE_STATUS_LABELS, humanizeToken,
   type SmsSafetyReport, type SmsSafetyReportTriageStatus,
 } from '@/lib/supabase/sms'
 import { formatZuluDateTime } from '@/lib/utils'
@@ -159,7 +160,7 @@ function ReportDetailModal({ report, baseId, canTriage, onClose, onChanged }: {
     })
     setBusy(false)
     if (!r.ok) { toast.error(r.error || 'Update failed'); return }
-    toast.success(`Status → ${next.replace('_', ' ')}`)
+    toast.success(`Status → ${TRIAGE_STATUS_LABELS[next]}`)
     onChanged()
   }
 
@@ -199,7 +200,7 @@ function ReportDetailModal({ report, baseId, canTriage, onClose, onChanged }: {
             {report.occurred_at && <Field label="Occurred"><span className="text-foreground">{formatZuluDateTime(report.occurred_at)}</span></Field>}
             <Field label="Submitted"><span className="text-foreground">{formatZuluDateTime(report.submitted_at)}</span></Field>
             {report.location_text && <Field label="Location"><span className="text-foreground">{report.location_text}</span></Field>}
-            <Field label="Source"><span className="text-foreground">{report.source.replace('_', ' ')}</span></Field>
+            <Field label="Source"><span className="text-foreground">{humanizeToken(report.source)}</span></Field>
           </div>
 
           {!report.is_anonymous && (
@@ -285,7 +286,7 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
 function CategoryChip({ cat }: { cat: string }) {
   return (
     <span className="text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wider bg-inset text-secondary">
-      {cat.replace('_', ' ')}
+      {humanizeToken(cat)}
     </span>
   )
 }

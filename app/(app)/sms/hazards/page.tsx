@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { AlertTriangle, ArrowLeft, Plus, Search, Filter, Download } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
-import { fetchHazards, createHazard, type SmsHazard, type SmsHazardSourceType, type SmsHazardStatus, BAND_COLORS } from '@/lib/supabase/sms'
+import { fetchHazards, createHazard, humanizeToken, type SmsHazard, type SmsHazardSourceType, type SmsHazardStatus, BAND_COLORS } from '@/lib/supabase/sms'
 import { BandChip } from '@/components/sms/risk-matrix'
 import { formatZuluDate } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/loading-state'
@@ -270,7 +270,7 @@ export default function SmsHazardsPage() {
               <h2 className="text-lg font-semibold text-foreground">Add Hazard</h2>
               {prefillSource && (
                 <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-medium bg-sky-500/15 text-sky-700">
-                  Pre-filled from {prefillSource.source_type === 'whmp' ? 'WHMP' : prefillSource.source_type.replace('_', ' ')}
+                  Pre-filled from {prefillSource.source_type === 'whmp' ? 'WHMP' : humanizeToken(prefillSource.source_type)}
                 </span>
               )}
             </div>

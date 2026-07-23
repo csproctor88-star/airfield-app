@@ -16,6 +16,7 @@ import {
   fetchMitigations, createMitigation, updateMitigation,
   BAND_COLORS, classifyRiskBand,
   LIKELIHOOD_LABELS, SEVERITY_LABELS,
+  HAZARD_STATUS_LABELS, humanizeToken,
   type SmsHazard, type SmsRiskAssessment, type SmsMitigation,
   type SmsHazardStatus, type SmsMitigationStatus, type SmsMitigationControlType,
 } from '@/lib/supabase/sms'
@@ -62,7 +63,7 @@ export default function HazardDetailPage() {
     if (!hazard || !installationId) return
     const r = await updateHazard(hazard.id, installationId, { status: next })
     if (!r.ok) { toast.error(r.error || 'Update failed'); return }
-    toast.success(`Status → ${next.replace('_', ' ')}`)
+    toast.success(`Status → ${HAZARD_STATUS_LABELS[next]}`)
     reload()
   }
 
@@ -123,9 +124,9 @@ export default function HazardDetailPage() {
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-xs">
-          <Meta label="Source" value={hazard.source_type.replace('_', ' ')} />
+          <Meta label="Source" value={humanizeToken(hazard.source_type)} />
           <Meta label="Identified" value={formatZuluDate(hazard.identified_at.slice(0, 10))} />
-          <Meta label="Status" value={hazard.status.replace('_', ' ')} />
+          <Meta label="Status" value={HAZARD_STATUS_LABELS[hazard.status]} />
           <Meta label="Updated" value={formatZuluDate(hazard.updated_at.slice(0, 10))} />
         </div>
       </header>

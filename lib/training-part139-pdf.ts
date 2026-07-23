@@ -108,7 +108,7 @@ export function generateTrainingTranscriptPdf(input: TrainingTranscriptInput): {
     return [
       t.code,
       t.title,
-      status.toUpperCase().replace('_', ' '),
+      status.toUpperCase().replace(/_/g, ' '),
       latest ? formatZuluDate(latest.completed_at) : '—',
       latest?.expires_at ? formatZuluDate(latest.expires_at) : '—',
       latest ? latest.training_type : '—',
@@ -197,7 +197,7 @@ export function generateTrainingTranscriptPdf(input: TrainingTranscriptInput): {
         c.credential,
         formatZuluDate(c.issued_at),
         c.expires_at ? formatZuluDate(c.expires_at) : 'Lifetime',
-        status.toUpperCase().replace('_', ' '),
+        status.toUpperCase().replace(/_/g, ' '),
         c.notes ? c.notes.slice(0, 80) : '—',
       ]
     })

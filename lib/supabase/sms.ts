@@ -315,6 +315,37 @@ export const BAND_COLORS: Record<'low' | 'medium' | 'high', { bg: string; border
 }
 
 // ────────────────────────────────────────────────────────────────
+// Enum display labels — single source of truth.
+// NEVER hand-humanize a DB enum with `.replace('_', ' ')`: that
+// replaces only the FIRST underscore, so a multi-word value like
+// `closed_no_action` leaks to the user as "closed no_action". Use a
+// label map for a known enum, or humanizeToken() as the safe fallback.
+// ────────────────────────────────────────────────────────────────
+
+/** Title-case a snake_case DB token, replacing ALL underscores. Underscore-safe. */
+export function humanizeToken(value: string): string {
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+export const TRIAGE_STATUS_LABELS: Record<SmsSafetyReportTriageStatus, string> = {
+  new: 'New',
+  reviewing: 'Reviewing',
+  promoted: 'Promoted',
+  closed_no_action: 'Closed — No Action',
+  duplicate: 'Duplicate',
+}
+
+export const HAZARD_STATUS_LABELS: Record<SmsHazardStatus, string> = {
+  open: 'Open',
+  under_review: 'Under Review',
+  controlled: 'Controlled',
+  closed: 'Closed',
+  duplicate: 'Duplicate',
+}
+
+// ────────────────────────────────────────────────────────────────
 // Policy CRUD
 // ────────────────────────────────────────────────────────────────
 

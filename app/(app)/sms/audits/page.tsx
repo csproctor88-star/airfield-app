@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { ClipboardCheck, ArrowLeft, Plus, X, Calendar, ExternalLink } from 'lucide-react'
 import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
-import { fetchAudits, createAudit, updateAudit, type SmsAudit } from '@/lib/supabase/sms'
+import { fetchAudits, createAudit, updateAudit, humanizeToken, type SmsAudit } from '@/lib/supabase/sms'
 import { formatZuluDate } from '@/lib/utils'
 import { LoadingState } from '@/components/ui/loading-state'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -118,7 +118,7 @@ export default function SmsAuditsPage() {
                     <span className="font-mono text-xs text-muted-dark">{a.audit_code}</span>
                     <span className="text-sm font-medium text-foreground truncate">{a.title}</span>
                     <AuditStatusPill status={a.status} />
-                    <span className="text-[10px] uppercase tracking-wider text-muted-darker">{a.audit_type.replace('_', ' ')}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-muted-darker">{humanizeToken(a.audit_type)}</span>
                   </div>
                   {a.scope && <p className="text-xs text-muted-dark mt-1 line-clamp-1">{a.scope}</p>}
                 </div>
