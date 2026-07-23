@@ -46,8 +46,11 @@ export function computePprChanges(
 
   for (const col of [...columns].sort((a, b) => a.sort_order - b.sort_order)) {
     if (col.column_type === 'info_only') continue
-    const from = formatPprColumnValue(col, before.column_values[col.id], opts)
-    const to = formatPprColumnValue(col, after.column_values[col.id], opts)
+    // Anchor each side's local conversion to that side's arrival date so
+    // a time column renders "1500Z (1000L)" accurately (and a midnight
+    // rollover is flagged) in the change summary agencies receive.
+    const from = formatPprColumnValue(col, before.column_values[col.id], { ...opts, dateISO: before.arrival_date })
+    const to = formatPprColumnValue(col, after.column_values[col.id], { ...opts, dateISO: after.arrival_date })
     if (from !== to) changes.push({ label: col.column_name, from, to })
   }
 

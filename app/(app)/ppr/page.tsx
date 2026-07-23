@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { useInstallation } from '@/lib/installation-context'
 import { createClient } from '@/lib/supabase/client'
-import { formatZuluDate, formatZuluDateTime } from '@/lib/utils'
+import { formatZuluDate, formatZuluDateTimeWithLocal } from '@/lib/utils'
 import { PERM, usePermissions } from '@/lib/permissions'
 import {
   fetchPprColumns,
@@ -27,6 +27,8 @@ import {
   fetchPprRemarks,
   fetchPprRemarksForEntries,
   addPprRemark,
+  updatePprRemark,
+  deletePprRemark,
   cancelPprEntry,
   addPprCoordinationAgencies,
   fetchPprEntryById,
@@ -186,6 +188,14 @@ function PprContent() {
   const [detailRemarks, setDetailRemarks] = useState<PprRemark[]>([])
   const [remarkInput, setRemarkInput] = useState('')
   const [remarkBusy, setRemarkBusy] = useState(false)
+  // Current user id — gates the Edit/Delete affordances to the author's
+  // own remarks. Set alongside the operating initials fetch.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  // Inline remark edit: the remark being edited + its draft text.
+  const [editingRemarkId, setEditingRemarkId] = useState<string | null>(null)
+  const [editingRemarkText, setEditingRemarkText] = useState('')
+  // Two-click delete confirm: id of the remark whose delete is armed.
+  const [confirmDeleteRemarkId, setConfirmDeleteRemarkId] = useState<string | null>(null)
 
   // Row selection for exporting a specific PPR or a subset. Holds entry
   // ids; the export paths intersect this with the currently visible
@@ -294,6 +304,7 @@ function PprContent() {
       if (!supabase) return
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setCurrentUserId(user.id)
       const { data } = await supabase.from('profiles').select('operating_initials').eq('id', user.id).single()
       if (data?.operating_initials) setUserOI(data.operating_initials)
     }
@@ -407,6 +418,9 @@ function PprContent() {
     if (!detailEntry) {
       setDetailRemarks([])
       setRemarkInput('')
+      setEditingRemarkId(null)
+      setEditingRemarkText('')
+      setConfirmDeleteRemarkId(null)
       return
     }
     let cancelled = false
@@ -457,6 +471,60 @@ function PprContent() {
     const rows = await fetchPprRemarks(detailEntry.id)
     setDetailRemarks(rows)
     setRemarkBusy(false)
+  }
+
+  // Whether the current user may edit/delete a given remark: their own,
+  // and not a system-mirrored entry. Coordination decisions and re-open
+  // snapshots are inserted with a "[…]" prefix and are part of the audit
+  // timeline, so they stay locked even for their author.
+  function canEditRemark(r: PprRemark): boolean {
+    if (!currentUserId || r.created_by !== currentUserId) return false
+    return !/^\s*\[/.test(r.remark)
+  }
+
+  function startEditRemark(r: PprRemark) {
+    setConfirmDeleteRemarkId(null)
+    setEditingRemarkId(r.id)
+    setEditingRemarkText(r.remark)
+  }
+
+  function cancelEditRemark() {
+    setEditingRemarkId(null)
+    setEditingRemarkText('')
+  }
+
+  async function handleUpdateRemark() {
+    if (!detailEntry || !editingRemarkId) return
+    const text = editingRemarkText.trim()
+    if (!text) return
+    setRemarkBusy(true)
+    const { ok, error } = await updatePprRemark({ id: editingRemarkId, remark: text })
+    if (!ok) {
+      toast.error(error || 'Failed to update remark')
+      setRemarkBusy(false)
+      return
+    }
+    setEditingRemarkId(null)
+    setEditingRemarkText('')
+    const rows = await fetchPprRemarks(detailEntry.id)
+    setDetailRemarks(rows)
+    setRemarkBusy(false)
+  }
+
+  async function handleDeleteRemark(id: string) {
+    if (!detailEntry) return
+    setRemarkBusy(true)
+    const { ok, error } = await deletePprRemark({ id })
+    if (!ok) {
+      toast.error(error || 'Failed to delete remark')
+      setRemarkBusy(false)
+      return
+    }
+    setConfirmDeleteRemarkId(null)
+    const rows = await fetchPprRemarks(detailEntry.id)
+    setDetailRemarks(rows)
+    setRemarkBusy(false)
+    toast.success('Remark deleted')
   }
 
   // Date mode changes. PPRs are inherently future-leaning — an aircraft
@@ -612,7 +680,7 @@ function PprContent() {
     for (const col of summaryColumns) {
       const raw = (e.column_values || {})[col.id]
       if (raw && String(raw).trim()) {
-        return formatPprColumnValue(col, raw, { tz: baseTimezone })
+        return formatPprColumnValue(col, raw, { tz: baseTimezone, dateISO: e.arrival_date })
       }
     }
     return e.requester_name || e.ppr_number
@@ -1809,7 +1877,7 @@ function PprContent() {
                     </td>
                     <td style={tdStyle}>{formatZuluDate(entry.arrival_date + 'T00:00:00Z')}</td>
                     {summaryColumns.map(col => {
-                      const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id], { tz: baseTimezone })
+                      const formatted = formatPprColumnValue(col, (entry.column_values || {})[col.id], { tz: baseTimezone, dateISO: entry.arrival_date })
                       return (
                         <td key={col.id} style={dynamicTdStyle}>
                           {formatted || '—'}
@@ -1870,6 +1938,7 @@ function PprContent() {
                   onChange={(v) => setFormValues(prev => ({ ...prev, [col.id]: v }))}
                   infoText={col.info_text}
                   timeDisplay={col.time_display}
+                  timezone={baseTimezone}
                 />
               ))}
 
@@ -2076,7 +2145,7 @@ function PprContent() {
               {triageEntry.requester_phone ? ` · ${triageEntry.requester_phone}` : ''}).
             </p>
 
-            <SubmittedSummary entry={triageEntry} columns={columns} />
+            <SubmittedSummary entry={triageEntry} columns={columns} tz={baseTimezone} />
 
             {/* Action picker — three mutually-exclusive outcomes. */}
             <div style={{ margin: '12px 0' }}>
@@ -2193,7 +2262,7 @@ function PprContent() {
               Concur or non-concur on each agency row your office covers. Comments are optional.
             </p>
 
-            <SubmittedSummary entry={coordEntry} columns={columns} />
+            <SubmittedSummary entry={coordEntry} columns={columns} tz={baseTimezone} />
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '12px 0' }}>
               {(coordsByEntry[coordEntry.id] ?? []).map((row) => {
@@ -2284,7 +2353,7 @@ function PprContent() {
               All agency coordination is in. Approve to notify the requester (with PPR #), or deny with a reason.
             </p>
 
-            <SubmittedSummary entry={decideEntry} columns={columns} />
+            <SubmittedSummary entry={decideEntry} columns={columns} tz={baseTimezone} />
 
             <div style={{ margin: '12px 0' }}>
               <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 6, fontWeight: 600 }}>
@@ -2364,7 +2433,7 @@ function PprContent() {
               This denied PPR will return to <strong>In Coordination</strong>. Pick which agencies must (re)coordinate — the prior denial reason and any earlier coordination are preserved in the remarks thread. The requester isn&apos;t emailed until the next decision.
             </p>
 
-            <SubmittedSummary entry={reopenEntry} columns={columns} />
+            <SubmittedSummary entry={reopenEntry} columns={columns} tz={baseTimezone} />
 
             {(() => {
               const orphans = reopenAgencyIds.filter((id) => (agencyCoordCounts[id] ?? 0) === 0)
@@ -2508,7 +2577,7 @@ function PprContent() {
                 rows={[
                   { label: 'Arrival Date', value: detailEntry.arrival_date },
                   ...dataColumns
-                    .map((c) => ({ label: c.column_name, value: formatPprColumnValue(c, (detailEntry.column_values || {})[c.id], { tz: baseTimezone }) }))
+                    .map((c) => ({ label: c.column_name, value: formatPprColumnValue(c, (detailEntry.column_values || {})[c.id], { tz: baseTimezone, dateISO: detailEntry.arrival_date }) }))
                     .filter((r) => r.value),
                   ...(detailEntry.notes ? [{ label: 'Notes', value: detailEntry.notes }] : []),
                 ]}
@@ -2588,7 +2657,11 @@ function PprContent() {
                 </div>
                 {detailRemarks.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8 }}>
-                    {detailRemarks.map((r) => (
+                    {detailRemarks.map((r) => {
+                      const editable = canEditRemark(r)
+                      const isEditing = editingRemarkId === r.id
+                      const armed = confirmDeleteRemarkId === r.id
+                      return (
                       <div
                         key={r.id}
                         style={{
@@ -2598,9 +2671,9 @@ function PprContent() {
                           background: 'var(--color-bg-elevated)',
                         }}
                       >
-                        {/* Header strip — author + Zulu timestamp visually
-                            separated from the remark body by a divider
-                            and a subtler background. */}
+                        {/* Header strip — author + Zulu(+local) timestamp
+                            visually separated from the remark body by a
+                            divider and a subtler background. */}
                         <div style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
                           padding: '6px 10px',
@@ -2610,24 +2683,120 @@ function PprContent() {
                         }}>
                           <span style={{ fontWeight: 700, color: 'var(--color-text-2)' }}>
                             {r.user_rank ? `${r.user_rank} ${r.user_name}` : (r.user_name || 'Unknown')}
+                            {r.updated_at && (
+                              <span style={{ fontWeight: 400, fontStyle: 'italic', color: 'var(--color-text-3)', marginLeft: 6 }}>
+                                (edited)
+                              </span>
+                            )}
                           </span>
                           <span style={{ color: 'var(--color-text-3)', fontFamily: 'monospace' }}>
-                            {formatZuluDateTime(r.created_at)}
+                            {formatZuluDateTimeWithLocal(r.created_at, baseTimezone)}
                           </span>
                         </div>
-                        {/* Body */}
-                        <div style={{
-                          padding: '8px 10px',
-                          color: 'var(--color-text-1)',
-                          fontSize: 'var(--fs-sm)',
-                          whiteSpace: 'pre-wrap',
-                          wordBreak: 'break-word',
-                          lineHeight: 1.5,
-                        }}>
-                          {r.remark}
-                        </div>
+                        {/* Body — read view, or an inline editor when the
+                            author is editing their own remark. */}
+                        {isEditing ? (
+                          <div style={{ padding: '8px 10px' }}>
+                            <textarea
+                              value={editingRemarkText}
+                              onChange={(e) => setEditingRemarkText(e.target.value)}
+                              rows={3}
+                              disabled={remarkBusy}
+                              autoFocus
+                              style={{
+                                width: '100%', padding: '6px 10px', borderRadius: 4,
+                                border: '1px solid var(--color-border)', background: 'var(--color-bg)',
+                                color: 'var(--color-text-1)', fontSize: 'var(--fs-sm)', fontFamily: 'inherit',
+                                resize: 'vertical', minHeight: 56, boxSizing: 'border-box',
+                              }}
+                            />
+                            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                              <button
+                                onClick={handleUpdateRemark}
+                                disabled={remarkBusy || !editingRemarkText.trim()}
+                                style={{
+                                  padding: '4px 12px', borderRadius: 4,
+                                  border: '1px solid var(--color-accent)',
+                                  background: remarkBusy || !editingRemarkText.trim() ? 'transparent' : 'var(--color-accent)',
+                                  color: remarkBusy || !editingRemarkText.trim() ? 'var(--color-accent)' : 'var(--color-bg)',
+                                  cursor: remarkBusy || !editingRemarkText.trim() ? 'not-allowed' : 'pointer',
+                                  fontWeight: 600, fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                                }}
+                              >
+                                {remarkBusy ? 'Saving…' : 'Save'}
+                              </button>
+                              <button
+                                onClick={cancelEditRemark}
+                                disabled={remarkBusy}
+                                style={{
+                                  padding: '4px 12px', borderRadius: 4,
+                                  border: '1px solid var(--color-border)', background: 'transparent',
+                                  color: 'var(--color-text-3)', cursor: 'pointer',
+                                  fontWeight: 600, fontSize: 'var(--fs-xs)', fontFamily: 'inherit',
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{
+                              padding: '8px 10px',
+                              color: 'var(--color-text-1)',
+                              fontSize: 'var(--fs-sm)',
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              lineHeight: 1.5,
+                            }}>
+                              {r.remark}
+                            </div>
+                            {editable && (
+                              <div style={{
+                                display: 'flex', gap: 12, alignItems: 'center',
+                                padding: '0 10px 8px', fontSize: 'var(--fs-xs)',
+                              }}>
+                                <button
+                                  onClick={() => startEditRemark(r)}
+                                  disabled={remarkBusy}
+                                  style={remarkActionBtnStyle}
+                                >
+                                  Edit
+                                </button>
+                                {armed ? (
+                                  <>
+                                    <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>Delete?</span>
+                                    <button
+                                      onClick={() => handleDeleteRemark(r.id)}
+                                      disabled={remarkBusy}
+                                      style={{ ...remarkActionBtnStyle, color: 'var(--color-danger)', fontWeight: 700 }}
+                                    >
+                                      Yes
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteRemarkId(null)}
+                                      disabled={remarkBusy}
+                                      style={remarkActionBtnStyle}
+                                    >
+                                      No
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => { cancelEditRemark(); setConfirmDeleteRemarkId(r.id) }}
+                                    disabled={remarkBusy}
+                                    style={{ ...remarkActionBtnStyle, color: 'var(--color-danger)' }}
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -2667,12 +2836,12 @@ function PprContent() {
                 title="Audit"
                 rows={[
                   ...(detailEntry.approver_oi ? [{ label: 'Approver OI', value: detailEntry.approver_oi }] : []),
-                  ...(detailEntry.triaged_at ? [{ label: 'Reviewed At', value: formatZuluDateTime(detailEntry.triaged_at) }] : []),
-                  ...(detailEntry.approval_at ? [{ label: 'Approved At', value: formatZuluDateTime(detailEntry.approval_at) }] : []),
+                  ...(detailEntry.triaged_at ? [{ label: 'Reviewed At', value: formatZuluDateTimeWithLocal(detailEntry.triaged_at, baseTimezone) }] : []),
+                  ...(detailEntry.approval_at ? [{ label: 'Approved At', value: formatZuluDateTimeWithLocal(detailEntry.approval_at, baseTimezone) }] : []),
                   ...(detailEntry.denial_reason ? [{ label: 'Denial Reason', value: detailEntry.denial_reason }] : []),
                   ...(detailEntry.cancellation_reason ? [{ label: 'Cancellation Reason', value: detailEntry.cancellation_reason }] : []),
-                  ...(detailEntry.departed_at ? [{ label: 'Departed At', value: formatZuluDateTime(detailEntry.departed_at) }] : []),
-                  ...(detailEntry.created_at ? [{ label: 'Submitted At', value: formatZuluDateTime(detailEntry.created_at) }] : []),
+                  ...(detailEntry.departed_at ? [{ label: 'Departed At', value: formatZuluDateTimeWithLocal(detailEntry.departed_at, baseTimezone) }] : []),
+                  ...(detailEntry.created_at ? [{ label: 'Submitted At', value: formatZuluDateTimeWithLocal(detailEntry.created_at, baseTimezone) }] : []),
                 ]}
               />
 
@@ -2983,7 +3152,7 @@ function DetailSection({ title, rows, footnote }: { title: string; rows: DetailR
   )
 }
 
-function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprColumn[] }) {
+function SubmittedSummary({ entry, columns, tz }: { entry: PprEntry; columns: PprColumn[]; tz?: string }) {
   return (
     <div style={{ padding: 10, background: 'var(--color-bg-inset)', borderRadius: 4, border: '1px solid var(--color-border)', fontSize: 'var(--fs-xs)', color: 'var(--color-text-1)' }}>
       <div>
@@ -2994,10 +3163,9 @@ function SubmittedSummary({ entry, columns }: { entry: PprEntry; columns: PprCol
         if (c.column_type === 'info_only') return null
         // SubmittedSummary intentionally renders every input column the
         // requester provided regardless of show_on_log — it's the
-        // record of what was submitted, not a Log view. Time columns
-        // still respect time_display via the column metadata; we just
-        // don't have a tz here so they fall through as Zulu.
-        const v = formatPprColumnValue(c, (entry.column_values || {})[c.id])
+        // record of what was submitted, not a Log view. Passing tz +
+        // the arrival date pairs time columns as "1500Z (1000L)".
+        const v = formatPprColumnValue(c, (entry.column_values || {})[c.id], { tz, dateISO: entry.arrival_date })
         if (!v) return null
         return <div key={c.id}><strong>{c.column_name}:</strong> {v}</div>
       })}
@@ -3013,6 +3181,14 @@ const thStyle: React.CSSProperties = {
   color: 'var(--color-text-3)', fontSize: 'var(--fs-xs)',
   textTransform: 'uppercase', letterSpacing: '0.04em',
   whiteSpace: 'nowrap',
+}
+
+// Text-link buttons under a remark (Edit / Delete / confirm). Kept
+// visually light so the remark body stays the focus.
+const remarkActionBtnStyle: React.CSSProperties = {
+  padding: 0, border: 'none', background: 'transparent',
+  color: 'var(--color-text-3)', cursor: 'pointer',
+  fontSize: 'var(--fs-xs)', fontWeight: 600, fontFamily: 'inherit',
 }
 
 // Dynamic / long-label columns (admin-configured + Notes) — wrap the

@@ -1,6 +1,7 @@
 'use client'
 
 import type { PprColumnType } from '@/lib/supabase/ppr'
+import { formatLocalTime, localTimeToZulu } from '@/lib/utils'
 
 type Props = {
   columnId: string
@@ -15,6 +16,10 @@ type Props = {
   /** Only meaningful for `time` columns — appends "(Z)" or "(Local)"
    *  to the label so requesters know which clock they're entering. */
   timeDisplay?: 'zulu' | 'local' | null
+  /** Base IANA timezone. When set (and not UTC), a `time` field shows a
+   *  live "= HHMM local/Z" hint under the input so the requester can see
+   *  the offset as they type. */
+  timezone?: string | null
   // Optional override for the dark-on-light public form. The staff
   // modal leaves these out so var(--color-*) tokens take over.
   inputBackground?: string
@@ -56,6 +61,7 @@ export function PprFieldInput({
   onChange,
   infoText,
   timeDisplay,
+  timezone,
   inputBackground,
   inputColor,
   inputBorder,
@@ -63,6 +69,15 @@ export function PprFieldInput({
   const labelText = columnType === 'time'
     ? `${columnName} (${timeDisplay === 'local' ? 'Local' : 'Z'})`
     : columnName
+  // Live counterpart-clock hint for time fields: a Zulu-entry field
+  // shows the base-local equivalent, a local-entry field shows Zulu.
+  // Only once 4 digits are in and the base actually differs from UTC.
+  const timeDigits = columnType === 'time' ? (value || '').replace(/\D/g, '').slice(0, 4) : ''
+  const timeHint = (columnType === 'time' && timezone && timezone !== 'UTC' && timeDigits.length === 4)
+    ? (timeDisplay === 'local'
+        ? `= ${localTimeToZulu(timeDigits, timezone)}Z`
+        : `= ${formatLocalTime(timeDigits, timezone)} local`)
+    : null
   // info_only renders as a labeled read-only block — no input element,
   // no required marker, no value/onChange wiring. Used for things like
   // airfield hours, restrictions, and fuel availability that the base
@@ -158,25 +173,36 @@ export function PprFieldInput({
           })}
         </div>
       ) : columnType === 'time' ? (
-        <input
-          type="text"
-          inputMode="numeric"
-          // 4-digit HHMM (24-hour Zulu). Mirrors the spine ETA (Z)
-          // field on /ppr — no colon in display or storage. Existing
-          // entries that predate this change may carry "HH:MM" in
-          // column_values; the display formatters strip the colon
-          // before rendering, so both shapes coexist cleanly.
-          pattern="^([01]\d|2[0-3])[0-5]\d$"
-          placeholder="HHMM"
-          maxLength={4}
-          // Strip a stale colon from legacy values so the input
-          // always shows 4 digits regardless of how it was stored.
-          value={(value || '').replace(':', '').slice(0, 4)}
-          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
-          required={isRequired}
-          id={`ppr-field-${columnId}`}
-          style={inputStyle}
-        />
+        <>
+          <input
+            type="text"
+            inputMode="numeric"
+            // 4-digit HHMM (24-hour Zulu). Mirrors the spine ETA (Z)
+            // field on /ppr — no colon in display or storage. Existing
+            // entries that predate this change may carry "HH:MM" in
+            // column_values; the display formatters strip the colon
+            // before rendering, so both shapes coexist cleanly.
+            pattern="^([01]\d|2[0-3])[0-5]\d$"
+            placeholder="HHMM"
+            maxLength={4}
+            // Strip a stale colon from legacy values so the input
+            // always shows 4 digits regardless of how it was stored.
+            value={(value || '').replace(':', '').slice(0, 4)}
+            onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            required={isRequired}
+            id={`ppr-field-${columnId}`}
+            style={inputStyle}
+          />
+          {timeHint && (
+            <span style={{
+              display: 'block', marginTop: 3, fontSize: 'var(--fs-xs)',
+              color: inputColor ?? 'var(--color-text-3)', opacity: 0.85,
+              fontFamily: 'monospace',
+            }}>
+              {timeHint}
+            </span>
+          )}
+        </>
       ) : (
         <input
           type={INPUT_TYPE[columnType as Exclude<PprColumnType, 'yes_no_na' | 'time' | 'info_only'>] ?? 'text'}

@@ -425,6 +425,7 @@ export function PublicPprRequestForm({ lookup }: { lookup: RequestFormLookup }) 
                   onChange={(v) => setValues((prev) => ({ ...prev, [col.id]: v }))}
                   infoText={col.info_text}
                   timeDisplay={col.time_display}
+                  timezone={config.timezone}
                   inputBackground="#0F172A"
                   inputColor="#E2E8F0"
                   inputBorder="1px solid #334155"

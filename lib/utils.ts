@@ -104,6 +104,133 @@ export function zuluToLocalDateTime(
   }
 }
 
+/**
+ * Base-local parts for a Zulu wall-clock time on a known Zulu date.
+ * Returns the local HHMM plus the whole-day offset from the Zulu date —
+ * a 0030Z arrival can fall on the previous local day (dayDelta -1), a
+ * late-evening Zulu time on the next (dayDelta +1). Unlike
+ * formatLocalTime this is DST-accurate because it anchors to the real
+ * calendar date. Null on malformed input or an invalid timezone.
+ */
+export function zuluToLocalParts(
+  dateISO: string,
+  zuluHHMM: string,
+  tz: string,
+): { time: string; dayDelta: number } | null {
+  const digits = (zuluHHMM || '').replace(/\D/g, '').slice(0, 4)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateISO || '') || digits.length !== 4) return null
+  const d = new Date(`${dateISO}T${digits.slice(0, 2)}:${digits.slice(2, 4)}:00Z`)
+  if (Number.isNaN(d.getTime())) return null
+  try {
+    const time = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(d).replace(':', '')
+    // en-CA renders YYYY-MM-DD, directly comparable to the Zulu date.
+    const localDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d)
+    const dayDelta = Math.round(
+      (Date.parse(`${localDate}T00:00:00Z`) - Date.parse(`${dateISO}T00:00:00Z`)) / 86400000,
+    )
+    return { time, dayDelta }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Day-offset suffix for a base-local time that crosses midnight relative
+ * to its Zulu date: '' same day, ' +1d' the next local day, ' -1d' the
+ * previous. ASCII hyphen (not U+2212) so it renders in jsPDF core fonts.
+ */
+export function formatDayDelta(delta: number): string {
+  if (!delta) return ''
+  return delta > 0 ? ` +${delta}d` : ` -${Math.abs(delta)}d`
+}
+
+/**
+ * Full-timestamp Zulu label with the base-local equivalent appended:
+ * "Jun 12, 2026 1500Z (1000L)". The local date is included when it
+ * differs from the Zulu date ("... 0030Z (Jun 11 2030L)"). Returns the
+ * bare Zulu label when tz is missing/UTC or the instant is unparseable,
+ * so UTC bases read exactly as before.
+ */
+export function formatZuluDateTimeWithLocal(
+  date: Date | string,
+  tz: string | null | undefined,
+): string {
+  const zulu = formatZuluDateTime(date)
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (!tz || tz === 'UTC' || Number.isNaN(d.getTime())) return zulu
+  try {
+    const localTime = new Intl.DateTimeFormat('en-GB', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(d).replace(':', '')
+    const localDayCA = new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d)
+    const zuluDayCA = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(d)
+    // Zero-offset instant (UTC-equivalent zone right now) → nothing to add.
+    if (localTime === formatZuluTime(d) && localDayCA === zuluDayCA) return zulu
+    const localDateLabel = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, month: 'short', day: 'numeric',
+    }).format(d)
+    const inner = localDayCA === zuluDayCA ? `${localTime}L` : `${localDateLabel} ${localTime}L`
+    return `${zulu} (${inner})`
+  } catch {
+    return zulu
+  }
+}
+
+/**
+ * How many minutes `tz` is ahead of UTC at a given instant (negative for
+ * zones behind UTC). Used to invert a base-local wall time back to Zulu.
+ */
+function tzOffsetMinutes(instant: Date, tz: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(instant)
+  const m: Record<string, string> = {}
+  for (const p of parts) m[p.type] = p.value
+  // Intl can render midnight as "24" in some engines — normalize to 0.
+  const hour = m.hour === '24' ? 0 : Number(m.hour)
+  const asUTC = Date.UTC(Number(m.year), Number(m.month) - 1, Number(m.day), hour, Number(m.minute), Number(m.second))
+  return Math.round((asUTC - instant.getTime()) / 60000)
+}
+
+/**
+ * Inverse of formatLocalTime: convert a base-local HHMM wall time back to
+ * its Zulu HHMM equivalent. Anchors to `dateISO` when supplied (else
+ * today) and measures the zone's offset there, so it's DST-correct except
+ * within the ~1-hour DST transition window — adequate for a live entry
+ * hint. Falls back to the raw digits on malformed input.
+ */
+export function localTimeToZulu(localHHMM: string, tz: string, dateISO?: string): string {
+  const digits = (localHHMM || '').replace(/\D/g, '').slice(0, 4)
+  if (digits.length !== 4) return digits
+  const hh = Number(digits.slice(0, 2))
+  const mm = Number(digits.slice(2, 4))
+  if (hh > 23 || mm > 59) return digits
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(dateISO || '') ? (dateISO as string) : new Date().toISOString().slice(0, 10)
+  try {
+    // Treat the digits as UTC to get a reference instant, measure the
+    // zone's offset there, then shift so the digits read as local.
+    const guess = new Date(`${day}T${digits.slice(0, 2)}:${digits.slice(2, 4)}:00Z`)
+    if (Number.isNaN(guess.getTime())) return digits
+    const offMin = tzOffsetMinutes(guess, tz)
+    const utc = new Date(guess.getTime() - offMin * 60000)
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(utc).replace(':', '')
+  } catch {
+    return digits
+  }
+}
+
 // Format relative time, e.g. "2h ago", "3d ago"
 export function formatRelativeTime(date: string | Date): string {
   const now = new Date()

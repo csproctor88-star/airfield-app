@@ -1,6 +1,6 @@
 import { createClient } from './client'
 import { logActivity } from './activity'
-import { formatLocalTime, friendlyError } from '@/lib/utils'
+import { formatDayDelta, formatLocalTime, friendlyError, zuluToLocalParts } from '@/lib/utils'
 
 function db() {
   return createClient()
@@ -36,10 +36,19 @@ export function isSummaryColumn(columnName: string): boolean {
 
 /**
  * Format a raw `column_values[col.id]` string for display in tables,
- * the detail card, the PDF, and outbound emails. For `time` columns
- * the output respects `col.time_display`:
- *   - 'local' + opts.tz set → "HHMM" in base local time
- *   - anything else        → "HHMMZ" (Zulu, the historical default)
+ * the detail card, the PDF, and outbound emails.
+ *
+ * For `time` columns the output depends on what context the caller
+ * supplies:
+ *   - `opts.dateISO` + `opts.tz` set → paired "1500Z (1000L)", both
+ *     clocks shown so a reader never has to do the offset in their head.
+ *     The local half is DST-accurate (anchored to the arrival date) and
+ *     flags a midnight rollover ("0030Z (2030L -1d)"). `time_display`
+ *     only decides which clock leads: 'local' → "1000L (1500Z)".
+ *   - `opts.tz` only (no date — the PDF, which renders its own dedicated
+ *     local sublines) → the historical single value: local HHMM when
+ *     `time_display='local'`, else "1500Z".
+ *   - neither → "1500Z" (Zulu, the historical default).
  *
  * Backwards-compatible with both raw shapes in `column_values`:
  *   - "15:00" — entries written before the HHMM input swap
@@ -48,7 +57,7 @@ export function isSummaryColumn(columnName: string): boolean {
 export function formatPprColumnValue(
   col: PprColumn,
   raw: string | null | undefined,
-  opts?: { tz?: string },
+  opts?: { tz?: string; dateISO?: string },
 ): string {
   if (!raw) return ''
   switch (col.column_type) {
@@ -62,9 +71,26 @@ export function formatPprColumnValue(
     case 'time': {
       const digits = raw.replace(/\D/g, '').slice(0, 4)
       if (!digits) return raw
-      if (col.time_display === 'local' && opts?.tz) {
+      const tz = opts?.tz
+      // Paired Zulu + base-local display is opt-in via dateISO. The
+      // on-screen surfaces and email diffs pass it; the PDF passes only
+      // tz (it renders its own arrival/departure local sublines) and so
+      // keeps the historical single-value behavior below.
+      if (opts?.dateISO && tz && tz !== 'UTC') {
+        const parts = zuluToLocalParts(opts.dateISO, digits, tz)
+        if (parts) {
+          const zuluPart = `${digits}Z`
+          const localPart = `${parts.time}L${formatDayDelta(parts.dayDelta)}`
+          // Zero-offset base — nothing gained by showing the same time twice.
+          if (parts.time === digits && parts.dayDelta === 0) return zuluPart
+          return col.time_display === 'local'
+            ? `${localPart} (${zuluPart})`
+            : `${zuluPart} (${localPart})`
+        }
+      }
+      if (col.time_display === 'local' && tz) {
         const hhmm = `${digits.slice(0, 2)}:${digits.slice(2, 4)}`
-        return formatLocalTime(hhmm, opts.tz)
+        return formatLocalTime(hhmm, tz)
       }
       return `${digits}Z`
     }
@@ -159,6 +185,9 @@ export type PprRemark = {
   remark: string
   created_by: string | null
   created_at: string
+  /** Set by a DB trigger on edit; drives the "(edited)" marker. NULL /
+   *  absent for never-edited remarks and pre-migration rows. */
+  updated_at?: string | null
   user_name?: string
   user_rank?: string
 }
@@ -965,6 +994,57 @@ export async function addPprRemark(input: {
     remark: text,
     created_by: user.id,
   })
+  if (error) return { ok: false, error: friendlyError(error.message) }
+  return { ok: true }
+}
+
+/**
+ * Edit a remark the current user authored. The `.eq('created_by', …)`
+ * guard means a user can only rewrite their OWN remarks even though the
+ * table's UPDATE policy admits any `ppr:write` holder — the UI only
+ * offers the affordance on own, non-system remarks, and this keeps that
+ * promise at the data layer too. A DB trigger stamps `updated_at`, so
+ * the remark surfaces an "(edited)" marker afterwards. `remark` is the
+ * only mutable field.
+ */
+export async function updatePprRemark(input: {
+  id: string
+  remark: string
+}): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+
+  const text = input.remark.trim()
+  if (!text) return { ok: false, error: 'Remark cannot be empty' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('ppr_remarks')
+    .update({ remark: text })
+    .eq('id', input.id)
+    .eq('created_by', user.id)
+  if (error) return { ok: false, error: friendlyError(error.message) }
+  return { ok: true }
+}
+
+/** Delete a remark the current user authored. Same own-row guard as
+ *  updatePprRemark. */
+export async function deletePprRemark(input: {
+  id: string
+}): Promise<{ ok: boolean; error?: string }> {
+  const supabase = db()
+  if (!supabase) return { ok: false, error: 'Supabase not configured' }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Not authenticated' }
+
+  const { error } = await supabase
+    .from('ppr_remarks')
+    .delete()
+    .eq('id', input.id)
+    .eq('created_by', user.id)
   if (error) return { ok: false, error: friendlyError(error.message) }
   return { ok: true }
 }

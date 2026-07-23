@@ -52,6 +52,16 @@ describe('computePprChanges', () => {
     ])
   })
 
+  it('pairs Zulu + local on time columns when a tz is supplied', () => {
+    const cols = [col({ id: 'eta', column_name: 'ETA', column_type: 'time' })]
+    const before = { ...base, column_values: { eta: '1200' } }
+    const after = { ...base, column_values: { eta: '1300' } }
+    // base.arrival_date is 2026-06-12 (EDT, UTC-4).
+    expect(computePprChanges(before, after, cols, { tz: 'America/New_York' })).toEqual([
+      { label: 'ETA', from: '1200Z (0800L)', to: '1300Z (0900L)' },
+    ])
+  })
+
   it('reports a newly-set column (empty → value)', () => {
     const cols = [col({ id: 'park', column_name: 'Parking' })]
     const out = computePprChanges({ ...base, column_values: {} }, { ...base, column_values: { park: 'Apron C' } }, cols)
