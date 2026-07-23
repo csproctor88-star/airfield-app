@@ -167,3 +167,47 @@ describe('calculateSystemHealth — status rollup', () => {
     expect(health.status).toBe('inoperative')
   })
 })
+
+// ── FAA Part 139 configuration ──
+// The same data-driven engine serves civilian bases whose components are cloned
+// from the FAA templates (AC 150/5340-26C thresholds, JO 7930.2U keywords). FAA
+// components carry NO DAFMAN fields (q_code null, no CE/TERPS/shutoff, no
+// barrette/consecutive/adjacent), so those never surface for civilian bases.
+describe('FAA-configured components (14 CFR §139.311 / AC 150/5340-26C)', () => {
+  // Runway edge: 85% must be on → allowable 15% out, no Q-code, no CE/TERPS.
+  const faaEdge = () => comp({
+    id: 'c1', component_type: 'overall', label: 'Runway Edge Lights',
+    allowable_outage_pct: 15, allowable_outage_count: null,
+    allowable_outage_consecutive: null, allowable_no_adjacent: false,
+    is_zero_tolerance: false, requires_notam: true,
+    requires_ce_notification: false, requires_system_shutoff: false,
+    requires_terps_notification: false, q_code: null,
+    notam_text_template: 'Runway Edge Lights (REDL) — specify runway — U/S',
+  })
+
+  it('flags U/S past the AC 150/5340-26C edge tolerance (>15% out)', () => {
+    const out = calculateComponentOutage(faaEdge(), line(20, [0, 1, 2, 3])) // 20% out
+    expect(out.isExceeded).toBe(true)
+    expect(out.outagePct).toBe(20)
+  })
+
+  it('stays within limits at exactly 85% on (15% out)', () => {
+    const out = calculateComponentOutage(faaEdge(), line(20, [0, 1, 2])) // 15% out
+    expect(out.isExceeded).toBe(false)
+  })
+
+  it('carries no DAFMAN-specific outputs (Q-code / CE / TERPS / shutoff)', () => {
+    const out = calculateComponentOutage(faaEdge(), line(20, [0, 1, 2, 3]))
+    expect(out.qCode).toBeNull()
+    expect(out.requiredActions.notifyCE).toBe(false)
+    expect(out.requiredActions.notifyTerps).toBe(false)
+    expect(out.requiredActions.systemShutoff).toBe(false)
+    expect(out.requiredActions.notam).toBe(true)
+  })
+
+  it('honors REIL zero-tolerance (any unit out is U/S)', () => {
+    const reil = comp({ id: 'c1', component_type: 'overall', label: 'REIL', is_zero_tolerance: true, requires_notam: true })
+    expect(calculateComponentOutage(reil, line(4, [0])).isExceeded).toBe(true)
+    expect(calculateComponentOutage(reil, line(4, [])).isExceeded).toBe(false)
+  })
+})

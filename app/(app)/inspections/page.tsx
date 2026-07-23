@@ -31,6 +31,7 @@ import { persistPendingPhoto } from '@/lib/sync/pending-photos'
 import { logActivity } from '@/lib/supabase/activity'
 import { fetchAirfieldStatus, updateAirfieldStatus } from '@/lib/supabase/airfield-status'
 import { useInstallation } from '@/lib/installation-context'
+import { getLightingCompliance } from '@/lib/airport-mode'
 import { formatZuluTime, formatZuluDate, formatZuluDateTime, formatZuluDateShort } from '@/lib/utils'
 import { fetchCurrentWeather } from '@/lib/weather'
 import { fetchInspectionTemplate, toInspectionSections } from '@/lib/supabase/inspection-templates'
@@ -1859,7 +1860,7 @@ export default function InspectionsPage() {
     if (featuresMarkedInop > 0) parts.push(`${featuresMarkedInop} feature${featuresMarkedInop !== 1 ? 's' : ''} marked inop`)
     if (dafmanAlerts.length > 0) {
       toast.success(parts.join(' — '), {
-        description: `DAFMAN Alert: ${dafmanAlerts.join('; ')}`,
+        description: `${getLightingCompliance(currentInstallation).alertLabel}: ${dafmanAlerts.join('; ')}`,
         duration: 8000,
       })
     } else {

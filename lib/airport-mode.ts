@@ -287,3 +287,45 @@ export function getSurfaceSet(base: BaseLike): SurfaceSet {
   }
   return isCivilian(base) ? 'faa_part77' : 'ufc_3_260_01'
 }
+
+// ────────────────────────────────────────────────────────────────
+// Visual NAVAID lighting-outage compliance framework
+// ────────────────────────────────────────────────────────────────
+
+/**
+ * Which lighting-outage compliance standard the Visual NAVAID engine
+ * applies for a base, plus the labels/citations the UI should render.
+ * USAF → DAFMAN 13-204v2 Table A3.1 (Q-codes, notify CE/TERPS).
+ * Civilian (faa_part139) → FAA Part 139: thresholds from AC 150/5340-26C
+ * Appendix A, NOTAM keywords from FAA Order JO 7930.2U, mandate 14 CFR
+ * §139.311. The `standard` value keys outage_rule_templates (see
+ * lib/supabase/lighting-systems.ts) and must stay in sync with that
+ * table's `standard` column.
+ */
+export function getLightingCompliance(base: BaseLike): {
+  standard: 'dafman' | 'faa'
+  /** Short standard label for headers/badges. */
+  label: string
+  /** Governing citation shown next to alerts. */
+  mandateRef: string
+  /** Where the outage thresholds/templates come from. */
+  templateSource: string
+  /** Noun for an alert row ("DAFMAN Alert" vs "Lighting NOTAM"). */
+  alertLabel: string
+} {
+  return isCivilian(base)
+    ? {
+        standard: 'faa',
+        label: 'FAA Part 139',
+        mandateRef: '14 CFR §139.311',
+        templateSource: 'AC 150/5340-26C · FAA JO 7930.2U',
+        alertLabel: 'Lighting NOTAM',
+      }
+    : {
+        standard: 'dafman',
+        label: 'DAFMAN 13-204v2',
+        mandateRef: 'DAFMAN 13-204v2 Table A3.1',
+        templateSource: 'DAFMAN 13-204v2 Table A3.1',
+        alertLabel: 'DAFMAN Alert',
+      }
+}

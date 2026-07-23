@@ -8,11 +8,37 @@ import {
   getTerm,
   getRegSource,
   getSurfaceSet,
+  getLightingCompliance,
   type AirportType,
 } from '@/lib/airport-mode'
 
 const usafBase = { airport_type: 'usaf' as AirportType }
 const faaBase  = { airport_type: 'faa_part139' as AirportType }
+
+describe('getLightingCompliance', () => {
+  it('civilian bases use the FAA Part 139 lighting standard', () => {
+    const c = getLightingCompliance(faaBase)
+    expect(c.standard).toBe('faa')
+    expect(c.label).toBe('FAA Part 139')
+    expect(c.mandateRef).toContain('139.311')
+    expect(c.alertLabel).toBe('Lighting NOTAM')
+    // Civilian framing must never surface DAFMAN language.
+    expect(c.label).not.toMatch(/dafman/i)
+    expect(c.templateSource).not.toMatch(/dafman/i)
+    expect(c.alertLabel).not.toMatch(/dafman/i)
+  })
+
+  it('USAF bases keep the DAFMAN A3.1 standard', () => {
+    const c = getLightingCompliance(usafBase)
+    expect(c.standard).toBe('dafman')
+    expect(c.label).toBe('DAFMAN 13-204v2')
+    expect(c.alertLabel).toBe('DAFMAN Alert')
+  })
+
+  it('defaults an unknown base to DAFMAN (usaf)', () => {
+    expect(getLightingCompliance(null).standard).toBe('dafman')
+  })
+})
 
 describe('getAirportType', () => {
   it('defaults null/undefined to usaf', () => {

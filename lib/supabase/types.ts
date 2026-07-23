@@ -6388,6 +6388,7 @@ export type Database = {
           requires_system_shutoff: boolean | null
           requires_terps_notification: boolean | null
           sort_order: number | null
+          standard: string
           system_type: string
         }
         Insert: {
@@ -6409,6 +6410,7 @@ export type Database = {
           requires_system_shutoff?: boolean | null
           requires_terps_notification?: boolean | null
           sort_order?: number | null
+          standard?: string
           system_type: string
         }
         Update: {
@@ -6430,6 +6432,7 @@ export type Database = {
           requires_system_shutoff?: boolean | null
           requires_terps_notification?: boolean | null
           sort_order?: number | null
+          standard?: string
           system_type?: string
         }
         Relationships: []

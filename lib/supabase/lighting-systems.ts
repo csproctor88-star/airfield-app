@@ -221,13 +221,22 @@ export async function deleteSystemComponent(id: string): Promise<boolean> {
 
 // ── Fetch outage rule templates (for system setup cloning) ──
 
-export async function fetchOutageRuleTemplates(systemType?: string): Promise<OutageRuleTemplate[]> {
+export type OutageStandard = 'dafman' | 'faa'
+
+export async function fetchOutageRuleTemplates(
+  systemType?: string,
+  standard: OutageStandard = 'dafman',
+): Promise<OutageRuleTemplate[]> {
   const supabase = createClient()
   if (!supabase) return []
 
   let query = supabase
     .from('outage_rule_templates')
     .select('*')
+    // USAF bases clone the DAFMAN 13-204v2 A3.1 rows; civilian (faa_part139)
+    // bases clone the FAA Part 139 rows (14 CFR 139.311 / AC 150/5340-26C /
+    // JO 7930.2U). Never mix — an unfiltered fetch would double-clone.
+    .eq('standard', standard)
     .order('system_type')
     .order('sort_order')
 
@@ -245,9 +254,10 @@ export async function fetchOutageRuleTemplates(systemType?: string): Promise<Out
 export async function cloneComponentsFromTemplates(
   systemId: string,
   systemType: string,
-  totalCounts: Record<string, number>  // component_type → total_count
+  totalCounts: Record<string, number>,  // component_type → total_count
+  standard: OutageStandard = 'dafman',
 ): Promise<LightingSystemComponent[]> {
-  const templates = await fetchOutageRuleTemplates(systemType)
+  const templates = await fetchOutageRuleTemplates(systemType, standard)
   if (templates.length === 0) return []
 
   const created: LightingSystemComponent[] = []

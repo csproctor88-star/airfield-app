@@ -8,7 +8,7 @@ import { useInstallation } from '@/lib/installation-context'
 import { usePermissions, PERM } from '@/lib/permissions'
 import { createClient } from '@/lib/supabase/client'
 import { friendlyError } from '@/lib/utils'
-import { isCivilian, getSurfaceSet } from '@/lib/airport-mode'
+import { isCivilian, getSurfaceSet, getLightingCompliance } from '@/lib/airport-mode'
 import {
   FAA_APPROACH_TYPE_LABELS,
   type FaaApproachType,
@@ -149,7 +149,7 @@ const WIZARD_STEPS: WizardStep[] = [
   { key: 'fprchecklist', number: 11, label: 'Flight Planning Room Checklist', description: 'Off by default — enable Flight Planning Room Check at Modules first. Define the per-shift checklist (FLIP currency, charts, forms, NOTAM display). Load the suggested starting point or build your own.', required: false },
   { key: 'drivingcheckitems', number: 11, label: 'Driving Check Items', description: 'Off by default — enable Airfield Driving Spot Check at Modules first. Define the item list checked during a spot check (FOD tire check, radio procedures, vehicle serviceability). Load the suggested starting point or build your own.', required: false },
   { key: 'wildlife', number: 12, label: 'Wildlife Species', description: 'Select the wildlife species commonly observed at your installation. These populate the species picker in sighting and strike forms.', required: true },
-  { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with DAFMAN 13-204v2 outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
+  { key: 'lighting', number: 13, label: 'Lighting Systems', description: 'Define lighting systems and components with their outage thresholds. This is a detailed configuration — skip for now and complete later if needed.', required: false },
   { key: 'statusboards', number: 14, label: 'Status Boards', description: 'Create custom status panels for the Airfield Status page (e.g., Arresting Systems, Comm Status). Each board has items with green/yellow/red toggles.', required: false },
   { key: 'pprcolumns', number: 15, label: 'PPR Columns', description: 'Define the columns for your Prior Permission Required (PPR) table. Each base can have its own fields (e.g., Aircraft Type, Tail #, Unit, POC, Purpose).', required: false },
   { key: 'feedback', number: 16, label: 'Customer Feedback', description: 'Configure a public feedback form and generate a QR code. Anyone who scans the code can submit feedback that is stored in your installation\'s database.', required: false },
@@ -4454,6 +4454,11 @@ function SeedPickerDialog({
 // ═══════════════════════════════════════════════════════════════
 
 function LightingSystemsTab({ installationId, markSaved }: { installationId: string | null; markSaved?: (stepKey: WizardStepKey) => void }) {
+  const { currentInstallation } = useInstallation()
+  // USAF clones DAFMAN A3.1 templates; civilian (faa_part139) clones the
+  // FAA Part 139 templates (14 CFR 139.311 / AC 150/5340-26C).
+  const compliance = getLightingCompliance(currentInstallation)
+  const outageStandard = compliance.standard
   const [systems, setSystems] = useState<LightingSystem[]>([])
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
@@ -4627,7 +4632,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
 
   const handleStartClone = async (systemId: string, systemType: string) => {
     setCloning(systemId)
-    const t = await fetchOutageRuleTemplates(systemType)
+    const t = await fetchOutageRuleTemplates(systemType, outageStandard)
     setTemplatesList(t)
   }
 
@@ -4635,7 +4640,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
     if (!cloning) return
     setSaving(true)
     const sys = systems.find((s) => s.id === cloning)
-    const created = await cloneComponentsFromTemplates(cloning, sys?.system_type || '', {})
+    const created = await cloneComponentsFromTemplates(cloning, sys?.system_type || '', {}, outageStandard)
     if (created.length > 0) {
       toast.success(`Cloned ${created.length} component(s)`)
       setCompsMap((prev) => ({ ...prev, [cloning]: [...(prev[cloning] || []), ...created] }))
@@ -4762,7 +4767,7 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
                   <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>Loading components...</p>
                 ) : (
                   <>
-                    {comps.length === 0 && <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>No components. Clone from DAFMAN templates to get started.</p>}
+                    {comps.length === 0 && <p style={{ color: 'var(--color-text-3)', fontSize: 'var(--fs-sm)', padding: '8px 0' }}>No components. Clone from {compliance.label} templates to get started.</p>}
                     {comps.map((comp) => (
                       <div key={comp.id}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--color-border)', fontSize: 'var(--fs-sm)' }}>
@@ -4789,9 +4794,9 @@ function LightingSystemsTab({ installationId, markSaved }: { installationId: str
                     {cloning === sys.id ? (
                       <div style={{ marginTop: 8, padding: 10, background: 'var(--color-bg-inset)', borderRadius: 'var(--radius-base)' }}>
                         <div style={{ fontWeight: 600, fontSize: 'var(--fs-sm)', color: 'var(--color-text-1)', marginBottom: 8 }}>
-                          Clone from DAFMAN Table A3.1 &mdash; {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
+                          Clone from {compliance.templateSource} &mdash; {SYSTEM_TYPE_LABELS[sys.system_type] || sys.system_type}
                         </div>
-                        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>Components will be created with DAFMAN outage thresholds. Light counts auto-populate from assigned features.</p>
+                        <p style={{ fontSize: 'var(--fs-xs)', color: 'var(--color-text-3)', marginBottom: 8 }}>Components will be created with {compliance.label} outage thresholds. Light counts auto-populate from assigned features.</p>
                         {templatesList.map((t) => (
                           <div key={t.component_type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 'var(--fs-sm)' }}>
                             <span style={{ flex: 1, color: 'var(--color-text-2)' }}>{t.label}</span>
