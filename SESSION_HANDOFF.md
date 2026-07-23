@@ -1,5 +1,94 @@
 # Session Handoff
 
+> **2026-07-23 — ICAO Annex 14 lighting standard + FAA lighting phase-2 + EDGP
+> ICAO demo base + Daily Ops PPR/BASH split (session 17).** Interactive,
+> owner-driven, home machine. **3 airfield-app commits** (`99a921cf`,
+> `d5202d3f`, `fbd6f55d`), **all PUSHED**, tree clean and level with origin.
+> Build green on `fbd6f55d`: tsc ✓ · lint 0 errors ✓ · vitest **1874 passed**
+> (+19) ✓ · build ✓ (`/base-config/setup` 82.1 kB · 327 kB First Load;
+> `/infrastructure` 38.9 kB · 248 kB; `/reports/daily` 5.15 kB · 345 kB;
+> middleware 80.8 kB unchanged). **4 migrations (`2026072300`–`2026072303`)
+> APPLIED + verified to the linked DB.** Plus a large DB-only base clone (EDGP —
+> no repo footprint).
+>
+> **HEAD: `fbd6f55d`.**
+>
+> Shipped (code):
+> - **Lighting outage engine → THREE standards (DAFMAN / FAA / ICAO)**
+>   (`99a921cf`). Two prior FAA phase-2 gaps closed + a new ICAO branch:
+>   - *FAA item #1* — qualitative templates for the 4 orphan feature types
+>     (`signage`/`rdr_signs`/`taxiway_end` zero-tolerance legibility items citing
+>     14 CFR §139.311; `stadium_light` informational-only) so their features
+>     link to a compliance panel. AC 150/5340-26C App A gives NO tolerance for
+>     these → no fabricated % (migration `2026072300`, 4 FAA rows).
+>   - *FAA item #2* — `lighting_systems.is_cat_ii_iii` tightens runway edge
+>     lights 85%→95% per AC 150/5340-26C Table A-8, at calc time via
+>     `resolveEdgeThreshold` (migration `2026072301`).
+>   - *ICAO Annex 14 §10.5* — a per-base **`bases.lighting_standard`** selector
+>     (dafman/faa/icao) decoupled from `airport_type`; `getLightingCompliance`
+>     reads it (NULL derives the old default so existing bases are unchanged).
+>     29 ICAO templates transcribed VERBATIM from Annex 14 Vol I §10.5 (Ch 10
+>     Aerodrome Maintenance) → gitignored
+>     `docs/references/icao-annex14-lighting-verified.md`. §10.5 is
+>     category-keyed (CAT II/III §10.5.7 vs CAT I §10.5.10) — runway END lights
+>     are STRICTER at CAT I (85%) than CAT II/III (75%). `resolveComponentThreshold
+>     (standard, system, comp)` is the single entry point (DAFMAN pass-through,
+>     FAA edge 85→95, ICAO edge+threshold→95 / end→75); `calculateSystemHealth`/
+>     `calculateAllSystemHealth` gained a `standard` param threaded through ALL
+>     callers (infra page, 3 dashboard widgets, `lighting-report-data`,
+>     inspections). Base Config lighting tab gains the standard selector +
+>     extends the CAT II/III toggle to ICAO's edge/threshold/end (migrations
+>     `2026072302` + `2026072303`). v1 caveats (documented): approach lights
+>     modelled at the beyond-450 m 85% value (inner-450 m 95% deferred); the
+>     §10.5 "maintenance objective, not out-of-service" caveat surfaces via alert
+>     labels, not a banner. See `[[project_faa_lighting_outage_engine]]`.
+> - **Reusable demo-base deep-cloner** (`d5202d3f`) —
+>   `scripts/clone-demo-base.sql` (NOT a migration). Discovery-driven,
+>   deterministic md5 UUID remapping, FK checks off via
+>   `session_replication_role=replica`, transaction-wrapped, dry-run-first
+>   (flip COMMIT→ROLLBACK). Clones every base-scoped table + the 5
+>   base-scoped-by-proxy child tables (no `base_id`, e.g.
+>   `lighting_system_components`), regenerates the globally-unique
+>   `display_id`/`waiver_number`, skips `activity_log`/`page_view_daily`, and
+>   rebuilds lighting to a chosen standard. Parameterized CONFIG block at top.
+> - **Daily Ops Review: PPR + BASH/wildlife get their own sections**
+>   (`fbd6f55d`). PPR (`ppr_entry`, 473 rows) and wildlife
+>   (`wildlife_sighting`/`_strike`, 551) both write physical `activity_log`
+>   rows, so the report scattered them through the generic Events Log among
+>   3410 `manual`/contractor/weather entries. `daily-ops-data.ts` now
+>   partitions the day's activity into `pprEntries`/`wildlifeEntries`/
+>   everything-else (exported entity-type sets); the PDF + on-screen preview
+>   render **PPR ACTIVITY** and **BASH — WILDLIFE** (sightings + strikes;
+>   civilian mode drops the BASH prefix) sections, and Events Log is the clean
+>   catch-all. Partition only — no new queries; `sign-modal` passes mode through.
+>
+> Shipped (DB-only, no repo footprint):
+> - **EDGP "Demo International Airport" — ICAO demo base**, completing the
+>   DAFMAN (KDMO) / FAA (KDRA) / ICAO (EDGP) demo-base trio. A FULL deterministic
+>   deep-clone of KDRA via `scripts/clone-demo-base.sql` (base id =
+>   `md5(kdra_id || 'icao-clone-v1')`; `faa_part139` + obstruction `icao_annex14`
+>   + `lighting_standard='icao'`). 2509 rows across 73 tables, verified
+>   row-for-row vs KDRA (only `activity_log`/`page_view_daily` differ, skipped by
+>   design). Lighting rebuilt ICAO: 43 systems, 25 ICAO components, 1298/1387
+>   features linked. `base_members` cloned → the demo user already has access.
+>   Identity (`EDGP` / "Demo International Airport") is a placeholder, renameable
+>   in Base Config. Owner captures separately.
+>
+> Migrations status: **all 4 APPLIED + verified** — templates now dafman=63,
+> faa=24, icao=29; `bases.lighting_standard` + `lighting_systems.is_cat_ii_iii`
+> present; `standard` CHECK admits icao; **0 bases overridden, 0 systems flagged**
+> (existing bases behave exactly as before).
+>
+> Open next: **owner captures the ICAO Visual NAVAIDs / compliance view on EDGP**
+> (and any other module on the new base) — that's the pending action. To activate
+> ICAO on ANY existing base: set `lighting_standard='icao'` FIRST, THEN clone its
+> lighting components (re-clone picks up ICAO templates). Optional lighting
+> follow-ups: per-runway CAT II/III auto-inherit from
+> `base_runways.icao_approach_classification` (v1 marks per-system); ICAO approach
+> inner-450 m 95% split; the §10.5 caveat as a visible banner. Standing carryover
+> unchanged: glidepath-site `modifications-exemptions` page registration · Part
+> 139 cert-audit resume (Task 2.5c) · civilian-imagery capture priority.
+
 > **2026-07-23 — SMS status-label leak fix + glidepath-site audience gate
 > (session 16).** Interactive, owner-driven, home machine. **1 airfield-app
 > commit** (`5a5a5eb1`, PUSHED), tree clean and level with origin. Build green
