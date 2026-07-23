@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useTheme } from '@/lib/theme-context'
-import { useSidebar } from '@/lib/sidebar-context'
 import { useInstallation } from '@/lib/installation-context'
 import { useDashboard } from '@/lib/dashboard-context'
 import { createClient } from '@/lib/supabase/client'
@@ -13,7 +12,7 @@ import {
 } from '@/lib/sync/pending-photos'
 import { fetchPprEntriesOnField, isActivePpr } from '@/lib/supabase/ppr'
 import { QueueInspector } from '@/components/sync/queue-inspector'
-import { PanelLeftOpen, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 const ROLE_LABELS: Record<string, string> = {
   airfield_manager: 'AFM',
@@ -110,7 +109,6 @@ function useQueueCounts(): {
 
 export function Header() {
   const { resolvedTheme } = useTheme()
-  const { isOpen, toggle } = useSidebar()
   const { currentInstallation, allInstallations, switchInstallation, userRole } = useInstallation()
   const { advisories } = useDashboard()
   const [userName, setUserName] = useState<string | null>(null)
@@ -247,7 +245,7 @@ export function Header() {
         zIndex: 50,
       }}
     >
-      {/* Info row: sidebar toggle + installation left, ops cluster
+      {/* Info row: installation left, ops cluster
           middle, status+user right. The ops cluster (advisories /
           PPRs / Z time / Julian / calendar date) lives here so it
           rides the sticky header and stays visible across every
@@ -291,26 +289,10 @@ export function Header() {
             letterSpacing: '0.03em',
           }}
         >
-          {/* Left: sidebar toggle + installation name (hero treatment) */}
+          {/* Left: installation name (hero treatment). The sidebar
+              expand/collapse control lives solely atop the side-nav rail
+              (SidebarNav) — no duplicate toggle here. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, position: 'relative' }}>
-            <button
-              onClick={toggle}
-              className={`sidebar-toggle${!isOpen ? ' sidebar-toggle-visible' : ''}`}
-              title="Expand sidebar"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'var(--color-text-3)',
-                padding: 4,
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <PanelLeftOpen size={18} />
-            </button>
           <div style={{ position: 'relative' }}>
             <div
               style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: canSwitchInstallation ? 'pointer' : 'default' }}
