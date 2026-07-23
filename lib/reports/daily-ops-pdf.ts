@@ -25,6 +25,8 @@ interface Options {
   baseName?: string | null
   baseIcao?: string | null
   review?: DailyReviewSignoff | null
+  /** Civilian mode → "Wildlife" section title; military → "BASH / Wildlife". */
+  isCivilian?: boolean
 }
 
 const CHECK_TYPE_LABELS: Record<string, string> = {
@@ -170,6 +172,8 @@ function filterDataForDate(data: DailyReportData, dateStr: string): DailyReportD
     statusUpdates: data.statusUpdates.filter((u) => inRange(u.created_at)),
     obstructionEvals: data.obstructionEvals.filter((e) => inRange(e.created_at)),
     activityEntries: data.activityEntries.filter((a) => inRange(a.created_at)),
+    pprEntries: data.pprEntries.filter((a) => inRange(a.created_at)),
+    wildlifeEntries: data.wildlifeEntries.filter((a) => inRange(a.created_at)),
     qrcExecutions: data.qrcExecutions.filter((q) => inRange(q.opened_at) || (q.closed_at && inRange(q.closed_at))),
     outageEvents: data.outageEvents.filter((o) => inRange(o.created_at)),
     arffStatusLog: data.arffStatusLog.filter((a) => inRange(a.created_at)),
@@ -456,7 +460,17 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
     // 6. QRC EXECUTIONS
     renderQrcSection(dayData.qrcExecutions)
 
-    // 7. EVENTS LOG
+    // 7. PPR ACTIVITY (own section — split out of the Events Log)
+    renderActivitySubSection('PPR ACTIVITY', dayData.pprEntries, 'No PPR activity.')
+
+    // 8. BASH / WILDLIFE (sightings + strikes — split out of the Events Log)
+    renderActivitySubSection(
+      opts.isCivilian ? 'WILDLIFE (SIGHTINGS & STRIKES)' : 'BASH — WILDLIFE (SIGHTINGS & STRIKES)',
+      dayData.wildlifeEntries,
+      opts.isCivilian ? 'No wildlife sightings or strikes.' : 'No BASH activity.',
+    )
+
+    // 9. EVENTS LOG (everything else)
     renderEventsLogSection(dayData.activityEntries)
   }
 
@@ -670,6 +684,33 @@ export function generateDailyOpsPdf(data: DailyReportData, opts: Options) {
         y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 3
       }
     }
+  }
+
+  // ── Activity sub-section (PPR, BASH/Wildlife) — same shape as the Events Log ──
+  function renderActivitySubSection(title: string, entries: ActivityEntryForReport[], emptyMsg: string) {
+    sectionHeader(`${title} (${entries.length})`)
+
+    if (entries.length === 0) {
+      emptyState(emptyMsg)
+      return
+    }
+
+    const tableBody = entries.map((e) => {
+      const name = e.user_rank ? `${e.user_rank} ${e.user_name}` : e.user_name
+      return [fmtTime(e.created_at), formatActivityAction(e), getActivityDetails(e), name]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Time', 'Action', 'Details', 'User']],
+      body: tableBody,
+      styles: { fontSize: 7, cellPadding: 1.5, textColor: [0, 0, 0] },
+      headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 0: { cellWidth: 18 }, 1: { cellWidth: 50 }, 2: { cellWidth: 'auto' }, 3: { cellWidth: 38 } },
+    })
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4
   }
 
   // ── Events Log section ──

@@ -17,6 +17,7 @@ import {
   type SignerInfo,
 } from '@/lib/supabase/daily-reviews'
 import { useInstallation } from '@/lib/installation-context'
+import { isCivilian } from '@/lib/airport-mode'
 import { getWriteQueue } from '@/lib/sync/write-queue'
 import type { DailyReviewSignPayload, DailyReviewSignResult } from '@/lib/sync/handlers'
 import { ConflictError } from '@/lib/sync/types'
@@ -100,6 +101,7 @@ export default function DailyReviewSignModal({
       generatedBy: userName,
       baseName,
       baseIcao,
+      isCivilian: isCivilian(currentInstallation),
       review: buildReviewSignoff(currentRow, currentSigners),
     })
     const blob = doc.output('blob')

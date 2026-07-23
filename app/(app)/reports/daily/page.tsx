@@ -7,6 +7,7 @@ import { fetchDailyReportData, type DailyReportData } from '@/lib/reports/daily-
 import { generateDailyOpsPdf } from '@/lib/reports/daily-ops-pdf'
 import { getInspectorName } from '@/lib/supabase/inspections'
 import { useInstallation } from '@/lib/installation-context'
+import { isCivilian } from '@/lib/airport-mode'
 import { sendPdfViaEmail } from '@/lib/email-pdf'
 import EmailPdfModal from '@/components/ui/email-pdf-modal'
 import { toast } from 'sonner'
@@ -87,6 +88,7 @@ export default function DailyOpsPage() {
       generatedBy: generatorName,
       baseName: currentInstallation?.name,
       baseIcao: currentInstallation?.icao,
+      isCivilian: isCivilian(currentInstallation),
     }
   }
 
@@ -303,6 +305,28 @@ export default function DailyOpsPage() {
             return parts.join(', ')
           })()
         : 'No QRC executions',
+      color: 'var(--color-warning)',
+    },
+    {
+      label: 'PPR Activity',
+      count: data.pprEntries.length,
+      detail: data.pprEntries.length > 0
+        ? `${data.pprEntries.length} PPR update${data.pprEntries.length !== 1 ? 's' : ''}`
+        : 'No PPR activity',
+      color: 'var(--color-cyan)',
+    },
+    {
+      label: isCivilian(currentInstallation) ? 'Wildlife' : 'BASH / Wildlife',
+      count: data.wildlifeEntries.length,
+      detail: (() => {
+        if (data.wildlifeEntries.length === 0) return isCivilian(currentInstallation) ? 'No wildlife activity' : 'No BASH activity'
+        const strikes = data.wildlifeEntries.filter((e) => e.entity_type === 'wildlife_strike').length
+        const sightings = data.wildlifeEntries.length - strikes
+        const parts: string[] = []
+        if (sightings > 0) parts.push(`${sightings} sighting${sightings !== 1 ? 's' : ''}`)
+        if (strikes > 0) parts.push(`${strikes} strike${strikes !== 1 ? 's' : ''}`)
+        return parts.join(', ')
+      })(),
       color: 'var(--color-warning)',
     },
     {

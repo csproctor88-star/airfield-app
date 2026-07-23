@@ -102,13 +102,24 @@ export interface OutageEventForReport {
   created_at: string
 }
 
+// Activity-log entity types that get their OWN report section instead of being
+// folded into the generic Events Log (which would otherwise scatter them among
+// manual/contractor/weather/etc. rows).
+export const PPR_ACTIVITY_TYPES = new Set(['ppr_entry'])
+export const WILDLIFE_ACTIVITY_TYPES = new Set(['wildlife_sighting', 'wildlife_strike'])
+
 export interface DailyReportData {
   inspections: (InspectionRow & { failed_items: InspectionItem[] })[]
   checks: CheckRow[]
   newDiscrepancies: DiscrepancyWithReporter[]
   statusUpdates: StatusUpdateWithContext[]
   obstructionEvals: ObstructionEvalForReport[]
+  /** Generic Events Log — activity_log rows EXCLUDING PPR and wildlife (those get own sections). */
   activityEntries: ActivityEntryForReport[]
+  /** PPR activity (approvals/arrivals/departures/updates) — own section. */
+  pprEntries: ActivityEntryForReport[]
+  /** BASH / wildlife sightings + strikes — own section. */
+  wildlifeEntries: ActivityEntryForReport[]
   qrcExecutions: QrcExecutionForReport[]
   outageEvents: OutageEventForReport[]
   arffStatusLog: ArffStatusLogRow[]
@@ -140,8 +151,16 @@ export async function fetchDailyReportData(
   const checks = results[1] as CheckRow[]
   const newDiscrepancies = results[2] as DiscrepancyWithReporter[]
   const obstructionEvals = results[4] as ObstructionEvalForReport[]
-  const activityEntries = results[5] as ActivityEntryForReport[]
+  const allActivity = results[5] as ActivityEntryForReport[]
   const qrcExecutions = results[6] as QrcExecutionForReport[]
+
+  // Partition activity into PPR / wildlife / everything-else so PPR and BASH
+  // get their own report sections rather than being scattered in the Events Log.
+  const pprEntries = allActivity.filter((a) => PPR_ACTIVITY_TYPES.has(a.entity_type))
+  const wildlifeEntries = allActivity.filter((a) => WILDLIFE_ACTIVITY_TYPES.has(a.entity_type))
+  const activityEntries = allActivity.filter(
+    (a) => !PPR_ACTIVITY_TYPES.has(a.entity_type) && !WILDLIFE_ACTIVITY_TYPES.has(a.entity_type),
+  )
   const arffStatusLog = results[8] as ArffStatusLogRow[]
   const outageEvents = results[7] as OutageEventForReport[]
 
@@ -172,6 +191,8 @@ export async function fetchDailyReportData(
     statusUpdates: results[3],
     obstructionEvals,
     activityEntries,
+    pprEntries,
+    wildlifeEntries,
     qrcExecutions,
     outageEvents,
     arffStatusLog,
