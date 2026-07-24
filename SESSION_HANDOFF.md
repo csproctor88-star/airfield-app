@@ -1,5 +1,73 @@
 # Session Handoff
 
+> **2026-07-23 — KDRA comprehensive demo-data seed for civilian marketing
+> captures (session 18).** Interactive, owner-driven, home machine. **1
+> airfield-app commit** (`9f0629f8`, PUSHED), tree clean and level with origin.
+> Build green on `9f0629f8`: tsc ✓ · lint 0 errors ✓ · vitest **1874 passed**
+> (182 files, unchanged) ✓ · build ✓ (middleware 80.8 kB) — the commit adds only
+> SQL/MD under `scripts/`, no code surface, so the app tree is byte-identical to
+> session 17's. **Zero migrations.** The substance of the session was a large
+> **DB-only seed of the civilian demo base KDRA** (`ea2b542e-…`) applied
+> directly to the linked DB; see `[[project_marketing_capture_pipeline]]`.
+>
+> Goal: make KDRA "Demo Regional Airport" (FAA Part 139 Class III) look like a
+> fully-operational airport that has run Glidepath for ~6 months, so the empty
+> civilian module frames can be captured. Result: ~98 base-scoped tables
+> populated, ~4.4k rows, history 2026-01-24→07-23 (recent-weighted), civilian
+> §139 voice throughout.
+>
+> What was done (all DB-only unless noted):
+> - **Staff roster 2→10.** The demo login (`af9a39db`) was renamed **Marcus
+>   Delgado** (`airfield_manager` → "Airport Operations Manager"); 8 fabricated
+>   display-only staff added (Karen Whitfield/accountable_executive, Anthony
+>   Ruiz/ops_supervisor, Danielle Pearce·Brian Okafor·Olivia Brenner/amops, Sara
+>   Lindqvist/sms_manager, James Holloway/aep_coordinator, Ramon
+>   Castellano/arff_chief). Their `auth.users` rows were created (cloned from the
+>   demo user) so they author records everywhere — `profiles.id` FKs to
+>   `auth.users`, and SMS tables FK author columns to `auth.users` specifically
+>   (the SMS cluster failed until those rows existed).
+> - **Disabled** `waivers`/`acsi`/`amtr` in `bases.enabled_modules` (owner call —
+>   military-voiced on a civilian base). 23 civilian modules remain.
+> - **9 per-module cluster seeds**, drafted by parallel subagents against the
+>   live schema (each returned a `.sql` file; every file reviewed + applied +
+>   count-verified by me): checks 11→191 + inspections 5→40; discrepancies
+>   14→84 (routed across 6 CES shops) + 209 status_updates + obstructions 7→25
+>   (FAA Part 77); PPR 3→93 + agencies/coordination/88 remarks; wildlife 18→148
+>   sightings / 3→15 strikes + FICON 3→33; SMS reports 7→37 / hazards 6→21 /
+>   mitigations 6→26 + 48 SPI trend points; AEP drills 2→9 / comms 3→13 + **FLIP
+>   built from empty** (16 pubs / 10 changes / 4 review cycles); training 10→77 +
+>   18 certs / 10 renewals + local-regs/mods/read-file (72 acks); contractors
+>   3→23 / qrc 1→13 / feedback 4→16 / status board / parking; shift-checklists
+>   8→69 + 483 responses.
+> - **2 cleanups** on pre-existing base-setup data (owner-authorized; the DELETE
+>   was correctly classifier-gated): `aep_response_agencies` deduped 14→6 (3
+>   referenced comms results re-pointed first); the broken SPI-003 "Daily
+>   Self-Inspection Completion Rate" measurements rewritten from 0% to a high-90s
+>   trend (consistent with the 191 inspections).
+> - **Committed** (`9f0629f8`) the reproducible seed as
+>   `scripts/seed-demo-base-kdra/` (14 ordered `.sql` + README) — companion to
+>   `clone-demo-base.sql`, NOT migrations, idempotent (deterministic md5 ids +
+>   `ON CONFLICT`).
+>
+> Seeding mechanics learned (now in `[[project_marketing_capture_pipeline]]`):
+> the `profiles.id`→`auth.users` FK is invisible to `information_schema` for the
+> linked role; generated columns must not be inserted (`sms_risk_assessments`
+> risk_index/band + residual, `auth.users.confirmed_at`); linked-DB writes run
+> in-sandbox WITHOUT `dangerouslyDisableSandbox` (that flag now gets
+> classifier-DENIED), though a DELETE of existing rows can still be blocked; uuid
+> literals across a UNION need explicit `::uuid` casts.
+>
+> Open next: **civilian captures are unblocked** — owner runs the shot list
+> against the deployed app (log in `demo@glidepathops.com` → lands on KDRA; the
+> data is already live in prod, no promote needed). Capture caveats: NOTAMs
+> stays empty (live FAA feed); Local-Reg / Read-File / Mods file DOWNLOADS 404
+> (no object uploaded — list/detail render fine); the existing `read_only`
+> account still carries the owner's real name "Christopher Proctor" (left as-is —
+> rename if wanted before a users-page shot). Standing carryover unchanged: owner
+> captures the ICAO Visual NAVAIDs view on EDGP · glidepath-site
+> `modifications-exemptions` page registration · Part 139 cert-audit resume
+> (Task 2.5c).
+
 > **2026-07-23 — ICAO Annex 14 lighting standard + FAA lighting phase-2 + EDGP
 > ICAO demo base + Daily Ops PPR/BASH split (session 17).** Interactive,
 > owner-driven, home machine. **3 airfield-app commits** (`99a921cf`,
